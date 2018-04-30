@@ -11,6 +11,7 @@ using namespace std;
 #include "status_bar.h"
 #include "file_name_list.h"
 #include "wx/time.h"
+#include "wx/filename.h"
 
 extern "C"
 {
@@ -21,45 +22,31 @@ extern "C"
 
 wxThread::ExitCode ImageLoader::Entry()
 {
-    int w, h;
-    cout << "Turbo" << endl;
-    //wxLongLong startTime = wxGetLocalTimeMillis();
-    //int exitCode = LoadJPEGTest("IMG_2287.jpg"); // fileName.char_str());
-    //int exitCode = ReadJpegHeader("IMG_2287.jpg", &w, &h);
-    //char *imageBuffer = new char[w*h*3];
-    //JpegRead(imageBuffer);
-
-
-    //wxLongLong endTime = wxGetLocalTimeMillis();
-    //cout << "exitCode = " << exitCode << endl;
-    //cout << "time = " << endTime - startTime << endl;
-
-    glImage.Load(fileName);
-
+	glImage.Load(fileName);
 
     // Generate a new texture
-    if (glImage.hasGeneratedTexture)
-    {
-        glDeleteTextures(1, &glImage.ID);
-    }
-
-    glGenTextures(1, &glImage.ID);
-    glImage.hasGeneratedTexture = true;
-
-    // check the file exists
-    if (!wxFileExists(fileName))
-    {
-        cout << ">   File doesn't exist: " << fileName << endl;
-        exit(1);
-    }
-
-    glImage.wxImg.SetOption(wxIMAGE_OPTION_GIF_TRANSPARENCY, wxIMAGE_OPTION_GIF_TRANSPARENCY_UNCHANGED);
-    glImage.wxImg.LoadFile(fileName);
-
-    glImage.width  = glImage.wxImg.GetWidth();
-    glImage.height = glImage.wxImg.GetHeight();
-
-    glImage.loadedImage = true;
+    //if (glImage.hasGeneratedTexture)
+    //{
+    //    glDeleteTextures(1, &glImage.ID);
+    //}
+	//
+    //glGenTextures(1, &glImage.ID);
+    //glImage.hasGeneratedTexture = true;
+	//
+    //// check the file exists
+    //if (!wxFileExists(fileName))
+    //{
+    //    cout << ">   File doesn't exist: " << fileName << endl;
+    //    exit(1);
+    //}
+	//
+    //glImage.wxImg.SetOption(wxIMAGE_OPTION_GIF_TRANSPARENCY, wxIMAGE_OPTION_GIF_TRANSPARENCY_UNCHANGED);
+    //glImage.wxImg.LoadFile(fileName);
+	//
+    //glImage.width  = glImage.wxImg.GetWidth();
+    //glImage.height = glImage.wxImg.GetHeight();
+	//
+    //glImage.loadedImage = true;
     return 0;
 }
 
@@ -290,8 +277,34 @@ void GL_Image::Load(wxString path)
         exit(1);
     }
 
-    wxImg.SetOption(wxIMAGE_OPTION_GIF_TRANSPARENCY, wxIMAGE_OPTION_GIF_TRANSPARENCY_UNCHANGED);
-    wxImg.LoadFile(path);
+	int w, h;
+	wxFileName fn(path);
+
+	if ((fn.GetExt().Lower() == "jpg") ||
+		(fn.GetExt().Lower() == "jpeg"))
+	{
+		cout << "Using JPEG Turbo for " << path << endl;
+
+		wxLongLong startTime = wxGetLocalTimeMillis();
+		//int exitCode = LoadJPEGTest("IMG_2287.jpg"); // fileName.char_str());
+		int exitCode = ReadJpegHeader((const  char*)path.c_str(), &w, &h);
+		cout << "Image " << w << "x" << h << endl;
+		//int exitCode = read_JPEG_file((const  char*)fileName.c_str());
+		//char *imageBuffer = new char[w*h*3];
+		wxImg.Create(w, h);
+		wxImg.SetRGB(wxRect(0, 0, w, h), 128, 64, 0);
+		//JpegRead(wxImg.GetData());
+
+
+		wxLongLong endTime = wxGetLocalTimeMillis();
+		//cout << "exitCode = " << exitCode << endl;
+		cout << "time = " << endTime - startTime << endl;
+	}
+	else
+	{
+		wxImg.SetOption(wxIMAGE_OPTION_GIF_TRANSPARENCY, wxIMAGE_OPTION_GIF_TRANSPARENCY_UNCHANGED);
+		wxImg.LoadFile(path);
+	}
 
     wxLongLong endTime = wxGetLocalTimeMillis();
     cout << "load time = " << endTime - startTime << endl;

@@ -248,7 +248,7 @@ ThumbnailCanvas::ThumbnailCanvas(wxWindow *parent, wxWindowID id, const wxPoint 
   cursor(tnColumns, fileNameList),
   selectionStart(-1),
   backgroundColor(wxColor(64, 64, 64)),
-  tnSize(100, 100),
+  tnSize(200, 200),
   thBorder(5),
   redrawType(REDRAW_ALL),
   tnSpacingX(20),
