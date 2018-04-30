@@ -1,6 +1,7 @@
 #include "file_name_list.h"
 #include "wx/dir.h"
 #include <iostream>
+#include <algorithm>
 #include "status_bar.h"
 using namespace std;
 
@@ -18,6 +19,10 @@ FileNameList::FileNameList(wxString dir)
     LoadFileList(dir);
 }
 
+bool FileSortNatural(const DirSortingItem &fn1, const DirSortingItem &fn2)
+{
+    return (fn1.fileName.GetName().CmpNatural(fn2.fileName.GetName()) < 0);
+}
 
 void FileNameList::LoadFileList(wxString dir)
 {
@@ -35,10 +40,15 @@ void FileNameList::LoadFileList(wxString dir)
         bool cont = directory.GetFirst(&filename, filters[i], wxDIR_FILES);
         while (cont)
         {
-            files.push_back(directory.GetName() + wxT("\\") + filename);
+            wxFileName fn = directory.GetName() + wxT("\\") + filename;
+
+            files.emplace_back(fn, fn.GetModificationTime(), FileSortNatural);
+            //files.push_back(directory.GetName() + wxT("\\") + filename);
             cont = directory.GetNext(&filename);
         }
     }
+
+    sort(files.begin(), files.end(), FileSortNatural);
 }
 
 

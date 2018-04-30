@@ -361,6 +361,7 @@ protected:
     bool                hasBeenDrawn;
 	wxBitmap            bitmap;
     wxFileName          fullPath;
+    wxDateTime          dateTime;
     wxSize              imageSize;
     ThumbnailLoader    *thumbnailLoader;
     wxPoint             position;
@@ -427,15 +428,15 @@ private:
     //void MoveCursor(int dx, int dy);
 
 	std::vector<Thumbnail>	thumbnails;
+    std::vector<Thumbnail*>	thumbnailPointers;
     int                     selectionStart;
 	bool                    inFocus;
 
-    TnCursor                cursor;
-    SortedVectorInts        selectionSet;                       // Selected thumbnails 
-    SortedVectorInts        redrawSet;                          // Thumbnails that need to be redrawn
+    TnCursor                cursorP;
+    SortedVectorInts        selectionSetP;                      // Selected thumbnails 
+    SortedVectorInts        redrawSetP;                         // Thumbnails that need to be redrawn
     SortedVectorInts        waitingSet;                         // Thumbnails that need to be requested to load their images
     SortedVectorInts        loadingSet;                         // Thumbnails that are currently loading
-    //SortedVectorInts        loadedSet;                          // Thumbnails that have just finished loading and need to be redrawn
 
     int                     maxLoading;
     int                     tnColumns, tnRows;

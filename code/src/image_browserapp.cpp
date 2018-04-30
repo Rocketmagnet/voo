@@ -98,9 +98,9 @@ bool Image_BrowserApp::OnInit()
 #if wxUSE_LIBPNG
 	wxImage::AddHandler(new wxPNGHandler);
 #endif
-//#if wxUSE_LIBJPEG
-//	wxImage::AddHandler(new wxJPEGHandler);
-//#endif
+#if wxUSE_LIBJPEG
+	//wxImage::AddHandler(new wxJPEGHandler);
+#endif
 #if wxUSE_GIF
 	wxImage::AddHandler(new wxGIFHandler);
 #endif

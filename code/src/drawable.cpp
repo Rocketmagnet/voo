@@ -226,7 +226,7 @@ void GL_Image::UploadNextBlock()
     uploadedTexture = true;
 
     wxLongLong endTime = wxGetLocalTimeMillis();
-    cout << "upload time = " << endTime-startTime << endl;
+    cout << "upload time 1 = " << endTime-startTime << endl;
 
     cout << "UploadNextBlock() done" << endl;
 }
@@ -262,7 +262,6 @@ void GL_Image::Load(wxString path)
 {
     cout << "Load()" << endl;
 
-    wxLongLong startTime = wxGetLocalTimeMillis();
 
     loadedImage       = false;
     uploadedTexture   = false;
@@ -292,13 +291,13 @@ void GL_Image::Load(wxString path)
 		//int exitCode = read_JPEG_file((const  char*)fileName.c_str());
 		//char *imageBuffer = new char[w*h*3];
 		wxImg.Create(w, h);
-		wxImg.SetRGB(wxRect(0, 0, w, h), 128, 64, 0);
-		//JpegRead(wxImg.GetData());
+		//wxImg.SetRGB(wxRect(0, 0, w, h), 128, 64, 0);
+		JpegRead(wxImg.GetData());
 
 
 		wxLongLong endTime = wxGetLocalTimeMillis();
 		//cout << "exitCode = " << exitCode << endl;
-		cout << "time = " << endTime - startTime << endl;
+		cout << "JPEG load time = " << endTime - startTime << endl;
 	}
 	else
 	{
@@ -306,8 +305,7 @@ void GL_Image::Load(wxString path)
 		wxImg.LoadFile(path);
 	}
 
-    wxLongLong endTime = wxGetLocalTimeMillis();
-    cout << "load time = " << endTime - startTime << endl;
+    wxLongLong startTime = wxGetLocalTimeMillis();
 
     startTime = wxGetLocalTimeMillis();
     width  = wxImg.GetWidth();
@@ -417,8 +415,10 @@ void GL_Image::Load(wxString path)
 
     loadedImage = true;
     wxImg.Destroy();
-    endTime = wxGetLocalTimeMillis();
-    cout << "refit time = " << endTime - startTime << endl;
+
+    wxLongLong endTime = wxGetLocalTimeMillis();
+    cout << "upload time 2 = " << endTime - startTime << endl;
+
     cout << "Load() done" << endl;
 }
 
@@ -473,13 +473,13 @@ int GL_ImageServer::Cache(int imageNumber)
     imageSet[cacheLocation].creationTime            = t;
     imageSet[cacheLocation].imageNumber             = imageNumber;
 
-    wxString fileName = (*fileNameList)[imageNumber];
-    ImageLoader *imageLoader = new ImageLoader(imageSet[cacheLocation].glImage, fileName, basicGLPanel, glContext);      // Begin loading the image in the background.
-    imageLoader->Run();
+    //wxString fileName = (*fileNameList)[imageNumber];
+    //ImageLoader *imageLoader = new ImageLoader(imageSet[cacheLocation].glImage, fileName, basicGLPanel, glContext);      // Begin loading the image in the background.
+    //imageLoader->Run();
 
 
-    //imageSet[i].glImage.Load(path);
-    //imageSet[cacheLocation].glImage.Load(fileNameList[imageNumber]);
+    //imageSet[cacheLocation].glImage.Load(path);
+    imageSet[cacheLocation].glImage.Load((*fileNameList)[imageNumber]);
     return cacheLocation;
 }
 

@@ -400,7 +400,7 @@ void ImageBrowser::CreateControls()
 
 	LoadPrivateDirs();
 	dirTreeCtrl->ExpandPath(wxGetCwd());
-	
+	 
 ////@end ImageBrowser content construction
 }
 

@@ -11,9 +11,14 @@
 #include "status_bar.h"
 
 #include <iostream>
-
-
 using namespace std;
+
+extern "C"
+{
+#include "jpeg_turbo.h"
+};
+
+
 
 wxBEGIN_EVENT_TABLE(ThumbnailCanvas, wxScrolledWindow)
     EVT_PAINT(ThumbnailCanvas::OnPaint)
@@ -72,13 +77,25 @@ wxThread::ExitCode ThumbnailLoader::Entry()
     wxLogNull logNo;													// ... instead logging is suspended while this object is in scope
     wxImage   image;
 
-    //cout << "Setting option " << wxIMAGE_OPTION_GIF_TRANSPARENCY << " = " << wxIMAGE_OPTION_GIF_TRANSPARENCY_UNCHANGED << endl;
     image.SetOption(wxIMAGE_OPTION_GIF_TRANSPARENCY, wxIMAGE_OPTION_GIF_TRANSPARENCY_UNCHANGED);
+    wxFileName fn(fileName);
 
-    if (image.LoadFile(fileName))
+    if ((fn.GetExt().Upper() == "JPG") ||
+        (fn.GetExt().Upper() == "JPEG"))
     {
-        thumbnail.imageSize = image.GetSize();
-        wxSize newSize      = thumbnail.GetTnImageSize(image.GetSize(), thumbnail.tnSize);
+        cout << "Using JpegTurbo to load thumbnail " << fileName << endl;
+
+        int w, h;
+        int exitCode = ReadJpegHeader((const  char*)fileName.c_str(), &w, &h);
+        cout << "Image " << w << "x" << h << endl;
+        image.Create(w, h);
+        cout << "a" << endl;
+        image.SetRGB(wxRect(0, 0, w, h), 128, 64, 0);
+        cout << "b" << endl;
+        JpegRead(image.GetData());
+        cout << "c" << endl;
+
+        wxSize newSize = thumbnail.GetTnImageSize(image.GetSize(), thumbnail.tnSize);
         image.Rescale(newSize.GetWidth(), newSize.GetHeight(), wxIMAGE_QUALITY_BILINEAR);
         thumbnail.bitmap = wxBitmap(image);
         image.Destroy();
@@ -86,9 +103,20 @@ wxThread::ExitCode ThumbnailLoader::Entry()
     }
     else
     {
-        cout << "Failed to load " << fileName << endl;
+        if (image.LoadFile(fileName))
+        {
+            thumbnail.imageSize = image.GetSize();
+            wxSize newSize = thumbnail.GetTnImageSize(image.GetSize(), thumbnail.tnSize);
+            image.Rescale(newSize.GetWidth(), newSize.GetHeight(), wxIMAGE_QUALITY_BILINEAR);
+            thumbnail.bitmap = wxBitmap(image);
+            image.Destroy();
+            thumbnail.imageLoaded = true;
+        }
+        else
+        {
+            cout << "Failed to load " << fileName << endl;
+        }
     }
-
     return 0;
 }
 
@@ -245,19 +273,19 @@ ThumbnailCanvas::ThumbnailCanvas(wxWindow *parent, wxWindowID id, const wxPoint 
 : wxScrolledWindow(parent, id, pos, size, wxSUNKEN_BORDER | wxVSCROLL | wxEXPAND | wxWANTS_CHARS | wxTAB_TRAVERSAL),
   fileNameList(),
   inFocus(true),
-  cursor(tnColumns, fileNameList),
+  cursorP(tnColumns, fileNameList),
   selectionStart(-1),
   backgroundColor(wxColor(64, 64, 64)),
   tnSize(200, 200),
   thBorder(5),
   redrawType(REDRAW_ALL),
   tnSpacingX(20),
-  tnSpacingY(25),
-  selectionSet(256),
-  redrawSet(256),
+  tnSpacingY(35),
+  selectionSetP(256),
+  redrawSetP(256),
   waitingSet(256),
   loadingSet(8),
-  maxLoading(3)
+  maxLoading(1)
 {
     SetBackgroundColour(backgroundColor);
 
@@ -323,7 +351,7 @@ void ThumbnailCanvas::RecalculateRowsCols()
         }
     }
 
-    redrawSet.Clear();
+    redrawSetP.Clear();
     redrawType = REDRAW_ALL;
 }
 
@@ -346,12 +374,12 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
             //cout << "Redrawing ALL" << endl;
             for (int i = 0; i < n; i++)
             {
-                selected = selectionSet.Contains(i);
-                if (cursor.GetNumber() == i)
+                selected = selectionSetP.Contains(i);
+                if (cursorP.GetNumber() == i)
                 {
                     onCursor = true;
-                    cursorFileName = thumbnails[i].GetFullPath().GetFullName();
-                    cursorImageSize = thumbnails[i].GetImageSize();
+                    cursorFileName = thumbnailPointers[i]->GetFullPath().GetFullName();
+                    cursorImageSize = thumbnailPointers[i]->GetImageSize();
                     //STATUS_TEXT(0, "%s  (%d, %d)", cursorFileName, cursorImageSize.GetWidth(), cursorImageSize.GetHeight());
                 }
                 else
@@ -359,30 +387,30 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
                     onCursor = false;
                 }
 
-                thumbnails[i].Draw(dc, selected, onCursor);
+                thumbnailPointers[i]->Draw(dc, selected, onCursor);
             }
             break;
 
         case REDRAW_SELECTION:
-            redrawSet.Print();
+            //redrawSetP.Print();
 
-            for (int i = 0; i<redrawSet.size(); i++)
+            for (int i = 0; i<redrawSetP.size(); i++)
             {
-				int th = redrawSet[i];
+				int th = redrawSetP[i];
 				if (i >= 0)
-					thumbnails[th].Erase(dc);
+					thumbnailPointers[th]->Erase(dc);
             }
 
-            for (int i=0; i<redrawSet.size(); i++)
+            for (int i=0; i<redrawSetP.size(); i++)
             {
-                int th = redrawSet[i];
-				selected = selectionSet.Contains(th);
+                int th = redrawSetP[i];
+				selected = selectionSetP.Contains(th);
 
-				if (cursor.GetNumber() == th)
+				if (cursorP.GetNumber() == th)
                 {
                     onCursor = true;
-                    cursorFileName  = thumbnails[th].GetFullPath().GetFullName();
-                    cursorImageSize = thumbnails[th].GetImageSize();
+                    cursorFileName  = thumbnailPointers[th]->GetFullPath().GetFullName();
+                    cursorImageSize = thumbnailPointers[th]->GetImageSize();
                     //STATUS_TEXT(0, "%s  (%d, %d)", cursorFileName, cursorImageSize.GetWidth(), cursorImageSize.GetHeight());
                 }
                 else
@@ -392,10 +420,10 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
 
                 //cout << "  draw " << th << " " << selected << " " << onCursor << " " << cursor.GetNumber() << endl;
 
-                thumbnails[th].Draw(dc, selected, onCursor, inFocus);
+                thumbnailPointers[th]->Draw(dc, selected, onCursor, inFocus);
             }
 
-            redrawSet.Clear();
+            redrawSetP.Clear();
             break;
     }
     
@@ -410,11 +438,11 @@ void ThumbnailCanvas::OnKeyEvent(wxKeyEvent &event)
 
     switch (event.GetKeyCode())
     {
-        case WXK_UP:     cursor.Move( 0, -1);							break;
-        case WXK_DOWN:   cursor.Move( 0,  1);							break;
-        case WXK_LEFT:   cursor.Move(-1,  0);							break;
-        case WXK_RIGHT:  cursor.Move( 1,  0);							break;
-        case WXK_RETURN: imageViewer->DisplayImage(cursor.GetNumber()); break;
+        case WXK_UP:     cursorP.Move( 0, -1);							break;
+        case WXK_DOWN:   cursorP.Move( 0,  1);							break;
+        case WXK_LEFT:   cursorP.Move(-1,  0);							break;
+        case WXK_RIGHT:  cursorP.Move( 1,  0);							break;
+        case WXK_RETURN: imageViewer->DisplayImage(cursorP.GetNumber()); break;
 
         default:
 			//cout << "Key: " << event.GetKeyCode() << endl;
@@ -422,25 +450,25 @@ void ThumbnailCanvas::OnKeyEvent(wxKeyEvent &event)
             return;
     }
 
-	selectionStart = cursor.GetNumber();
+	selectionStart = cursorP.GetNumber();
 
-	cursor.SetupRedraw(redrawSet);
-	redrawSet.AddFrom(selectionSet);
+	cursorP.SetupRedraw(redrawSetP);
+	redrawSetP.AddFrom(selectionSetP);
 
 	if (event.ShiftDown())
 	{
-		selectionSet.SelectTo(cursor.GetNumber());
+		selectionSetP.SelectTo(cursorP.GetNumber());
 	}
 	else
 	{
-		selectionSet.SelectFrom(cursor.GetNumber());
+		selectionSetP.SelectFrom(cursorP.GetNumber());
 	}
 
-	selectionSet.Print();
+	selectionSetP.Print();
 
-	redrawSet.AddFrom(selectionSet);
+	redrawSetP.AddFrom(selectionSetP);
 
-	redrawSet.Print();
+	redrawSetP.Print();
 
 	redrawType = REDRAW_SELECTION;
     Refresh(DONT_ERASE_BACKGROUND);
@@ -451,16 +479,16 @@ void ThumbnailCanvas::OnFocusEvent(wxFocusEvent &event)
     //cout << "ThumbnailCanvas::OnFocusEvent" << endl;
 	inFocus = true;
 
-    if ((cursor.GetNumber() > -1) && (cursor.GetNumber() < thumbnails.size()))
+    if ((cursorP.GetNumber() > -1) && (cursorP.GetNumber() < thumbnails.size()))
     {
         //cursorNumberthumbnails[cursorNumber].Select();
-        cursor.SetupRedraw(redrawSet);
+        cursorP.SetupRedraw(redrawSetP);
         redrawType = REDRAW_SELECTION;
         Refresh(DONT_ERASE_BACKGROUND);
     }
     else
     {
-		cursor.SetTo(0);
+		cursorP.SetTo(0);
     }
 }
 
@@ -470,16 +498,16 @@ void ThumbnailCanvas::OnFocusKillEvent(wxFocusEvent &event)
 
     //cout << "ThumbnailCanvas::OnFocusKillEvent" << endl;
 
-    if ((cursor.GetNumber() > -1) && (cursor.GetNumber() < thumbnails.size()))
+    if ((cursorP.GetNumber() > -1) && (cursorP.GetNumber() < thumbnails.size()))
     {
 		//thumbnails[cursorNumber].UnSelect();
-		cursor.SetupRedraw(redrawSet);
+		cursorP.SetupRedraw(redrawSetP);
 		redrawType = REDRAW_SELECTION;
         Refresh(DONT_ERASE_BACKGROUND);         // Don't erase background
     }
     else
     {
-		cursor.SetTo(0);
+		cursorP.SetTo(0);
     }
 
     //cout << "done" << endl;
@@ -504,6 +532,7 @@ void ThumbnailCanvas::CreateAntiAliasedBitmap()
 void ThumbnailCanvas::ClearThumbnails()
 {
     thumbnails.clear();
+    thumbnailPointers.clear();
 }
 
 void ThumbnailCanvas::LoadThumbnails(wxString directory)
@@ -515,13 +544,19 @@ void ThumbnailCanvas::LoadThumbnails(wxString directory)
 
     int n = fileNameList.files.size();
     thumbnails.reserve(n);
+    thumbnailPointers.reserve(n);
     for (int i = 0; i<n; i++)
     {
         wxString fullPath = directory;
         fullPath += wxT("\\");
-        fullPath += fileNameList.files[i];
+        fullPath += fileNameList.files[i].fileName.GetFullPath();
 
         thumbnails.emplace_back(wxPoint(0,0), fullPath);
+    }
+
+    for (int i = 0; i < n; i++)
+    {
+        thumbnailPointers.push_back( &thumbnails[i] );
     }
 
     if (n > 0)
@@ -552,7 +587,7 @@ bool ThumbnailCanvas::HandleThumbnailLoading()
         {
             //cout << "    removing" << endl;
             loadingSet.RemoveSingle(th);
-            redrawSet.AddSingle(th);
+            redrawSetP.AddSingle(th);
             i--;
             n--;
         }
@@ -580,7 +615,7 @@ bool ThumbnailCanvas::HandleThumbnailLoading()
         //cout << "  * starting " << th << endl;
     }
 
-    if (redrawSet.size())
+    if (redrawSetP.size())
     {
         redrawType = REDRAW_SELECTION;
         Refresh(DONT_ERASE_BACKGROUND);
@@ -657,8 +692,8 @@ void ThumbnailCanvas::OnMouseEvent(wxMouseEvent &event)
             {
                 //cout << "Selecting range " << selectionStart << "-" << th << endl;
 				int selectionEnd = th;
-				redrawSet.SetRange(selectionEnd, th);
-                selectionSet.SetRange(selectionStart, selectionEnd);
+				redrawSetP.SetRange(selectionEnd, th);
+                selectionSetP.SetRange(selectionStart, selectionEnd);
                 redrawType = REDRAW_SELECTION;
                 Refresh(DONT_ERASE_BACKGROUND);
             }
@@ -668,10 +703,10 @@ void ThumbnailCanvas::OnMouseEvent(wxMouseEvent &event)
                 //cout << "  selectionSet: ";  selectionSet.Print();
                 //cout << "     redrawSet: ";     redrawSet.Print();
 
-                cursor.SetTo(th);
-                cursor.SetupRedraw(redrawSet);
-                redrawSet.AddFrom(selectionSet);
-                selectionSet.Clear();
+                cursorP.SetTo(th);
+                cursorP.SetupRedraw(redrawSetP);
+                redrawSetP.AddFrom(selectionSetP);
+                selectionSetP.Clear();
                 selectionStart = th;
 
                 redrawType = REDRAW_SELECTION;

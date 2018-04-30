@@ -96,44 +96,47 @@ int ReadJpegHeader(const char* filename, int* width, int* height)
     (void)jpeg_start_decompress(&cinfo);
 
     row_stride = cinfo.output_width * cinfo.output_components;
-    buffer     = (*cinfo.mem->alloc_sarray)((j_common_ptr)&cinfo, JPOOL_IMAGE, row_stride, 1);
+    int samples_per_row = 1;
 
+    // Allocate a buffer which will be destroyed automatically when the jpeg has finished being read.
+    buffer     = (*cinfo.mem->alloc_sarray)((j_common_ptr)&cinfo, JPOOL_IMAGE, row_stride, samples_per_row);
+
+    
+    printf("D\n");
     return 1;
 }
 
-JSAMPARRAY rowBuffer = 0;
-FILE *outputFile;
-
-put_scanline_someplace(char* buffer, int row_stride)
-{
-	fwrite(buffer, 1, row_stride, outputFile);
-}
 
 int JpegRead(unsigned char* imageBuffer)
 {
-	row_stride = cinfo.output_width * cinfo.output_components;
-	buffer     = (*cinfo.mem->alloc_sarray)((j_common_ptr)&cinfo, JPOOL_IMAGE, row_stride, 1);
-	outputFile = fopen("output2.raw", "wb");
+    printf("JpegRead\n");
+    //row_stride = cinfo.output_width * cinfo.output_components;
+	//buffer     = (*cinfo.mem->alloc_sarray)((j_common_ptr)&cinfo, JPOOL_IMAGE, row_stride, 1);
+	//outputFile = fopen("output2.raw", "wb");
 
     char *dest = imageBuffer;
 	//JSAMPARRAY scanLine = &dest;
 
-    printf("JpegRead\n");
     while (cinfo.output_scanline < cinfo.output_height)
     {
         //(void)jpeg_read_scanlines(&cinfo, scanLine, 1);
 		(void)jpeg_read_scanlines(&cinfo, buffer, 1);
 
-		printf("  Copy %p to %p   bytes:%d\n", buffer[0], dest, row_stride);
-		//memcpy(dest, buffer[0], row_stride);
-		put_scanline_someplace(buffer[0], row_stride);
-		dest += row_stride*3;
+		//printf("  Copy %p to %p   bytes:%d\n", buffer[0], dest, row_stride);
+		memcpy(dest, buffer[0], row_stride);
+		//put_scanline_someplace(buffer[0], row_stride);
+		dest += row_stride;
     }
 
     (void)jpeg_finish_decompress(&cinfo);
+    printf("e\n");
     jpeg_destroy_decompress(&cinfo);
+    printf("f\n");
     fclose(infile);
-	fclose(outputFile);
+    printf("g\n");
+    //fclose(outputFile);
+
+    printf("JpegRead Done\n");
 
 	return 1;
 }
