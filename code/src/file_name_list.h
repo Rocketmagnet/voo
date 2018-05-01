@@ -31,7 +31,9 @@ public:
         else
         {
             //return fileName.GetName().CmpNatural(rhs.fileName.GetName()) < 0;
-            return wxNaturalStringSortNoCaseAscending(fileName.GetName(), (rhs.fileName.GetName())) < 0;
+            return wxDictionaryStringSortAscending(fileName.GetName(), (rhs.fileName.GetName())) < 0;
+
+            // wxNaturalStringSortNoCaseAscending
         }
     }
 

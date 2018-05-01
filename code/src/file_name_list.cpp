@@ -21,7 +21,7 @@ FileNameList::FileNameList(wxString dir)
 
 bool FileSortNatural(const DirSortingItem &fn1, const DirSortingItem &fn2)
 {
-    return (fn1.fileName.GetName().CmpNatural(fn2.fileName.GetName()) < 0);
+    return (fn1.fileName.GetName().CmpNoCase(fn2.fileName.GetName()) < 0);
 }
 
 void FileNameList::LoadFileList(wxString dir)
