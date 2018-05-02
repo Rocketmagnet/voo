@@ -15,7 +15,7 @@ using namespace std;
 
 extern "C"
 {
-#include "jpeg_turbo.h"
+    #include "jpeg_turbo.h"
 };
 
 
@@ -286,18 +286,25 @@ void GL_Image::Load(wxString path)
 
 		wxLongLong startTime = wxGetLocalTimeMillis();
 		//int exitCode = LoadJPEGTest("IMG_2287.jpg"); // fileName.char_str());
-		int exitCode = ReadJpegHeader((const  char*)path.c_str(), &w, &h);
-		cout << "Image " << w << "x" << h << endl;
-		//int exitCode = read_JPEG_file((const  char*)fileName.c_str());
-		//char *imageBuffer = new char[w*h*3];
-		wxImg.Create(w, h);
-		//wxImg.SetRGB(wxRect(0, 0, w, h), 128, 64, 0);
-		JpegRead(wxImg.GetData());
+		jpeg_load_state *load_state = ReadJpegHeader((const  char*)path.c_str());
 
 
-		wxLongLong endTime = wxGetLocalTimeMillis();
-		//cout << "exitCode = " << exitCode << endl;
-		cout << "JPEG load time = " << endTime - startTime << endl;
+        if (load_state)
+        {
+            int w = load_state->width, h = load_state->height;
+
+            cout << "Image " << w << "x" << h << endl;
+            //int exitCode = read_JPEG_file((const  char*)fileName.c_str());
+            //char *imageBuffer = new char[w*h*3];
+            wxImg.Create(w, h);
+            //wxImg.SetRGB(wxRect(0, 0, w, h), 128, 64, 0);
+            JpegRead(wxImg.GetData(), load_state);
+
+
+            wxLongLong endTime = wxGetLocalTimeMillis();
+            //cout << "exitCode = " << exitCode << endl;
+            cout << "JPEG load time = " << endTime - startTime << endl;
+        }
 	}
 	else
 	{

@@ -410,7 +410,7 @@ public:
     void OnFocusEvent(wxFocusEvent &event);
     void OnFocusKillEvent(wxFocusEvent &event);
 
-    int  GetThumbnailFromPosition(wxPoint &position);
+    int     GetThumbnailFromPosition(wxPoint &position);
     wxPoint GetThumbnailPosition(size_t n);
 
     void SetCursorTo(int n);

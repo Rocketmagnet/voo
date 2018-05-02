@@ -1,27 +1,10 @@
-
 #include <stdio.h>
-#include "jpeglib.h"
-#include <setjmp.h>
-
-struct my_error_mgr {
-    struct jpeg_error_mgr pub;    /* "public" fields */
-
-    jmp_buf setjmp_buffer;        /* for return to caller */
-};
+#include "jpeg_turbo.h"
 
 
-JSAMPLE *image_buffer;          // Points to large array of R,G,B-order data
-
-struct jpeg_decompress_struct cinfo;
-struct my_error_mgr           jerr;
-
-FILE       *infile;             // source file
-JSAMPARRAY  buffer;             // Output row buffer
-int         row_stride;         // physical row width in output buffer
 
 
 typedef struct my_error_mgr *my_error_ptr;
-
 
 METHODDEF(void) my_error_exit(j_common_ptr cinfo)
 {
@@ -39,10 +22,12 @@ METHODDEF(void) my_error_exit(j_common_ptr cinfo)
 }
 
 
-int ReadJpegHeader(const char* filename, int* width, int* height)
+jpeg_load_state* ReadJpegHeader(const char* filename)
 {
+
 	printf("ReadJpegHeader(%s)\n", filename);
 
+    FILE *infile;
     if ((infile = fopen(filename, "rb")) == NULL)
     {
         printf("can't open %s\n", filename);
@@ -52,40 +37,47 @@ int ReadJpegHeader(const char* filename, int* width, int* height)
     {
         printf("opened %s\n", filename);
     }
+
+    // If the file was successfully opened, then allocate memory.
+    jpeg_load_state* load_state = malloc(sizeof(jpeg_load_state));
+
+    load_state->infile = infile;
     /* Step 1: allocate and initialize JPEG decompression object */
 
     /* We set up the normal JPEG error routines, then override error_exit. */
-    cinfo.err = jpeg_std_error(&jerr.pub);
-    jerr.pub.error_exit = my_error_exit;
+    load_state->cinfo.err = jpeg_std_error(&load_state->jerr.pub);
+    load_state->jerr.pub.error_exit = my_error_exit;
 
     /* Establish the setjmp return context for my_error_exit to use. */
-    if (setjmp(jerr.setjmp_buffer))
+    if (setjmp(load_state->jerr.setjmp_buffer))
     {
         /* If we get here, the JPEG code has signaled an error.
         * We need to clean up the JPEG object, close the input file, and return.
         */
         printf("failed\n");
-        jpeg_destroy_decompress(&cinfo);
-        fclose(infile);
+        jpeg_destroy_decompress(&load_state->cinfo);
+        fclose(load_state->infile);
+
+        free(load_state);
         return 0;
     }
 
 
     printf("A\n");
     /* Now we can initialize the JPEG decompression object. */
-    jpeg_create_decompress(&cinfo);
+    jpeg_create_decompress(&load_state->cinfo);
 
 
     printf("B\n");
     /* Step 2: specify data source (eg, a file) */
-    jpeg_stdio_src(&cinfo, infile);
+    jpeg_stdio_src(&load_state->cinfo, load_state->infile);
 
 
     printf("C\n");
     /* Step 3: read file parameters with jpeg_read_header() */
-    (void)jpeg_read_header(&cinfo, TRUE);
-    *width  = cinfo.image_width;
-    *height = cinfo.image_height;
+    (void)jpeg_read_header(&load_state->cinfo, TRUE);
+    load_state->width  = load_state->cinfo.image_width;
+    load_state->height = load_state->cinfo.image_height;
 
     /* Step 4: set parameters for decompression */
 
@@ -93,21 +85,21 @@ int ReadJpegHeader(const char* filename, int* width, int* height)
     * jpeg_read_header(), so we do nothing here.
     */
 
-    (void)jpeg_start_decompress(&cinfo);
+    (void)jpeg_start_decompress(&load_state->cinfo);
 
-    row_stride = cinfo.output_width * cinfo.output_components;
+    load_state->row_stride = load_state->cinfo.output_width * load_state->cinfo.output_components;
     int samples_per_row = 1;
 
     // Allocate a buffer which will be destroyed automatically when the jpeg has finished being read.
-    buffer     = (*cinfo.mem->alloc_sarray)((j_common_ptr)&cinfo, JPOOL_IMAGE, row_stride, samples_per_row);
+    load_state->buffer     = (*load_state->cinfo.mem->alloc_sarray)((j_common_ptr)&load_state->cinfo, JPOOL_IMAGE, load_state->row_stride, samples_per_row);
 
     
     printf("D\n");
-    return 1;
+    return load_state;
 }
 
 
-int JpegRead(unsigned char* imageBuffer)
+int JpegRead(unsigned char* imageBuffer, jpeg_load_state* load_state)
 {
     printf("JpegRead\n");
     //row_stride = cinfo.output_width * cinfo.output_components;
@@ -117,26 +109,26 @@ int JpegRead(unsigned char* imageBuffer)
     char *dest = imageBuffer;
 	//JSAMPARRAY scanLine = &dest;
 
-    while (cinfo.output_scanline < cinfo.output_height)
+    while (load_state->cinfo.output_scanline < load_state->cinfo.output_height)
     {
         //(void)jpeg_read_scanlines(&cinfo, scanLine, 1);
-		(void)jpeg_read_scanlines(&cinfo, buffer, 1);
+		(void)jpeg_read_scanlines(&load_state->cinfo, load_state->buffer, 1);
 
 		//printf("  Copy %p to %p   bytes:%d\n", buffer[0], dest, row_stride);
-		memcpy(dest, buffer[0], row_stride);
+		memcpy(dest, load_state->buffer[0], load_state->row_stride);
 		//put_scanline_someplace(buffer[0], row_stride);
-		dest += row_stride;
+		dest += load_state->row_stride;
     }
 
-    (void)jpeg_finish_decompress(&cinfo);
+    (void)jpeg_finish_decompress(&load_state->cinfo);
     printf("e\n");
-    jpeg_destroy_decompress(&cinfo);
+    jpeg_destroy_decompress(&load_state->cinfo);
     printf("f\n");
-    fclose(infile);
+    fclose(load_state->infile);
     printf("g\n");
     //fclose(outputFile);
 
     printf("JpegRead Done\n");
-
+    free(load_state);
 	return 1;
 }

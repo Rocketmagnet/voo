@@ -15,7 +15,7 @@ using namespace std;
 
 extern "C"
 {
-#include "jpeg_turbo.h"
+    #include "jpeg_turbo.h"
 };
 
 
@@ -85,21 +85,26 @@ wxThread::ExitCode ThumbnailLoader::Entry()
     {
         cout << "Using JpegTurbo to load thumbnail " << fileName << endl;
 
-        int w, h;
-        int exitCode = ReadJpegHeader((const  char*)fileName.c_str(), &w, &h);
-        cout << "Image " << w << "x" << h << endl;
-        image.Create(w, h);
-        cout << "a" << endl;
-        image.SetRGB(wxRect(0, 0, w, h), 128, 64, 0);
-        cout << "b" << endl;
-        JpegRead(image.GetData());
-        cout << "c" << endl;
+        jpeg_load_state *load_state = ReadJpegHeader((const  char*)fileName.c_str());
 
-        wxSize newSize = thumbnail.GetTnImageSize(image.GetSize(), thumbnail.tnSize);
-        image.Rescale(newSize.GetWidth(), newSize.GetHeight(), wxIMAGE_QUALITY_BILINEAR);
-        thumbnail.bitmap = wxBitmap(image);
-        image.Destroy();
-        thumbnail.imageLoaded = true;
+        if (load_state)
+        {
+            int w = load_state->width, h = load_state->height;
+
+            cout << "Image " << w << "x" << h << endl;
+            image.Create(w, h);
+            cout << "a" << endl;
+            image.SetRGB(wxRect(0, 0, w, h), 128, 64, 0);
+            cout << "b" << endl;
+            JpegRead(image.GetData(), load_state);
+            cout << "c" << endl;
+
+            wxSize newSize = thumbnail.GetTnImageSize(image.GetSize(), thumbnail.tnSize);
+            image.Rescale(newSize.GetWidth(), newSize.GetHeight(), wxIMAGE_QUALITY_BILINEAR);
+            thumbnail.bitmap = wxBitmap(image);
+            image.Destroy();
+            thumbnail.imageLoaded = true;
+        }
     }
     else
     {
@@ -285,7 +290,7 @@ ThumbnailCanvas::ThumbnailCanvas(wxWindow *parent, wxWindowID id, const wxPoint 
   redrawSetP(256),
   waitingSet(256),
   loadingSet(8),
-  maxLoading(1)
+  maxLoading(4)
 {
     SetBackgroundColour(backgroundColor);
 
