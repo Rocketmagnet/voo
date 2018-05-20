@@ -37,7 +37,7 @@
 #include <iostream>
 using namespace std;
 
-#define PRIVATE_DIRS_FILE_NAME "C:\\Users\\Hugo\\Downloads\\prvdirs.txt"
+#define PRIVATE_DIRS_FILE_NAME "prvdirs.txt"
 
  
 ////@begin XPM images
@@ -61,8 +61,8 @@ IMPLEMENT_CLASS(ImageBrowser, wxFrame)
 	////@begin ImageBrowser event table entries
 	////@end ImageBrowser event table entries
 	EVT_DIRCTRL_SELECTIONCHANGED(ID_DIRECTORY_CTRL, ImageBrowser::OnDirClicked)
-	EVT_DIRCTRL_MENU_POPPED_UP(wxID_MENU_DIR,  ImageBrowser::DirMenuPopped)
-	EVT_DIRCTRL_MENU_POPPED_UP(wxID_MENU_FILE, ImageBrowser::FileMenuPopped)
+	//EVT_DIRCTRL_MENU_POPPED_UP(wxID_MENU_DIR,  ImageBrowser::DirMenuPopped)
+	EVT_DIRCTRL_MENU_POPPED_UP(wxID_MENU_DIR, ImageBrowser::MenuPopped)
 	END_EVENT_TABLE()
 
 
@@ -307,11 +307,82 @@ void ImageBrowser::ReNumberImages(wxCommandEvent &evt)
     wxDirItemData *data = dirTreeCtrl->GetRightClickItemData();
   
     cout << "ReNumberImages " << data->m_path << endl;
-    //std::cout << "data =    " << data << std::endl;
-    //std::cout << "testFunc: " << data->m_name << std::endl;
 }
 
- 
+bool RemoveDirectory(wxString pathName)
+{
+    wxString fn;
+    wxDir dir(pathName);
+    bool cont = dir.GetFirst(&fn);
+
+    cout << "RemoveDirectory(" << pathName << ")" << endl;
+
+    // if there are files to process
+    if (cont)
+    {
+        do {
+            // if the next filename is actually a directory
+            wxString subPath = dir.GetName() + wxFILE_SEP_PATH + fn + wxFILE_SEP_PATH;
+
+            cout << "Checking for existence of " << subPath << " " << wxDirExists(subPath) << endl;
+
+            if (wxDirExists(subPath))
+            {
+                cout << "deleting " << subPath << endl;
+                // delete this directory
+                RemoveDirectory(subPath);
+            }
+            else
+            {
+                // otherwise attempt to delete this file
+                cout << "Attempt to remove file " << pathName + fn << endl;
+                if (!wxRemoveFile(pathName + fn))
+                {
+                    // error if we couldn't
+                    //wxLogError("Could not remove file \"" + pathName + fn + "\"");
+                    return false;
+                }
+            }
+        }
+        // get the next file name
+        while (dir.GetNext(&fn));
+    }
+
+    cout << "Now remove directory " << pathName << endl;
+    bool success = wxRmDir(pathName);
+    cout << "success = " << success << endl;
+    return true;
+}
+
+void ImageBrowser::DeleteDirectory(wxCommandEvent &evt)
+{
+    wxDirItemData *data = dirTreeCtrl->GetRightClickItemData();
+    wxFileName dir(data->m_path);
+
+    //cout << "Delete " << data->m_path << endl;
+
+    wxMessageDialog *test = new wxMessageDialog(nullptr, wxT("Delete ") + data->m_path, wxT("caption"), wxYES_NO| wxNO_DEFAULT);
+    int ret = test->ShowModal();
+
+    //cout << "Returned " << ret << endl;
+
+    if (ret == wxID_YES)
+    {
+        RemoveDirectory(data->m_path);
+        dir.RemoveLastDir();
+        dirTreeCtrl->CollapsePath(dir.GetFullPath());
+        dirTreeCtrl->ExpandPath(dir.GetFullPath());
+    }
+}
+
+void ImageBrowser::MakeTopDirectory(wxCommandEvent &evt)
+{
+    wxDirItemData *data = dirTreeCtrl->GetRightClickItemData();
+
+    cout << "Make Top " << data->m_path << endl;
+}
+
+/* 
 void ImageBrowser::DirMenuPopped(wxCommandEvent &event)
 {
 	cout << "DirMenuPopped" << endl;
@@ -320,14 +391,19 @@ void ImageBrowser::DirMenuPopped(wxCommandEvent &event)
 	int id = dirTreeCtrl->NewMenuItem("Renumber Images");
 	dirTreeCtrl->Bind(wxEVT_MENU, &ImageBrowser::ReNumberImages, this, id);
 }
+*/
 
-void ImageBrowser::FileMenuPopped(wxCommandEvent &event)
+void ImageBrowser::MenuPopped(wxCommandEvent &event)
 {
-	cout << "DirMenuPopped" << endl;
-
 	dirTreeCtrl->GetMenu()->AppendSeparator();
 	int id = dirTreeCtrl->NewMenuItem("Renumber Images");
 	dirTreeCtrl->Bind(wxEVT_MENU, &ImageBrowser::ReNumberImages, this, id);
+
+    id = dirTreeCtrl->NewMenuItem("Delete Directory");
+    dirTreeCtrl->Bind(wxEVT_MENU, &ImageBrowser::DeleteDirectory, this, id);
+
+    id = dirTreeCtrl->NewMenuItem("Make Top Directory");
+    dirTreeCtrl->Bind(wxEVT_MENU, &ImageBrowser::MakeTopDirectory, this, id);
 }
 
 //typedef void (Class::*fnTest)(int x);
@@ -375,15 +451,15 @@ void ImageBrowser::CreateControls()
     
     
     //dirTreeCtrl = new PowerDirCtrl(splitter1, ID_DIRECTORY_CTRL, _T("C:\\"), wxDefaultPosition, wxSize(320, 200), wxDIRCTRL_DIR_ONLY);
-	dirTreeCtrl = new wxGenericDirCtrl(splitter1, ID_DIRECTORY_CTRL, _T("C:\\"), wxDefaultPosition, wxSize(320, 200), //wxDIRCTRL_DIR_ONLY              |
-																													  wxDIRCTRL_EDIT_LABELS |
-																													  wxDIRCTRL_RCLICK_MENU |
+	dirTreeCtrl = new wxGenericDirCtrl(splitter1, ID_DIRECTORY_CTRL, _T("C:\\"), wxDefaultPosition, wxSize(320, 200), wxDIRCTRL_DIR_ONLY              |
+																													  wxDIRCTRL_EDIT_LABELS           |
+																													  wxDIRCTRL_RCLICK_MENU           |
                                                                                                                       wxDIRCTRL_RCLICK_MENU_SORT_NAME |
                                                                                                                       wxDIRCTRL_RCLICK_MENU_SORT_DATE);
 
     //dirTreeCtrl->AddRightClickMenuItem("testFunc", this, (wxFrame::(*func)(wxCommandEvent &))ImageBrowser::testFunc);
-    //int id = dirTreeCtrl->NewMenuItem("testFunc", wxDIRCTRL_MENU_FILE);
-    //dirTreeCtrl->Bind(wxEVT_MENU, &ImageBrowser::testFunc, this, id);
+    //int id = dirTreeCtrl->NewMenuItem("testFunc");
+    //dirTreeCtrl->Bind(wxEVT_MENU, &ImageBrowser::MenuPopped, this, id);
 	
     //int id = dirTreeCtrl->NewMenuItem("testFunc");
     //dirTreeCtrl->Bind(wxEVT_MENU, std::bind(&ImageBrowser::testFunc, this), id);

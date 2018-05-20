@@ -28,7 +28,7 @@ class FileNameList;
 #include "wx/dir.h"
 #include "wx/filename.h"
 #include <vector>
-
+#include  "wx/timer.h"
 #include "gl_panel.h"
 
 /*!
@@ -43,8 +43,9 @@ class FileNameList;
  */
 
 ////@begin control identifiers
-#define ID_IMAGEVIEWER 10000
-#define ID_IMAGEPANEL  10001
+#define ID_IMAGEVIEWER        10000
+#define ID_IMAGEPANEL         10001
+#define IMAGE_VIEWER_TIMER_ID 10002
 #define SYMBOL_IMAGEVIEWER_STYLE wxCAPTION|wxRESIZE_BORDER|wxSYSTEM_MENU|wxCLOSE_BOX
 #define SYMBOL_IMAGEVIEWER_TITLE _("ImageViewer")
 #define SYMBOL_IMAGEPANEL_TITLE  _("ImagePanel")
@@ -108,6 +109,7 @@ public:
     void OnIdle(wxIdleEvent &event);
     void OnClose(wxCloseEvent &event);
     void EnableClose() { closeEnabled = true; }
+    void OnTimer(wxTimerEvent &event);
 
     void NextImage();
     void PrevImage();
@@ -128,6 +130,7 @@ public:
 
     /// Should we show tooltips?
     static bool ShowToolTips();
+    void ClearKeys();
 
 ////@begin ImageViewer member variables
     //ImagePanel              *imagePanel;
@@ -139,6 +142,8 @@ public:
     std::vector<char>        keys;
     int                      displayNumber;       // File to load and display, when the viewer becomes visible.
     bool                     closeEnabled;
+    wxTimer                  timer;
+
     ////@end ImageViewer member variables
 };
 

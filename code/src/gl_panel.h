@@ -5,6 +5,9 @@
 #include "wx/glcanvas.h"
 #include "drawable.h"
 
+#define GL_PANEL_BLANK_SCREEN   true
+#define GL_PANEL_RENDER_IMAGE   false
+
 class FileNameList;
 
 class BasicGLPanel : public wxGLCanvas
@@ -23,6 +26,8 @@ public:
     void Prepare3DViewport(int topleft_x, int topleft_y, int bottomrigth_x, int bottomrigth_y);
     void Prepare2DViewport(int topleft_x, int topleft_y, int bottomrigth_x, int bottomrigth_y);
 
+    void Clear();
+
     //void DisplayImage(wxString filename);
     void DisplayImage(int imageNumber);
 
@@ -35,7 +40,7 @@ public:
     void MouseLeftWindow(wxMouseEvent& event);
     void KeyPressed(wxKeyEvent& event);
     void KeyReleased(wxKeyEvent& event);
-    void Render();
+    void Render(bool blankScreen);
 
     void ZoomIn();
     void ZoomOut();

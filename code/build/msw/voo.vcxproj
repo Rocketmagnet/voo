@@ -97,6 +97,7 @@
       <AdditionalIncludeDirectories>C:\wxWidgets\lib\vc_lib;C:\wxWidgets\include;C:\wxWidgets\lib\vc_lib\mswu;.;..\..\lib;%(AdditionalIncludeDirectories);lib;D:\wxWidgets\lib\vc_lib;D:\wxWidgets\include;D:\wxWidgets\lib\vc_lib\mswu</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_NDEBUG;_CRT_SECURE_NO_DEPRECATE=1;_CRT_NON_CONFORMING_SWPRINTFS=1;_SCL_SECURE_NO_WARNINGS=1;__WXMSW__;_UNICODE;_WINDOWS;NOPCH;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>

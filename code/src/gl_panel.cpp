@@ -37,11 +37,11 @@ BasicGLPanel::BasicGLPanel(wxFrame* parent, int* args)
   scaling(1.0f),
   glewInitialised(false),
   currentImage(0),
-  imageServer(10)
+  imageServer(10),
+  imageNumberToLoad(-1)
 {
     m_context = new wxGLContext(this);
     imageServer.SetPointers(this, m_context);
-    cout << "Created context" << endl;
 }
 
 
@@ -158,7 +158,7 @@ void BasicGLPanel::DisplayImage(int imageNumber)
 void BasicGLPanel::OnPaint(wxPaintEvent& evt)
 {
     //cout << endl;
-    //cout << "BasicGLPanel::OnPaint " << endl;
+    cout << "BasicGLPanel::OnPaint " << endl;
 
     /*
     wxGLCanvas::SetCurrent(*m_context);
@@ -185,6 +185,8 @@ void BasicGLPanel::OnPaint(wxPaintEvent& evt)
     if (!glewInitialised)
     {
         wxGLCanvas::SetCurrent(*m_context);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Black Background
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         GLenum err = glewInit();
         if (GLEW_OK != err)
         {
@@ -196,13 +198,22 @@ void BasicGLPanel::OnPaint(wxPaintEvent& evt)
         glewInitialised = true;
     }
 
-    Render();
+    cout << "BasicGLPanel Rendering myself" << endl;
+    Render(false);
 
     //cout << "BasicGLPanel::OnPaint - Done" << endl;
 }
 
+void BasicGLPanel::Clear()
+{
+    wxGLCanvas::SetCurrent(*m_context);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Black Background
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glFlush();
+    SwapBuffers();
+}
 
-void BasicGLPanel::Render()
+void BasicGLPanel::Render(bool blankScreen)
 {
     if (!IsShown())         return;
     if (!glewInitialised)   return;
@@ -220,7 +231,10 @@ void BasicGLPanel::Render()
 
         cout << "newImage = " << newImage << endl;
         if (currentImage)
+        {
             newImage->CopyScaleAndPositionFrom(*currentImage);
+            newImage->ExpandToSides();
+        }
 
         currentImage = newImage;
 
@@ -241,11 +255,14 @@ void BasicGLPanel::Render()
     //glTranslatef(sprite->image->G)
 
 
-    if (currentImage)
+    if (currentImage && !blankScreen)
     {
         //currentImage->setHotspotCentered();
-        currentImage->ClampToSides();
-        currentImage->Render();
+        {
+            currentImage->basicGLPanel = this;
+            currentImage->ClampToSides();
+            currentImage->Render();
+        }
     }
     glFlush();
     SwapBuffers();    

@@ -61,11 +61,13 @@ GL_Image::GL_Image()
 : hasGeneratedTexture(false),
   basicGLPanel(0)
 {
-    //cout << this << "  GL_Image::GL_Image()" << endl;
+    cout << this << "  GL_Image::GL_Image()" << endl;
 
     x     = 0.0;
     y     = 0.0;
     scale = 1.0;
+
+    cout << x << endl;
 }
 
 
@@ -76,6 +78,37 @@ GL_Image::~GL_Image()
 }
 
 
+void GL_Image::ExpandToSides()
+{
+    double screenAspect = basicGLPanel->GetWidth() / basicGLPanel->GetHeight();
+    double imageAspect  = width / height;
+    double screenWidth  = basicGLPanel->GetWidth();
+    double screenHeight = basicGLPanel->GetHeight();
+
+    cout << "GL_Image::ExpandToSides()" << endl;
+    cout << "  x " << endl;
+
+    if (imageAspect > screenAspect)     // If image is more WideScreen than the screen
+    {                                   // then touch the sides, and leave gaps at the top and bottom
+        if (width < screenWidth)
+        {
+            x      = 0;
+            width  = screenWidth;
+            height = width / imageAspect;
+            y      = 0.5 * (screenHeight - height);
+        }
+    }
+    else                                // If screen is more Widescreen that the image
+    {
+        if (height < screenHeight)
+        {
+            y      = 0;
+            height = screenHeight;
+            width  = height * imageAspect;
+            x      = 0.5 * (screenWidth - width);
+        }
+    }
+}
 
 void GL_Image::ClampToSides()
 {
@@ -154,7 +187,6 @@ void GL_Image::ClampToSides()
 
 void GL_Image::Render()
 {   
-
     if (!loadedImage)
         return;
 
@@ -177,13 +209,17 @@ void GL_Image::Render()
 
     glTranslatef(screenWidth * 0.5, screenHeight * 0.5, 0);
 
-    glBindTexture(GL_TEXTURE_2D, ID);
+    //glBindTexture(GL_TEXTURE_2D, ID);
 
     glBegin(GL_QUADS);
         glTexCoord2f(          0, tex_coord_y);    glVertex2f(left,  top   );
         glTexCoord2f(tex_coord_x, tex_coord_y);    glVertex2f(right, top   );
         glTexCoord2f(tex_coord_x,           0);    glVertex2f(right, bottom);
         glTexCoord2f(          0,           0);    glVertex2f(left,  bottom);
+        //glVertex2f(left, top);
+        //glVertex2f(right, top);
+        //glVertex2f(right, bottom);
+        //glVertex2f(left, bottom);
     glEnd();
 }
 
@@ -197,7 +233,10 @@ void GL_Image::UploadNextBlock()
     wxLongLong startTime = wxGetLocalTimeMillis();
 
     if (hasGeneratedTexture)
+    {
+        hasGeneratedTexture = false;
         glDeleteTextures(1, &ID);
+    }
 
     glGenTextures(1, &ID);
     hasGeneratedTexture = true;
@@ -253,15 +292,22 @@ void GL_Image::CopyImageLine(int y)
 
 void GL_Image::Invalidate()
 {
-    loadedImage = false;
-    uploadedTexture = false;
+    if (hasGeneratedTexture)
+    {
+        glDeleteTextures(1, &ID);
+    }
+
+    hasGeneratedTexture = false;
+    loadedImage         = false;
+    uploadedTexture     = false;
 }
 
 
 void GL_Image::Load(wxString path)
 {
-    cout << "Load()" << endl;
+    cout << "GL_Image::Load(" << path << ")" << endl;
 
+    //Invalidate();
 
     loadedImage       = false;
     uploadedTexture   = false;
@@ -272,7 +318,7 @@ void GL_Image::Load(wxString path)
     // check the file exists
     if (!wxFileExists(path))
     {
-        cout << "File doesn't exist: " << path << endl;
+        cout << "  File doesn't exist: " << path << endl;
         exit(1);
     }
 
@@ -282,7 +328,7 @@ void GL_Image::Load(wxString path)
 	if ((fn.GetExt().Lower() == "jpg") ||
 		(fn.GetExt().Lower() == "jpeg"))
 	{
-		cout << "Using JPEG Turbo for " << path << endl;
+		cout << "  Using JPEG Turbo for " << path << endl;
 
 		wxLongLong startTime = wxGetLocalTimeMillis();
 		//int exitCode = LoadJPEGTest("IMG_2287.jpg"); // fileName.char_str());
@@ -308,15 +354,17 @@ void GL_Image::Load(wxString path)
 	}
 	else
 	{
+        cout << "  Using wxImage::Load()" << endl;
 		wxImg.SetOption(wxIMAGE_OPTION_GIF_TRANSPARENCY, wxIMAGE_OPTION_GIF_TRANSPARENCY_UNCHANGED);
 		wxImg.LoadFile(path);
 	}
 
+    cout << "  Loading done. Starting upload." << endl;
     wxLongLong startTime = wxGetLocalTimeMillis();
 
-    startTime = wxGetLocalTimeMillis();
-    width  = wxImg.GetWidth();
-    height = wxImg.GetHeight();
+    startTime     = wxGetLocalTimeMillis();
+    width         = wxImg.GetWidth();
+    height        = wxImg.GetHeight();
     textureWidth  = width;
     textureHeight = height;
 
@@ -324,7 +372,7 @@ void GL_Image::Load(wxString path)
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-    // Many graphics card require that textures be power of two.
+    // Many graphics cards require that textures be power of two.
     // Below is a simple implementation, probably not optimal but working.
     // If your texture sizes are not restricted to power of 2s, you can
     // of course adapt the bit below as needed.
@@ -455,9 +503,15 @@ void GL_Image::CreateFakeImage()
     glDeleteTextures(1, &ID);
 }
 
+void GL_ImageServer::SetFileNameList(FileNameList *fnl)
+{
+    fileNameList = fnl;
+}
 
 int GL_ImageServer::Cache(int imageNumber)
 {
+    cout << "Cache(" << imageNumber << ")" << endl;
+
     if (!fileNameList)
         return -1;
     
@@ -486,11 +540,21 @@ int GL_ImageServer::Cache(int imageNumber)
 
 
     //imageSet[cacheLocation].glImage.Load(path);
+    cout << "Loading " << (*fileNameList)[imageNumber] << endl;
     imageSet[cacheLocation].glImage.Load((*fileNameList)[imageNumber]);
+    cout << "Loading done" << endl;
+
     return cacheLocation;
 }
 
+GL_Image* GL_ImageServer::GetImage(int imageNumber)
+{
+    testImage.Load((*fileNameList)[imageNumber]);
 
+    return &testImage;
+}
+
+/*
 GL_Image* GL_ImageServer::GetImage(int imageNumber)
 {
     cout << endl << "GL_ImageServer::GetImage(" << imageNumber  << ")" << endl;
@@ -511,7 +575,7 @@ GL_Image* GL_ImageServer::GetImage(int imageNumber)
     //cout << "Detected load complete" << endl;
     return &(imageSet[cacheLocation].glImage);
 }
-
+*/
 
 int GL_ImageServer::GetCacheLocation(int imageNumber)
 {

@@ -281,7 +281,7 @@ ThumbnailCanvas::ThumbnailCanvas(wxWindow *parent, wxWindowID id, const wxPoint 
   cursorP(tnColumns, fileNameList),
   selectionStart(-1),
   backgroundColor(wxColor(64, 64, 64)),
-  tnSize(200, 200),
+  tnSize(150, 150),
   thBorder(5),
   redrawType(REDRAW_ALL),
   tnSpacingX(20),
@@ -290,7 +290,7 @@ ThumbnailCanvas::ThumbnailCanvas(wxWindow *parent, wxWindowID id, const wxPoint 
   redrawSetP(256),
   waitingSet(256),
   loadingSet(8),
-  maxLoading(4)
+  maxLoading(1)
 {
     SetBackgroundColour(backgroundColor);
 
@@ -357,6 +357,7 @@ void ThumbnailCanvas::RecalculateRowsCols()
     }
 
     redrawSetP.Clear();
+    cout << "Redraw All" << endl;
     redrawType = REDRAW_ALL;
 }
 
@@ -372,7 +373,7 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
     wxString cursorFileName;
     wxSize   cursorImageSize;
 
-
+    cout << "Redraw type " << redrawType << endl;
     switch (redrawType)
     {
         case REDRAW_ALL:
@@ -432,9 +433,40 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
             break;
     }
     
+    cout << "Redraw All" << endl;
     redrawType = REDRAW_ALL;
 }
 
+void ThumbnailCanvas::HandleCursorScrolling()
+{
+    int xPPU, yPPU;
+    GetScrollPixelsPerUnit(&xPPU, &yPPU);
+
+    Thumbnail *tn = thumbnailPointers[cursorP.GetNumber()];
+    wxPoint thPosition = tn->GetPosition();
+
+    // Check if cursor is off the top of the screen
+    int logical_X, logical_Y;
+    CalcScrolledPosition(thPosition.x, thPosition.y, &logical_X, &logical_Y);
+
+    if (logical_Y < 35)
+    {
+        Scroll(0, (thPosition.y - 35) / xPPU);
+        return;
+    }
+
+    // Check if cursor is off the bottom of the screen
+    CalcScrolledPosition(thPosition.x, thPosition.y + tnSize.y+35, &logical_X, &logical_Y);
+
+    int overlap = logical_Y - GetSize().GetHeight();
+
+    if (overlap > 0)
+    {
+        wxPoint scrollPosition = CalcUnscrolledPosition(wxPoint(0, 0));
+        int newScrollPosY = scrollPosition.y + overlap;
+        Scroll(0, (newScrollPosY) / xPPU);
+    }
+}
 
 void ThumbnailCanvas::OnKeyEvent(wxKeyEvent &event)
 {
@@ -470,13 +502,13 @@ void ThumbnailCanvas::OnKeyEvent(wxKeyEvent &event)
 	}
 
 	selectionSetP.Print();
-
 	redrawSetP.AddFrom(selectionSetP);
+	//redrawSetP.Print();
 
-	redrawSetP.Print();
-
-	redrawType = REDRAW_SELECTION;
+    //cout << "Redraw Selection" << endl;
+    redrawType = REDRAW_SELECTION;
     Refresh(DONT_ERASE_BACKGROUND);
+    HandleCursorScrolling();
 }
 
 void ThumbnailCanvas::OnFocusEvent(wxFocusEvent &event)
@@ -488,7 +520,9 @@ void ThumbnailCanvas::OnFocusEvent(wxFocusEvent &event)
     {
         //cursorNumberthumbnails[cursorNumber].Select();
         cursorP.SetupRedraw(redrawSetP);
-        redrawType = REDRAW_SELECTION;
+        cout << "Redraw Selection Focus" << endl;
+        //redrawType = REDRAW_SELECTION;
+        redrawType = REDRAW_ALL;
         Refresh(DONT_ERASE_BACKGROUND);
     }
     else
@@ -685,8 +719,18 @@ void ThumbnailCanvas::OnMouseEvent(wxMouseEvent &event)
 
     //ReportInt2(1, "Mouse: (%d, %d)", logicalPosition.x, logicalPosition.y);
     //cout << "OnMouseEvent" << endl;
+    if (event.LeftDClick())
+    {
+        cout << "Dclick" << endl;
+        int th = GetThumbnailFromPosition(logicalPosition);
+        imageViewer->DisplayImage(th);
+        cout << "Redraw All" << endl;
+        redrawType = REDRAW_ALL;
+    }
+
     if (event.LeftDown())
     {
+        cout << "Click" << endl;
         SetFocus();
 
         int th = GetThumbnailFromPosition(logicalPosition);
@@ -700,6 +744,7 @@ void ThumbnailCanvas::OnMouseEvent(wxMouseEvent &event)
 				redrawSetP.SetRange(selectionEnd, th);
                 selectionSetP.SetRange(selectionStart, selectionEnd);
                 redrawType = REDRAW_SELECTION;
+                cout << "Redraw Selection" << endl;
                 Refresh(DONT_ERASE_BACKGROUND);
             }
             else
@@ -714,6 +759,7 @@ void ThumbnailCanvas::OnMouseEvent(wxMouseEvent &event)
                 selectionSetP.Clear();
                 selectionStart = th;
 
+                cout << "Redraw Selection" << endl;
                 redrawType = REDRAW_SELECTION;
                 Refresh(DONT_ERASE_BACKGROUND);
             }
@@ -724,11 +770,6 @@ void ThumbnailCanvas::OnMouseEvent(wxMouseEvent &event)
         return;
     }
 
-    if (event.LeftDClick())
-    {
-        int th = GetThumbnailFromPosition(logicalPosition);
-        imageViewer->DisplayImage(th);
-    }
 
     //cout << "Done" << endl;
     //Update();

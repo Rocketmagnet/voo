@@ -87,7 +87,9 @@ public:
         y += yy;
         //std::cout << this << "  Move Rel(" << x << ", " << y << ")" << std::endl;
     }
+
     void ClampToSides();
+    void ExpandToSides();
 
     void CreateFakeImage();
 
@@ -119,11 +121,16 @@ private:
 
 struct ImageAndNumber
 {
+    ImageAndNumber()
+        : imageNumber(-1),
+        creationTime(0)
+    {
+    }
+
     GL_Image   glImage;
     int        imageNumber;
     size_t     creationTime;
 };
-
 
 class GL_ImageServer
 {
@@ -145,7 +152,7 @@ public:
             imageSet[i].glImage.basicGLPanel = panel;
     }
 
-    void SetFileNameList(FileNameList *fnl) { fileNameList = fnl; }
+    void SetFileNameList(FileNameList *fnl);
 
     void HandleCaching();
     int  NextImageToCache();
@@ -161,10 +168,12 @@ private:
 
     std::vector<ImageAndNumber>     imageSet;
     int                             currentImage;
-    size_t                          t;
+    size_t                          t;                  // time. Each image has a sequence number, used to determine which image is oldest.
     FileNameList                   *fileNameList;
     BasicGLPanel                   *basicGLPanel;
     wxGLContext                    *glContext;
+
+    GL_Image                        testImage;
 };
 
 #endif

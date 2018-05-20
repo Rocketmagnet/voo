@@ -352,6 +352,8 @@ public:
     wxFileName  GetFullPath()  { return fullPath; }
     wxSize      GetImageSize() { return imageSize; }
 
+    wxPoint GetPosition() { return position; }
+
     friend class ThumbnailLoader;
 protected:
 
@@ -421,6 +423,8 @@ public:
 
 
 private:
+    void HandleCursorScrolling();
+
     //void ReportInt1(int pos, wxString str, int i);
     //void ReportInt2(int pos, wxString str, int i, int j);
     //void ReportInt3(int pos, wxString str, int i, int j, int k);

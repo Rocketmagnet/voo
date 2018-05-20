@@ -103,9 +103,11 @@ public:
     static bool ShowToolTips();
 
 	void OnDirClicked(wxTreeEvent& event);
-	void DirMenuPopped(wxCommandEvent &event);
-	void FileMenuPopped(wxCommandEvent &event);
+	//void DirMenuPopped(wxCommandEvent &event);
+	void MenuPopped(wxCommandEvent &event);
 	void ReNumberImages(wxCommandEvent &evt);
+    void DeleteDirectory(wxCommandEvent &evt);
+    void MakeTopDirectory(wxCommandEvent &evt);
     void testFunc2(int i);
 ////@begin ImageBrowser member variables
 
