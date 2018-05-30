@@ -24,8 +24,7 @@ METHODDEF(void) my_error_exit(j_common_ptr cinfo)
 
 jpeg_load_state* ReadJpegHeader(const char* filename)
 {
-
-	printf("ReadJpegHeader(%s)\n", filename);
+	//printf("ReadJpegHeader(%s)\n", filename);
 
     FILE *infile;
     if ((infile = fopen(filename, "rb")) == NULL)
@@ -35,7 +34,7 @@ jpeg_load_state* ReadJpegHeader(const char* filename)
     }
     else
     {
-        printf("opened %s\n", filename);
+        //printf("opened %s\n", filename);
     }
 
     // If the file was successfully opened, then allocate memory.
@@ -63,17 +62,14 @@ jpeg_load_state* ReadJpegHeader(const char* filename)
     }
 
 
-    printf("A\n");
     /* Now we can initialize the JPEG decompression object. */
     jpeg_create_decompress(&load_state->cinfo);
 
 
-    printf("B\n");
     /* Step 2: specify data source (eg, a file) */
     jpeg_stdio_src(&load_state->cinfo, load_state->infile);
 
 
-    printf("C\n");
     /* Step 3: read file parameters with jpeg_read_header() */
     (void)jpeg_read_header(&load_state->cinfo, TRUE);
     load_state->width  = load_state->cinfo.image_width;
@@ -93,15 +89,13 @@ jpeg_load_state* ReadJpegHeader(const char* filename)
     // Allocate a buffer which will be destroyed automatically when the jpeg has finished being read.
     load_state->buffer     = (*load_state->cinfo.mem->alloc_sarray)((j_common_ptr)&load_state->cinfo, JPOOL_IMAGE, load_state->row_stride, samples_per_row);
 
-    
-    printf("D\n");
     return load_state;
 }
 
 
 int JpegRead(unsigned char* imageBuffer, jpeg_load_state* load_state)
 {
-    printf("JpegRead\n");
+    //printf("JpegRead\n");
     //row_stride = cinfo.output_width * cinfo.output_components;
 	//buffer     = (*cinfo.mem->alloc_sarray)((j_common_ptr)&cinfo, JPOOL_IMAGE, row_stride, 1);
 	//outputFile = fopen("output2.raw", "wb");
@@ -121,14 +115,10 @@ int JpegRead(unsigned char* imageBuffer, jpeg_load_state* load_state)
     }
 
     (void)jpeg_finish_decompress(&load_state->cinfo);
-    printf("e\n");
     jpeg_destroy_decompress(&load_state->cinfo);
-    printf("f\n");
     fclose(load_state->infile);
-    printf("g\n");
     //fclose(outputFile);
 
-    printf("JpegRead Done\n");
     free(load_state);
 	return 1;
 }

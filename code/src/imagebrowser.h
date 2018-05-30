@@ -36,11 +36,13 @@
  */
 
 ////@begin control identifiers
-#define ID_IMAGEBROWSER 10000
-#define ID_DIRCTRL 10002
-#define ID_PANEL 10003
-#define ID_SCROLLEDWINDOW 10001
-#define ID_STATUSBAR 10004
+#define ID_IMAGEBROWSER         10000
+#define ID_SCROLLEDWINDOW       10001
+#define ID_DIRCTRL              10002
+#define ID_PANEL                10003
+#define ID_STATUSBAR            10004
+#define ID_DELETE_DIRECTORY     10005
+
 #define SYMBOL_IMAGEBROWSER_STYLE wxDEFAULT_FRAME_STYLE|wxCAPTION|wxRESIZE_BORDER|wxSYSTEM_MENU|wxMAXIMIZE|wxMINIMIZE_BOX|wxMAXIMIZE_BOX|wxCLOSE_BOX|wxSIMPLE_BORDER|wxTAB_TRAVERSAL
 #define SYMBOL_IMAGEBROWSER_TITLE _("Image Browser")
 #define SYMBOL_IMAGEBROWSER_IDNAME ID_IMAGEBROWSER
@@ -108,6 +110,13 @@ public:
 	void ReNumberImages(wxCommandEvent &evt);
     void DeleteDirectory(wxCommandEvent &evt);
     void MakeTopDirectory(wxCommandEvent &evt);
+    void OnKeyDown(wxKeyEvent &event);
+    void SetAcceleratorTable(const wxAcceleratorTable &accel);
+    void RefreshDirTree(wxString path);
+    void DirectoryWasDeleted(wxString path);
+
+    wxString GetCurrentDir();
+
     void testFunc2(int i);
 ////@begin ImageBrowser member variables
 
@@ -117,7 +126,7 @@ public:
 	wxGenericDirCtrl	*dirTreeCtrl;
 	ThumbnailCanvas		*thumbnailCanvas;
 	wxArrayString		 privateDirs;
-
+    wxString             currentDirectory;
 ////@end ImageBrowser member variables
 };
 

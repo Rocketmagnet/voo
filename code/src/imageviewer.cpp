@@ -30,6 +30,7 @@
 #include "imageviewer.h"
 #include "file_name_list.h"
 #include "status_bar.h"
+#include "thumbnail_canvas.h"
 #include <iostream>
 
 wxDECLARE_APP(Image_BrowserApp);
@@ -70,11 +71,12 @@ ImageViewer::ImageViewer()
     Init();
 }
 
-ImageViewer::ImageViewer( wxWindow* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style)
-    : glPanel(),
-    fileNameList(0),
-    currentImage(0),
-    displayNumber(-1)
+ImageViewer::ImageViewer(ThumbnailCanvas* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style)
+: glPanel(),
+  fileNameList(0),
+  currentImage(0),
+  displayNumber(-1),
+  myParent(parent)
 {
     Init();
     Create( parent, id, caption, pos, size, style );
@@ -85,7 +87,7 @@ ImageViewer::ImageViewer( wxWindow* parent, wxWindowID id, const wxString& capti
  * ImageViewer creator
  */
 
-bool ImageViewer::Create( wxWindow* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style )
+bool ImageViewer::Create(ThumbnailCanvas* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style )
 {
 ////@begin ImageViewer creation
     wxFrame::Create( parent, id, caption, pos, size, style );
@@ -127,17 +129,26 @@ void ImageViewer::Init()
 void ImageViewer::CreateControls()
 {    
     ImageViewer* itemFrame1 = this;
-
-    wxBoxSizer *sizer = new wxBoxSizer(wxVERTICAL);
+    
+    wxBoxSizer *sizer = new wxBoxSizer(wxHORIZONTAL);
 
     SetSizer(sizer);
 
     glPanel = new BasicGLPanel(this, 0);
-    sizer->Add(glPanel, 1, wxEXPAND);
+    //textCtrl = new wxTextCtrl(this, -1, wxT("Text Info"), wxDefaultPosition, wxSize(400, 1000), wxTE_MULTILINE|wxTE_READONLY);
+    textCtrl = 0;
+
+    sizer->Add(glPanel,  1, wxEXPAND);
+    //sizer->Add(textCtrl, .1, wxEXPAND);
     SetBackgroundColour(wxColor(0, 0, 0));
     Show(false);
 
     timer.SetOwner(this, IMAGE_VIEWER_TIMER_ID);
+
+    //wxAcceleratorEntry entries[1];
+    //entries[0].Set(wxACCEL_CTRL, (int) 'D', ID_DELETE_DIRECTORY);
+    //wxAcceleratorTable accel(1, entries);
+    //this->SetAcceleratorTable(accel);
 }
 
 
@@ -218,6 +229,8 @@ void ImageViewer::OnIdle(wxIdleEvent &event)
 // 
 void ImageViewer::DisplayImage(int imageNumber)
 {
+    TEXT_MSG("ImageViewer::DisplayImage(%d)\n", imageNumber);
+
     if (imageNumber < 0)
         return;
 
@@ -228,8 +241,9 @@ void ImageViewer::DisplayImage(int imageNumber)
 
     if (glPanel)
     {
+        TEXT_MSG("  Display\n");
         Show(true);
-        ShowFullScreen(true);
+        //ShowFullScreen(true);
         displayNumber = imageNumber;
         SetFocus();
         Refresh();
@@ -238,25 +252,42 @@ void ImageViewer::DisplayImage(int imageNumber)
 
 }
 
+
+void ImageViewer::Disappear()
+{
+    glPanel->Clear();
+    currentImage = -1;
+    ClearKeys();
+    myParent->SetCursor(glPanel->GetImageNumber());
+    Show(false);
+    myParent->SetFocus();
+    //ShowFullScreen(false);
+}
+
+wxLongLong keyTime = 0;
+
 void ImageViewer::OnKeyDown(wxKeyEvent &event)
 {
+    wxLongLong kt = wxGetLocalTimeMillis();
+    if (keyTime != 0)
+    {
+        cout << "keyTime = " << keyTime - kt << endl;
+    }
+    keyTime = kt;
+
+
 	lastKeyCode = event.GetKeyCode();
 	//cout << "Key: " << event.GetKeyCode() << endl;
     switch (event.GetKeyCode())
     {
     case WXK_ESCAPE:
 	case WXK_RETURN:
-		cout << "Escape and clear" << endl;
-        glPanel->Clear();
-        currentImage = -1;
-        ClearKeys();
-        Show(false);
-        ShowFullScreen(false);
+        Disappear();
         break;
 
     default:
-        if (event.GetKeyCode() < keys.size())
-            keys[event.GetKeyCode()] = 1;
+            if (event.GetKeyCode() < keys.size())
+                keys[event.GetKeyCode()] = 1;
         break;
     }
 }
@@ -395,10 +426,32 @@ void ImageViewer::PrevImage()
     }
 }
 
+wxLongLong onTimer = 0;
+
+void NoteTime(wxString s)
+{
+    static wxULongLong timePrev;
+    wxULongLong timeNow;
+
+    timeNow = wxGetLocalTimeMillis();
+
+    cout << "TIME NOTE: " << s.c_str() << " " << timeNow - timePrev << endl;
+    timePrev = timeNow;
+}
+
 void ImageViewer::OnTimer(wxTimerEvent &event)
 {
+    //wxLongLong t = wxGetLocalTimeMillis();
+    //TEXT_MSG("ImageViewer::OnTimer() %d", (t-onTimer).GetLo());
+    //cout << "ImageViewer::OnTimer() " << (t - onTimer).GetLo() << endl;
+    //onTimer = t;
+    NoteTime(wxT("ImageViewer::OnTimer"));
+
     if (!IsShown())
+    {
+        TEXT_MSG(" No\n");
         return;
+    }
 
     //cout << "ImageViewer::OnIdle" << endl;
     float dx = 0, dy = 0;
@@ -419,9 +472,18 @@ void ImageViewer::OnTimer(wxTimerEvent &event)
         glPanel->DisplayImage(displayNumber);
         displayNumber = -1;
     }
+    NoteTime(wxT("  display"));
 
     if (currentImage >= 0)
+    {
+        TEXT_MSG("  Render\n");
         glPanel->Render(GL_PANEL_RENDER_IMAGE);
+    }
     else
+    {
+        TEXT_MSG("  Blank\n");
         glPanel->Render(GL_PANEL_BLANK_SCREEN);
+    }
+    NoteTime(wxT("  render"));
 }
+

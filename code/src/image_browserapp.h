@@ -57,6 +57,9 @@ public:
     /// Called on exit
     virtual int OnExit();
 
+    void OnDeleteDirectory(wxCommandEvent &event);
+
+    ImageBrowser *imageBrowser;
 ////@begin Image_BrowserApp event handler declarations
 
 ////@end Image_BrowserApp event handler declarations

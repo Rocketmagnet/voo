@@ -11,6 +11,9 @@
 using namespace std;
 
 
+extern void NoteTime(wxString s);
+
+
 BEGIN_EVENT_TABLE(BasicGLPanel, wxGLCanvas)
     EVT_MOTION(      BasicGLPanel::MouseMoved)
     EVT_LEFT_DOWN(   BasicGLPanel::MouseDown)
@@ -38,12 +41,25 @@ BasicGLPanel::BasicGLPanel(wxFrame* parent, int* args)
   glewInitialised(false),
   currentImage(0),
   imageServer(10),
-  imageNumberToLoad(-1)
+  imageNumberToLoad(-1),
+  screenFont()
 {
     m_context = new wxGLContext(this);
     imageServer.SetPointers(this, m_context);
+
 }
 
+void BasicGLPanel::LoadFont(const wxFileName & fileName, FreetypeFont & font, int fontResolution)
+{
+    //currentWidgetContext = &widgetContext;
+    if (fileName.FileExists())
+    {
+        if (!fontResolution)
+            font.LoadFont(fileName);
+        else
+            font.LoadFont(fileName, fontResolution);
+    }
+}
 
 void BasicGLPanel::Resized(wxSizeEvent& evt)
 {
@@ -56,6 +72,7 @@ void BasicGLPanel::ZoomIn()
 {
     //scaling *= 1.01f;
     //image.scale(scaling, scaling);
+    zoomTimeRemaining = 60;
     if (currentImage)
         currentImage->ZoomIn();
 }
@@ -64,6 +81,7 @@ void BasicGLPanel::ZoomOut()
 {
     //scaling *= 1.0f / 1.01f; 
     //image.scale(scaling, scaling);
+    zoomTimeRemaining = 60;
     if (currentImage)
         currentImage->ZoomOut();
 }
@@ -152,13 +170,17 @@ void BasicGLPanel::DisplayImage(int imageNumber)
     //cout << "BasicGLPanel::DisplayImage(" << path << ")" << endl;
     //imagePathToLoad = path;
     imageNumberToLoad = imageNumber;
+    fontTimeRemaining = 100;
+    zoomTimeRemaining = 100;
+
 }
 
 
 void BasicGLPanel::OnPaint(wxPaintEvent& evt)
 {
     //cout << endl;
-    cout << "BasicGLPanel::OnPaint " << endl;
+    //cout << "BasicGLPanel::OnPaint " << endl;
+    NoteTime(wxT("BasicGLPanel::OnPaint"));
 
     /*
     wxGLCanvas::SetCurrent(*m_context);
@@ -194,13 +216,14 @@ void BasicGLPanel::OnPaint(wxPaintEvent& evt)
             cout << "Error: " << glewGetErrorString(err) << endl;
             exit(1);
         }
-        cout << "Status: Using GLEW " << glewGetString(GLEW_VERSION) << endl;
+        LoadFont(wxFileName("Kyooshi Gothic.ttf"), screenFont, 24);
         glewInitialised = true;
     }
 
-    cout << "BasicGLPanel Rendering myself" << endl;
+    NoteTime(wxT("BasicGLPanel::OnPaint Render start"));
     Render(false);
 
+    NoteTime(wxT("BasicGLPanel::OnPaint done"));
     //cout << "BasicGLPanel::OnPaint - Done" << endl;
 }
 
@@ -215,6 +238,8 @@ void BasicGLPanel::Clear()
 
 void BasicGLPanel::Render(bool blankScreen)
 {
+    NoteTime(wxT("BasicGLPanel::Render"));
+
     if (!IsShown())         return;
     if (!glewInitialised)   return;
 
@@ -224,20 +249,26 @@ void BasicGLPanel::Render(bool blankScreen)
 
 
     wxGLCanvas::SetCurrent(*m_context);
+    NoteTime(wxT("Set Current"));
 
     if (imageNumberToLoad >= 0)
     {
         GL_Image *newImage = imageServer.GetImage(imageNumberToLoad);
+        NoteTime(wxT("Image Loaded"));
 
-        cout << "newImage = " << newImage << endl;
         if (currentImage)
         {
             newImage->CopyScaleAndPositionFrom(*currentImage);
-            newImage->ExpandToSides();
+            cout << "Scale Diff = " << currentImage->GetScaleDifference(*newImage) << endl;
+            if (newImage->width > 400)
+            {
+                newImage->ExpandToSides();
+            }
         }
 
         currentImage = newImage;
 
+        currentImageNumber = imageNumberToLoad;
         imageNumberToLoad = -1;
 
         if (currentImage)
@@ -263,7 +294,29 @@ void BasicGLPanel::Render(bool blankScreen)
             currentImage->ClampToSides();
             currentImage->Render();
         }
+
+        if (fontTimeRemaining)
+        {
+            fontTimeRemaining--;
+            glLoadIdentity();
+            screenFont.SetColour(0.0f, 0.0f, 0.0f, 0.5f);
+            screenFont.Print(2.0, 2.0, 24.0, currentImage->GetInfoString());
+            screenFont.SetColour(1, 1, 1, 1);
+            screenFont.Print(0.0, 0.0, 24.0, currentImage->GetInfoString());
+        }
+
+        if (zoomTimeRemaining)
+        {
+            zoomTimeRemaining--;
+            glLoadIdentity();
+            screenFont.SetColour(0.0f, 0.0f, 0.0f, 0.5f);
+            screenFont.Print(2.0, 32.0, 24.0, currentImage->GetZoomInfo());
+            screenFont.SetColour(1, 1, 1, 1);
+            screenFont.Print(0.0, 30.0, 24.0, currentImage->GetZoomInfo());
+        }
     }
+
+
     glFlush();
     SwapBuffers();    
 

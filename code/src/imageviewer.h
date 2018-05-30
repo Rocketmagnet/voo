@@ -15,6 +15,7 @@
 #define _IMAGEVIEWER_H_
 
 class FileNameList;
+class ThumbnailCanvas;
 
 /*!
  * Includes
@@ -29,6 +30,7 @@ class FileNameList;
 #include "wx/filename.h"
 #include <vector>
 #include  "wx/timer.h"
+#include  "wx/textctrl.h"
 #include "gl_panel.h"
 
 /*!
@@ -53,6 +55,8 @@ class FileNameList;
 #define SYMBOL_IMAGEVIEWER_SIZE wxSize(400, 300)
 #define SYMBOL_IMAGEVIEWER_POSITION wxDefaultPosition
 ////@end control identifiers
+
+#define TEXT_MSG(fmt, ...) { wxString s; s.Printf(fmt, __VA_ARGS__); if (textCtrl) textCtrl->AppendText(s);  /*std::cout << "* " << s << std::endl; */}
 
 class ImagePanel : public wxPanel
 {
@@ -83,9 +87,9 @@ class ImageViewer: public wxFrame
 public:
     /// Constructors
     ImageViewer();
-    ImageViewer( wxWindow* parent, wxWindowID id = SYMBOL_IMAGEVIEWER_IDNAME, const wxString& caption = SYMBOL_IMAGEVIEWER_TITLE, const wxPoint& pos = SYMBOL_IMAGEVIEWER_POSITION, const wxSize& size = SYMBOL_IMAGEVIEWER_SIZE, long style = SYMBOL_IMAGEVIEWER_STYLE);
+    ImageViewer(ThumbnailCanvas* parent, wxWindowID id = SYMBOL_IMAGEVIEWER_IDNAME, const wxString& caption = SYMBOL_IMAGEVIEWER_TITLE, const wxPoint& pos = SYMBOL_IMAGEVIEWER_POSITION, const wxSize& size = SYMBOL_IMAGEVIEWER_SIZE, long style = SYMBOL_IMAGEVIEWER_STYLE);
 
-    bool Create( wxWindow* parent, wxWindowID id = SYMBOL_IMAGEVIEWER_IDNAME, const wxString& caption = SYMBOL_IMAGEVIEWER_TITLE, const wxPoint& pos = SYMBOL_IMAGEVIEWER_POSITION, const wxSize& size = SYMBOL_IMAGEVIEWER_SIZE, long style = SYMBOL_IMAGEVIEWER_STYLE);
+    bool Create(ThumbnailCanvas* parent, wxWindowID id = SYMBOL_IMAGEVIEWER_IDNAME, const wxString& caption = SYMBOL_IMAGEVIEWER_TITLE, const wxPoint& pos = SYMBOL_IMAGEVIEWER_POSITION, const wxSize& size = SYMBOL_IMAGEVIEWER_SIZE, long style = SYMBOL_IMAGEVIEWER_STYLE);
 
     /// Destructor
     ~ImageViewer();
@@ -115,6 +119,7 @@ public:
     void PrevImage();
     void HomeImage();
     void  EndImage();
+    void Disappear();
 
 	int GetLastKeyCode() { return lastKeyCode; }
     ////@begin ImageViewer event handler declarations
@@ -143,7 +148,8 @@ public:
     int                      displayNumber;       // File to load and display, when the viewer becomes visible.
     bool                     closeEnabled;
     wxTimer                  timer;
-
+    wxTextCtrl              *textCtrl;
+    ThumbnailCanvas         *myParent;
     ////@end ImageViewer member variables
 };
 

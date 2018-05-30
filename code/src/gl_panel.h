@@ -4,6 +4,7 @@
 #include "wx/wx.h"
 #include "wx/glcanvas.h"
 #include "drawable.h"
+#include "freetype_fonts.h"
 
 #define GL_PANEL_BLANK_SCREEN   true
 #define GL_PANEL_RENDER_IMAGE   false
@@ -46,13 +47,21 @@ public:
     void ZoomOut();
     void MoveRel(float x, float y);
     
-    wxGLContext     *m_context;
+    void LoadFont(const wxFileName & fileName, FreetypeFont & font, int fontResolution = 0);
+
+    int GetImageNumber() { return currentImageNumber; }
+
+    wxGLContext        *m_context;
 
     GL_ImageServer      imageServer;
     GL_Image           *currentImage;
+    int                 currentImageNumber;
     int                 imageNumberToLoad;
     float               scaling;
     bool                glewInitialised;
+    FreetypeFont	    screenFont;
+    int                 fontTimeRemaining;
+    int                 zoomTimeRemaining;
     DECLARE_EVENT_TABLE()
 };
 

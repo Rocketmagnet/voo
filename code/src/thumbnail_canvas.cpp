@@ -19,19 +19,18 @@ extern "C"
 };
 
 
-
-wxBEGIN_EVENT_TABLE(ThumbnailCanvas, wxScrolledWindow)
-    EVT_PAINT(ThumbnailCanvas::OnPaint)
-    EVT_SIZE(ThumbnailCanvas::OnSize)
-    EVT_MOUSE_EVENTS(ThumbnailCanvas::OnMouseEvent)
-    EVT_KEY_DOWN(ThumbnailCanvas::OnKeyEvent)
-    EVT_SET_FOCUS(ThumbnailCanvas::OnFocusEvent)
-    EVT_KILL_FOCUS(ThumbnailCanvas::OnFocusKillEvent)
-    EVT_IDLE(ThumbnailCanvas::OnIdle)
-    EVT_MOUSEWHEEL(ThumbnailCanvas::OnMouseWheel)
-    EVT_CLOSE(ThumbnailCanvas::OnClose)
-    wxEND_EVENT_TABLE()
-    
+wxBEGIN_EVENT_TABLE(  ThumbnailCanvas, wxScrolledWindow)
+    EVT_PAINT(        ThumbnailCanvas::OnPaint)
+    EVT_SIZE(         ThumbnailCanvas::OnSize)
+    EVT_MOUSE_EVENTS( ThumbnailCanvas::OnMouseEvent)
+    EVT_KEY_DOWN(     ThumbnailCanvas::OnKeyEvent)
+    EVT_SET_FOCUS(    ThumbnailCanvas::OnFocusEvent)
+    EVT_KILL_FOCUS(   ThumbnailCanvas::OnFocusKillEvent)
+    EVT_IDLE(         ThumbnailCanvas::OnIdle)
+    EVT_MOUSEWHEEL(   ThumbnailCanvas::OnMouseWheel)
+    EVT_CLOSE(        ThumbnailCanvas::OnClose)
+wxEND_EVENT_TABLE()
+   
 wxSize      Thumbnail::tnSize(100,100);
 wxArrayInt  Thumbnail::arrayIntStatic;
 int         Thumbnail::selectBorderSize;
@@ -91,14 +90,11 @@ wxThread::ExitCode ThumbnailLoader::Entry()
         {
             int w = load_state->width, h = load_state->height;
 
-            cout << "Image " << w << "x" << h << endl;
             image.Create(w, h);
-            cout << "a" << endl;
             image.SetRGB(wxRect(0, 0, w, h), 128, 64, 0);
-            cout << "b" << endl;
             JpegRead(image.GetData(), load_state);
-            cout << "c" << endl;
 
+            thumbnail.imageSize = image.GetSize();
             wxSize newSize = thumbnail.GetTnImageSize(image.GetSize(), thumbnail.tnSize);
             image.Rescale(newSize.GetWidth(), newSize.GetHeight(), wxIMAGE_QUALITY_BILINEAR);
             thumbnail.bitmap = wxBitmap(image);
@@ -144,7 +140,6 @@ Thumbnail::~Thumbnail()
 
     //cout << "Destructing" << endl;
 }
-
 
 
 void Thumbnail::DrawLabelClipped(wxPaintDC &dc, wxString &labelRef, wxRect &rectangle)
@@ -275,7 +270,7 @@ bool Thumbnail::IsMouseInside(const wxPoint &mousePos)
 
 
 ThumbnailCanvas::ThumbnailCanvas(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size)
-: wxScrolledWindow(parent, id, pos, size, wxSUNKEN_BORDER | wxVSCROLL | wxEXPAND | wxWANTS_CHARS | wxTAB_TRAVERSAL),
+: wxScrolledWindow(parent, id, pos, size, wxSUNKEN_BORDER | wxVSCROLL | wxEXPAND | wxWANTS_CHARS),
   fileNameList(),
   inFocus(true),
   cursorP(tnColumns, fileNameList),
@@ -470,16 +465,24 @@ void ThumbnailCanvas::HandleCursorScrolling()
 
 void ThumbnailCanvas::OnKeyEvent(wxKeyEvent &event)
 {
-    //cout << "OnKeyEvent(" << event.GetKeyCode() << ")" << endl;
+    if (HandleAsNavigationKey(event))
+        return;
+
+    cout << "OnKeyEvent(" << event.GetKeyCode() << ")" << endl;
     int cursorToErase = -1;
+
+    if (event.GetKeyCode() == 'D')
+    {
+        cout << "ThumbnailCanvas(D)" << endl;
+    }
 
     switch (event.GetKeyCode())
     {
-        case WXK_UP:     cursorP.Move( 0, -1);							break;
-        case WXK_DOWN:   cursorP.Move( 0,  1);							break;
-        case WXK_LEFT:   cursorP.Move(-1,  0);							break;
-        case WXK_RIGHT:  cursorP.Move( 1,  0);							break;
-        case WXK_RETURN: imageViewer->DisplayImage(cursorP.GetNumber()); break;
+        case WXK_UP:     cursorP.Move( 0, -1);							    break;
+        case WXK_DOWN:   cursorP.Move( 0,  1);							    break;
+        case WXK_LEFT:   cursorP.Move(-1,  0);							    break;
+        case WXK_RIGHT:  cursorP.Move( 1,  0);							    break;
+        case WXK_RETURN: imageViewer->DisplayImage(cursorP.GetNumber());    break;
 
         default:
 			//cout << "Key: " << event.GetKeyCode() << endl;
@@ -509,6 +512,9 @@ void ThumbnailCanvas::OnKeyEvent(wxKeyEvent &event)
     redrawType = REDRAW_SELECTION;
     Refresh(DONT_ERASE_BACKGROUND);
     HandleCursorScrolling();
+    UpdateStatusBar_File();
+
+    event.Skip(true);
 }
 
 void ThumbnailCanvas::OnFocusEvent(wxFocusEvent &event)
@@ -529,6 +535,7 @@ void ThumbnailCanvas::OnFocusEvent(wxFocusEvent &event)
     {
 		cursorP.SetTo(0);
     }
+    UpdateStatusBar_File();
 }
 
 void ThumbnailCanvas::OnFocusKillEvent(wxFocusEvent &event)
@@ -558,6 +565,11 @@ void ThumbnailCanvas::OnIdle(wxIdleEvent &event)
     if (HandleThumbnailLoading())
     {
         event.RequestMore();
+        //STATUS_TEXT(3, "Loading Images ...");
+    }
+    else
+    {
+        //STATUS_TEXT(3, "");
     }
 }
 
@@ -572,6 +584,32 @@ void ThumbnailCanvas::ClearThumbnails()
 {
     thumbnails.clear();
     thumbnailPointers.clear();
+    ClearStatusBar();
+}
+
+wxString HumanFileSize(int bytes)
+{
+    wxString s;
+    if (bytes < 1000)
+    {
+        s.Printf("%dB", bytes);
+    }
+    else
+    {
+        char mags[] = "  KMGT";
+
+        int scale = 1;
+        int si = 0;
+        while (scale <= bytes)
+        {
+            scale *= 1000;
+            si++;
+        }
+        scale /= 1000;
+
+        s.Printf("%5.1f%cB", (double)bytes / (double)scale, mags[si]);
+    }
+    return s;
 }
 
 void ThumbnailCanvas::LoadThumbnails(wxString directory)
@@ -584,15 +622,22 @@ void ThumbnailCanvas::LoadThumbnails(wxString directory)
     int n = fileNameList.files.size();
     thumbnails.reserve(n);
     thumbnailPointers.reserve(n);
+
+    totalDirectorySizeBytes = 0;
+
     for (int i = 0; i<n; i++)
     {
         wxString fullPath = directory;
         fullPath += wxT("\\");
         fullPath += fileNameList.files[i].fileName.GetFullPath();
-
+        wxFileName fn(fullPath);
+        totalDirectorySizeBytes += fn.GetSize();
         thumbnails.emplace_back(wxPoint(0,0), fullPath);
     }
 
+    wxString hrs = HumanFileSize(totalDirectorySizeBytes.GetLo());
+    STATUS_TEXT(STATUS_BAR_DIRECTORY_SUMMARY, "%d files (%s)", n, hrs.c_str());
+    
     for (int i = 0; i < n; i++)
     {
         thumbnailPointers.push_back( &thumbnails[i] );
@@ -661,9 +706,9 @@ bool ThumbnailCanvas::HandleThumbnailLoading()
     }
 
     if (loadingSet.size() || waitingSet.size())
-        return false;
+        return true;
     else
-        return true;                                // Means we've finished loading
+        return false;                                // Means we've finished loading
 }
 
 void ThumbnailCanvas::OnSize(wxSizeEvent &event)
@@ -758,6 +803,7 @@ void ThumbnailCanvas::OnMouseEvent(wxMouseEvent &event)
                 redrawSetP.AddFrom(selectionSetP);
                 selectionSetP.Clear();
                 selectionStart = th;
+                UpdateStatusBar_File();
 
                 cout << "Redraw Selection" << endl;
                 redrawType = REDRAW_SELECTION;
@@ -775,6 +821,31 @@ void ThumbnailCanvas::OnMouseEvent(wxMouseEvent &event)
     //Update();
 }
 
+void ThumbnailCanvas::ClearStatusBar()
+{
+    STATUS_TEXT(STATUS_BAR_DIRECTORY_SUMMARY, "");
+    STATUS_TEXT(STATUS_BAR_FILE_INFO,         "");
+    STATUS_TEXT(STATUS_BAR_FILE_FORMAT,       "");
+    STATUS_TEXT(STATUS_BAR_FILE_DIMENSIONS,   "");
+}
+
+void ThumbnailCanvas::UpdateStatusBar_File()
+{
+    if (selectionSetP.size() == 0)
+    {
+        Thumbnail *tn = thumbnailPointers[cursorP.GetNumber()];
+
+
+        wxFileName fn = tn->GetFullPath();
+        wxDateTime date = fn.GetModificationTime();
+        wxString dateString = date.Format("%d/%m/%Y  %H:%M");
+        wxSize imageSize = tn->GetImageSize();
+
+        STATUS_TEXT(STATUS_BAR_FILE_INFO, "%s,  %s",  fn.GetHumanReadableSize().c_str(), dateString);
+        STATUS_TEXT(STATUS_BAR_FILE_FORMAT, fn.GetFullName().c_str());
+        STATUS_TEXT(STATUS_BAR_FILE_DIMENSIONS, "(%d x %d)", imageSize.GetWidth(), imageSize.GetHeight());
+    }
+}
 
 wxPoint ThumbnailCanvas::GetThumbnailPosition(size_t n)
 {
@@ -817,4 +888,21 @@ void ThumbnailCanvas::OnClose(wxCloseEvent &event)
 {
     imageViewer->EnableClose();
     Destroy();
+}
+
+void ThumbnailCanvas::SetAcceleratorTable(const wxAcceleratorTable &accel)
+{
+    wxWindow::SetAcceleratorTable(accel);
+    imageViewer->SetAcceleratorTable(accel);
+}
+
+void ThumbnailCanvas::HideImageViewer()
+{
+    imageViewer->Disappear();
+}
+
+void ThumbnailCanvas::SetCursor(int imageNumber)
+{
+    cursorP.SetTo(imageNumber);
+    HandleCursorScrolling();
 }

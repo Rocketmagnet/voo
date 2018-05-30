@@ -90,10 +90,13 @@ public:
 
     void ClampToSides();
     void ExpandToSides();
-
     void CreateFakeImage();
-
     void CopyImageLine(int y);
+    double GetScaleDifference(const GL_Image& glImage) const;
+
+    wxString    GetInfoString();
+    wxString    GetZoomInfo();
+    void        SetFileName(wxString fn);
 
     //friend class ImageLoader;
     //friend class GL_ImageServer;
@@ -110,9 +113,12 @@ public:
     wxImage     wxImg;
     GLubyte    *imageData;
     int         nextBlockToUpload;
+    int         blockSize;
+    int         lastBlock;
     bool        loadedImage;
     bool        uploadedTexture;
     bool        hasGeneratedTexture;
+    wxString    fileName;
 
 private:
     float       x, y, scale;  // (x=y=0 means image is centered)

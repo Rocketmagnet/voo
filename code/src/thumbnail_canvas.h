@@ -421,6 +421,12 @@ public:
     bool HandleThumbnailLoading();
     void OnClose(wxCloseEvent &event);
 
+    void HideImageViewer();
+
+    void SetAcceleratorTable(const wxAcceleratorTable &accel);
+    void UpdateStatusBar_File();
+    void ClearStatusBar();
+    void SetCursor(int imageNumber);
 
 private:
     void HandleCursorScrolling();
@@ -437,7 +443,7 @@ private:
 	bool                    inFocus;
 
     TnCursor                cursorP;
-    SortedVectorInts        selectionSetP;                      // Selected thumbnails 
+    SortedVectorInts        selectionSetP;                      // Selected thumbnails (pointers)
     SortedVectorInts        redrawSetP;                         // Thumbnails that need to be redrawn
     SortedVectorInts        waitingSet;                         // Thumbnails that need to be requested to load their images
     SortedVectorInts        loadingSet;                         // Thumbnails that are currently loading
@@ -453,7 +459,7 @@ private:
     REDRAW_TYPE             redrawType;
     wxPoint                 clickPoint;
     int                     tnSpacingX, tnSpacingY;
-    
+    wxULongLong             totalDirectorySizeBytes;
     ImageViewer            *imageViewer;
 	wxDECLARE_EVENT_TABLE();
 };
