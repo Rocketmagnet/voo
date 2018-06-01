@@ -64,7 +64,9 @@ BEGIN_EVENT_TABLE(ImageBrowser, wxFrame)
 	//EVT_DIRCTRL_MENU_POPPED_UP(wxID_MENU_DIR,  ImageBrowser::DirMenuPopped)
 	EVT_DIRCTRL_MENU_POPPED_UP(wxID_MENU_DIR, ImageBrowser::MenuPopped)
     EVT_KEY_DOWN(ImageBrowser::OnKeyDown)
-END_EVENT_TABLE()
+    EVT_MENU(ID_DELETE_DIRECTORY,  ImageBrowser::OnDeleteDirectory)
+    EVT_MENU(ID_ARCHIVE_DIRECTORY, ImageBrowser::OnArchiveDirectory)
+    END_EVENT_TABLE()
 
 
 /*
@@ -116,8 +118,6 @@ ImageBrowser::~ImageBrowser()
 
 void ImageBrowser::Init()
 {
-////@begin ImageBrowser member initialisation
-////@end ImageBrowser member initialisation
 }
 
 
@@ -318,10 +318,6 @@ void ImageBrowser::MakeTopDirectory(wxCommandEvent &evt)
     cout << "Make Top " << data->m_path << endl;
 }
 
-void ImageBrowser::DeleteDirectory(wxCommandEvent &evt)
-{
-}
-
 /* 
 void ImageBrowser::DirMenuPopped(wxCommandEvent &event)
 {
@@ -340,12 +336,15 @@ void ImageBrowser::MenuPopped(wxCommandEvent &event)
 	dirTreeCtrl->Bind(wxEVT_MENU, &ImageBrowser::ReNumberImages, this, id);
 
     id = dirTreeCtrl->NewMenuItem("Delete Directory");
-    dirTreeCtrl->Bind(wxEVT_MENU, &ImageBrowser::DeleteDirectory, this, id);
+    dirTreeCtrl->Bind(wxEVT_MENU, &ImageBrowser::MenuDeleteDirectory, this, id);
 
     id = dirTreeCtrl->NewMenuItem("Make Top Directory");
     dirTreeCtrl->Bind(wxEVT_MENU, &ImageBrowser::MakeTopDirectory, this, id);
 }
 
+void ImageBrowser::MenuDeleteDirectory(wxCommandEvent &evt)
+{
+}
 
 typedef std::function< void(int) > classFuncPtr;
 
@@ -434,6 +433,12 @@ void ImageBrowser::CreateControls()
 	LoadPrivateDirs();
 	dirTreeCtrl->ExpandPath(wxGetCwd());
 	 
+    wxAcceleratorEntry entries[1];
+    entries[0].Set(wxACCEL_CTRL, (int) 'D', ID_DELETE_DIRECTORY);
+    entries[0].Set(wxACCEL_CTRL, (int) 'K', ID_ARCHIVE_DIRECTORY);
+    wxAcceleratorTable accel(1, entries);
+    SetAcceleratorTable(accel);
+
 ////@end ImageBrowser content construction
 }
 
@@ -549,4 +554,86 @@ void ImageBrowser::LoadPrivateDirs()
 wxString ImageBrowser::GetCurrentDir()
 {
     return currentDirectory;
+}
+
+bool RemoveDirectory(wxString pathName)
+{
+    wxString fn;
+    wxDir dir(pathName);
+    bool cont = dir.GetFirst(&fn);
+
+    cout << "RemoveDirectory(" << pathName << ")" << endl;
+
+    // if there are files to process
+    if (cont)
+    {
+        do {
+            // if the next filename is actually a directory
+            wxString subPath = dir.GetName() + wxFILE_SEP_PATH + fn + wxFILE_SEP_PATH;
+
+            cout << "Checking for existence of " << subPath << " " << wxDirExists(subPath) << endl;
+
+            if (wxDirExists(subPath))
+            {
+                cout << "deleting " << subPath << endl;
+                // delete this directory
+                RemoveDirectory(subPath);
+            }
+            else
+            {
+                // otherwise attempt to delete this file
+                cout << "Attempt to remove file " << pathName + fn << endl;
+                if (!wxRemoveFile(pathName + fn))
+                {
+                    // error if we couldn't
+                    //wxLogError("Could not remove file \"" + pathName + fn + "\"");
+                    return false;
+                }
+            }
+        }
+        // get the next file name
+        while (dir.GetNext(&fn));
+    }
+
+    cout << "Now remove directory " << pathName << endl;
+    bool success = wxRmDir(pathName);
+    cout << "success = " << success << endl;
+    return true;
+}
+
+
+
+void ImageBrowser::OnDeleteDirectory(wxCommandEvent &event)
+{
+    wxString path = GetCurrentDir();
+    bool success = DeleteDirectory(path);
+
+    if (success)
+    {
+        DirectoryWasDeleted(path);
+    }
+}
+
+void ImageBrowser::OnArchiveDirectory(wxCommandEvent &event)
+{
+
+}
+
+
+bool ImageBrowser::DeleteDirectory(wxString path)
+{
+    wxMessageDialog *test = new wxMessageDialog(nullptr, wxT("Delete ") + path, wxT("Warning"), wxYES_NO | wxNO_DEFAULT);
+    int ret = test->ShowModal();
+
+    //cout << "Returned " << ret << endl;
+
+    if (ret == wxID_YES)
+    {
+        RemoveDirectory(path);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }

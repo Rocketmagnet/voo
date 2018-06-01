@@ -108,12 +108,16 @@ public:
 	//void DirMenuPopped(wxCommandEvent &event);
 	void MenuPopped(wxCommandEvent &event);
 	void ReNumberImages(wxCommandEvent &evt);
-    void DeleteDirectory(wxCommandEvent &evt);
     void MakeTopDirectory(wxCommandEvent &evt);
     void OnKeyDown(wxKeyEvent &event);
     void SetAcceleratorTable(const wxAcceleratorTable &accel);
     void RefreshDirTree(wxString path);
+
+    void MenuDeleteDirectory(wxCommandEvent &evt);
+    bool DeleteDirectory(wxString path);
     void DirectoryWasDeleted(wxString path);
+    void OnDeleteDirectory(wxCommandEvent &event);
+    void OnArchiveDirectory(wxCommandEvent &event);
 
     wxString GetCurrentDir();
 
