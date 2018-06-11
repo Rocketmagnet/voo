@@ -243,7 +243,7 @@ void ImageViewer::DisplayImage(int imageNumber)
     {
         TEXT_MSG("  Display\n");
         Show(true);
-        //ShowFullScreen(true);
+        ShowFullScreen(true);
         displayNumber = imageNumber;
         SetFocus();
         Refresh();
@@ -261,7 +261,7 @@ void ImageViewer::Disappear()
     myParent->SetCursor(glPanel->GetImageNumber());
     Show(false);
     myParent->SetFocus();
-    //ShowFullScreen(false);
+    ShowFullScreen(false);
 }
 
 wxLongLong keyTime = 0;

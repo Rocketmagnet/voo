@@ -122,6 +122,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\src\directory_functions.h" />
     <ClInclude Include="..\..\src\drawable.h" />
     <ClInclude Include="..\..\src\file_name_list.h" />
     <ClInclude Include="..\..\src\freetype_fonts.h" />
@@ -137,6 +138,7 @@
     <ClInclude Include="..\..\src\vector3d.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\directory_functions.cpp" />
     <ClCompile Include="..\..\src\drawable.cpp" />
     <ClCompile Include="..\..\src\file_name_list.cpp" />
     <ClCompile Include="..\..\src\freetype_fonts.cpp" />

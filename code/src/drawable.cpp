@@ -219,7 +219,7 @@ void GL_Image::Render()
 
     //glBindTexture(GL_TEXTURE_2D, ID);
 
-    if (uploadedTexture)
+    //if (uploadedTexture)
     {
         glBegin(GL_QUADS);
             glTexCoord2f(0, tex_coord_y);    glVertex2f(left, top);
@@ -232,15 +232,15 @@ void GL_Image::Render()
             //glVertex2f(left, bottom);
         glEnd();
     }
-    else
-    {
-        glBegin(GL_QUADS);
-            glVertex2f(left, top);
-            glVertex2f(right, top);
-            glVertex2f(right, bottom);
-            glVertex2f(left, bottom);
-        glEnd();
-    }
+    //else
+    //{
+    //    glBegin(GL_QUADS);
+    //        glVertex2f(left, top);
+    //        glVertex2f(right, top);
+    //        glVertex2f(right, bottom);
+    //        glVertex2f(left, bottom);
+    //    glEnd();
+    //}
     NoteTime(wxT("GL_Image::Render Quad"));
 }
 
@@ -270,28 +270,43 @@ void GL_Image::UploadNextBlock()
 
         //cout << "UPLOAD: Binding texture" << endl;
         glBindTexture(GL_TEXTURE_2D, ID);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+        glBindTexture(GL_TEXTURE_2D, ID);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureWidth, textureHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    }
+    else
+    {
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glBindTexture(GL_TEXTURE_2D, ID);
     }
 
     int texX = 0;
     int texY = blockSize * nextBlockToUpload;
     int uploadHeight = height - texY;
     if (uploadHeight > blockSize)
+    {
         uploadHeight = blockSize;
+    }
+    int startAddress = texY * textureWidth * 3;
+    int finalY = texY + uploadHeight;
 
-    //cout << "UPLOAD: uploading " << texY << " " << uploadHeight << endl;
-    glBindTexture(GL_TEXTURE_2D, ID);
-    //glTexSubImage2D(GL_TEXTURE_2D, 0, texX, texY, width, uploadHeight, GL_RGB, GL_UNSIGNED_BYTE, imageData);
+    cout << "UPLOAD: uploading " << texY << " " << uploadHeight << endl;
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureWidth, textureHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);
-    NoteTime(wxT("glTexImage2D"));
+    glTexSubImage2D(GL_TEXTURE_2D, 0, texX, texY, textureWidth, uploadHeight, GL_RGB, GL_UNSIGNED_BYTE, &imageData[startAddress]);
+    //glGenerateMipmap(GL_TEXTURE_2D);
 
-    glGenerateMipmap(GL_TEXTURE_2D);
-    NoteTime(wxT("glGenerateMipmap"));
-    //cout << "Mipmap time = " << endTime - startTime << endl;
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureWidth, textureHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);
+    //glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, lines1, GL_RGB, GL_UNSIGNED_BYTE, imageData);
+    //glTexSubImage2D(GL_TEXTURE_2D, 0, 0, lines1, textureWidth, lines2, GL_RGB, GL_UNSIGNED_BYTE, &imageData[halfWay*3]);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureWidth, textureHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);
 
-    nextBlockToUpload = lastBlock;
+
+    //nextBlockToUpload = lastBlock;
 
     if (nextBlockToUpload == lastBlock)
     {
@@ -554,7 +569,7 @@ void GL_Image::Load(wxString path)
     tex_coord_x = (float)width  / (float)textureWidth;
     tex_coord_y = (float)height / (float)textureHeight;
     nextBlockToUpload = 0;
-    blockSize = 10;
+    blockSize = 100;
     lastBlock = ceil((double)height / (double)blockSize) - 1;
 
     loadedImage = true;

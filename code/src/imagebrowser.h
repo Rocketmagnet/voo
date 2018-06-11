@@ -42,6 +42,7 @@
 #define ID_PANEL                10003
 #define ID_STATUSBAR            10004
 #define ID_DELETE_DIRECTORY     10005
+#define ID_ARCHIVE_DIRECTORY    10006
 
 #define SYMBOL_IMAGEBROWSER_STYLE wxDEFAULT_FRAME_STYLE|wxCAPTION|wxRESIZE_BORDER|wxSYSTEM_MENU|wxMAXIMIZE|wxMINIMIZE_BOX|wxMAXIMIZE_BOX|wxCLOSE_BOX|wxSIMPLE_BORDER|wxTAB_TRAVERSAL
 #define SYMBOL_IMAGEBROWSER_TITLE _("Image Browser")
@@ -59,6 +60,20 @@ class ThumbnailCanvas;
 #define ID_DIRECTORY_CTRL	100
 
 
+class RightHandWindow : public wxWindow
+{
+public:
+    RightHandWindow(wxWindow *parent);
+
+    ThumbnailCanvas* GetThumbnailCanvas()    { return thumbnailCanvas; }
+    wxTextCtrl*      GetDirectoryNameCtrl()  { return directoryNameCtrl; }
+
+
+private:
+    ThumbnailCanvas  *thumbnailCanvas;
+    wxTextCtrl       *directoryNameCtrl;
+    wxBoxSizer       *boxSizer;
+};
 
 
 
@@ -104,6 +119,8 @@ public:
     /// Should we show tooltips?
     static bool ShowToolTips();
 
+    void OnDecorationTimer(wxTimerEvent& event);
+    void TreeExpanded(wxTreeEvent &event);
 	void OnDirClicked(wxTreeEvent& event);
 	//void DirMenuPopped(wxCommandEvent &event);
 	void MenuPopped(wxCommandEvent &event);
@@ -121,6 +138,10 @@ public:
 
     wxString GetCurrentDir();
 
+    void ReportDirectoryInfo(wxString path, wxTreeItemId id, int flags);
+    //wxTreeItemId  GetTreeItemId(wxString path, wxTreeItemId root);
+    wxTreeCtrl* GetTreeCtrl() { return treeCtrl; }
+
     void testFunc2(int i);
 ////@begin ImageBrowser member variables
 
@@ -128,9 +149,16 @@ public:
 	wxMenu				*menu;
 	wxSplitterWindow	*splitter1;
 	wxGenericDirCtrl	*dirTreeCtrl;
+    wxTreeCtrl          *treeCtrl;
 	ThumbnailCanvas		*thumbnailCanvas;
+    wxTextCtrl          *directoryNameCtrl;
+    RightHandWindow     *rightHandWindow;
+
 	wxArrayString		 privateDirs;
     wxString             currentDirectory;
+
+    wxTimer              decorationTimer;
+    bool                 allowTreeDecoration;
 ////@end ImageBrowser member variables
 };
 
