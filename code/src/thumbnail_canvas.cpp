@@ -181,10 +181,10 @@ void Thumbnail::Erase(wxPaintDC &dc)
     dc.SetBrush(wxBrush(backgroundColor));
     dc.SetPen(  wxPen(  backgroundColor, 1));
 
-    wxRect rect(position.x         -  selectBorderSize     - 1,             // Top Left Coordinate
-                position.y         -  selectBorderSize     - 1,
-                tnSize.GetWidth()  + (selectBorderSize * 2 + 1),        // Size
-                tnSize.GetHeight() + (selectBorderSize * 2 + 1));
+    wxRect rect(position.x         -  selectBorderSize     - 3,             // Top Left Coordinate
+                position.y         -  selectBorderSize     - 3,
+                tnSize.GetWidth()  + (selectBorderSize * 2 + 3),        // Size
+                tnSize.GetHeight() + (selectBorderSize * 2 + 3));
 
     dc.DrawRectangle(rect);
 }
@@ -202,7 +202,7 @@ void Thumbnail::Draw(wxPaintDC &dc, bool selected, bool cursor, bool inFocus)
         {
 			if (inFocus)
 			{
-				dc.SetBrush(wxBrush(wxS("black")));
+				dc.SetBrush(wxBrush(wxS("blue")));
 				dc.SetPen(*wxBLACK_PEN);
 			}
 			else
@@ -212,10 +212,10 @@ void Thumbnail::Draw(wxPaintDC &dc, bool selected, bool cursor, bool inFocus)
 			}
 
 
-            dc.DrawRectangle(position.x         - selectBorderSize     - 1,
-                             position.y         - selectBorderSize     - 1,
-                             tnSize.GetWidth()  + selectBorderSize * 2 + 1, 
-                             tnSize.GetHeight() + selectBorderSize * 2 + 1);
+            dc.DrawRectangle(position.x         - selectBorderSize     - 3,
+                             position.y         - selectBorderSize     - 3,
+                             tnSize.GetWidth()  + selectBorderSize * 2 + 3, 
+                             tnSize.GetHeight() + selectBorderSize * 2 + 3);
         }
 
         if (selected)
@@ -231,10 +231,10 @@ void Thumbnail::Draw(wxPaintDC &dc, bool selected, bool cursor, bool inFocus)
 				dc.SetPen(wxColor(64, 64, 128));
 			}
 
-            dc.DrawRectangle(position.x         - selectBorderSize     + 1,
-                             position.y         - selectBorderSize     + 1,
-                             tnSize.GetWidth()  + selectBorderSize * 2 - 2,
-                             tnSize.GetHeight() + selectBorderSize * 2 - 2);
+            dc.DrawRectangle(position.x         - selectBorderSize     + 3,
+                             position.y         - selectBorderSize     + 3,
+                             tnSize.GetWidth()  + selectBorderSize * 2 - 3,
+                             tnSize.GetHeight() + selectBorderSize * 2 - 3);
 
             dc.SetTextForeground(wxColor(255, 255, 255));
         }
@@ -302,7 +302,7 @@ ThumbnailCanvas::ThumbnailCanvas(wxWindow *parent, wxWindowID id, const wxPoint 
     RecalculateRowsCols();
 
     //imageViewer = new ImageViewer(this, -1, _T("Image Viewer"), wxDefaultPosition, wxDefaultSize, wxSTAY_ON_TOP);
-    imageViewer = new ImageViewer(this, -1, _T("Image Viewer"), wxDefaultPosition, wxDefaultSize, wxRESIZE_BORDER | wxFRAME_TOOL_WINDOW | wxCAPTION);
+    imageViewer = new ImageViewer(this, -1, _T("Image Viewer"), wxDefaultPosition, wxDefaultSize, wxRESIZE_BORDER );
     imageViewer->SetFileNameList(&fileNameList);
 }
 
@@ -368,6 +368,9 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
     wxString cursorFileName;
     wxSize   cursorImageSize;
 
+    if (!n)
+        return;
+
     cout << "Redraw type " << redrawType << endl;
     switch (redrawType)
     {
@@ -393,10 +396,11 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
             break;
 
         case REDRAW_SELECTION:
-            //redrawSetP.Print();
+            redrawSetP.Print();
 
             for (int i = 0; i<redrawSetP.size(); i++)
             {
+                cout << "A: " << i << endl;
 				int th = redrawSetP[i];
 				if (i >= 0)
 					thumbnailPointers[th]->Erase(dc);
@@ -404,6 +408,7 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
 
             for (int i=0; i<redrawSetP.size(); i++)
             {
+                cout << "B: " << i << endl;
                 int th = redrawSetP[i];
 				selected = selectionSetP.Contains(th);
 
@@ -434,10 +439,18 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
 
 void ThumbnailCanvas::HandleCursorScrolling()
 {
+    int cursorNumber = cursorP.GetNumber();
+
+    if ((cursorNumber == -1) || (thumbnailPointers.size() == 0))
+    {
+        SetScrollPos(wxVERTICAL, 0);
+        return;
+    }
+
     int xPPU, yPPU;
     GetScrollPixelsPerUnit(&xPPU, &yPPU);
 
-    Thumbnail *tn = thumbnailPointers[cursorP.GetNumber()];
+    Thumbnail *tn = thumbnailPointers[cursorNumber];
     wxPoint thPosition = tn->GetPosition();
 
     // Check if cursor is off the top of the screen
@@ -584,6 +597,7 @@ void ThumbnailCanvas::ClearThumbnails()
 {
     thumbnails.clear();
     thumbnailPointers.clear();
+    SetCursor(-1);
     ClearStatusBar();
 }
 
@@ -625,6 +639,9 @@ void ThumbnailCanvas::LoadThumbnails(wxString directory)
 
     totalDirectorySizeBytes = 0;
 
+    if (n > 0)
+        SetCursor(0);
+
     for (int i = 0; i<n; i++)
     {
         wxString fullPath = directory;
@@ -653,6 +670,7 @@ void ThumbnailCanvas::LoadThumbnails(wxString directory)
 		waitingSet.Clear();
 	}
     loadingSet.Clear();
+    redrawSetP.Clear();
 
     RecalculateRowsCols();
 	//cout << "LoadThumbnails(" << directory << ")  done" << endl;
@@ -833,17 +851,21 @@ void ThumbnailCanvas::UpdateStatusBar_File()
 {
     if (selectionSetP.size() == 0)
     {
-        Thumbnail *tn = thumbnailPointers[cursorP.GetNumber()];
+        if (thumbnailPointers.size() > 0)
+        {
+            Thumbnail *tn = thumbnailPointers[cursorP.GetNumber()];
 
+            cout << "Update Status: " << tn->GetFullPath().GetFullPath() << endl;
 
-        wxFileName fn = tn->GetFullPath();
-        wxDateTime date = fn.GetModificationTime();
-        wxString dateString = date.Format("%d/%m/%Y  %H:%M");
-        wxSize imageSize = tn->GetImageSize();
+            wxFileName fn = tn->GetFullPath();
+            wxDateTime date = fn.GetModificationTime();
+            wxString   dateString = date.Format("%d/%m/%Y  %H:%M");
+            wxSize     imageSize = tn->GetImageSize();
 
-        STATUS_TEXT(STATUS_BAR_FILE_INFO, "%s,  %s",  fn.GetHumanReadableSize().c_str(), dateString);
-        STATUS_TEXT(STATUS_BAR_FILE_FORMAT, fn.GetFullName().c_str());
-        STATUS_TEXT(STATUS_BAR_FILE_DIMENSIONS, "(%d x %d)", imageSize.GetWidth(), imageSize.GetHeight());
+            STATUS_TEXT(STATUS_BAR_FILE_INFO, "%s,  %s", fn.GetHumanReadableSize().c_str(), dateString);
+            STATUS_TEXT(STATUS_BAR_FILE_FORMAT, fn.GetFullName().c_str());
+            STATUS_TEXT(STATUS_BAR_FILE_DIMENSIONS, "(%d x %d)", imageSize.GetWidth(), imageSize.GetHeight());
+        }
     }
 }
 

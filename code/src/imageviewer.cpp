@@ -79,7 +79,7 @@ ImageViewer::ImageViewer(ThumbnailCanvas* parent, wxWindowID id, const wxString&
   myParent(parent)
 {
     Init();
-    Create( parent, id, caption, pos, size, style );
+    Create( parent, id, caption, wxPoint(-5,0), wxSize(wxSystemSettings::GetMetric(wxSYS_SCREEN_X), wxSystemSettings::GetMetric(wxSYS_SCREEN_Y)), style | wxMAXIMIZE);
 }
 
 
@@ -93,7 +93,8 @@ bool ImageViewer::Create(ThumbnailCanvas* parent, wxWindowID id, const wxString&
     wxFrame::Create( parent, id, caption, pos, size, style );
 
     CreateControls();
-    Centre();
+    Layout();
+    //Centre();
 ////@end ImageViewer creation
     return true;
 }
@@ -243,7 +244,7 @@ void ImageViewer::DisplayImage(int imageNumber)
     {
         TEXT_MSG("  Display\n");
         Show(true);
-        ShowFullScreen(true);
+        //ShowFullScreen(true);
         displayNumber = imageNumber;
         SetFocus();
         Refresh();
@@ -261,7 +262,7 @@ void ImageViewer::Disappear()
     myParent->SetCursor(glPanel->GetImageNumber());
     Show(false);
     myParent->SetFocus();
-    ShowFullScreen(false);
+    //ShowFullScreen(false);
 }
 
 wxLongLong keyTime = 0;

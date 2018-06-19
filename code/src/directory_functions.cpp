@@ -2,6 +2,7 @@
 #include <wx/treectrl.h>
 #include "wx/dirctrl.h"
 #include "wx/dir.h"
+#include "wx/filename.h"
 #include "imagebrowser.h"
 #include <iostream>
 
@@ -33,14 +34,20 @@ void GreyEmptyDirectories(wxTreeCtrl &treeCtrl, wxTreeItemId treeItemId)
 
     wxTreeItemId id = treeCtrl.GetFirstChild(treeItemId, cookie);
 
+
     while (id.IsOk())
     {
         wxDirItemData *data = (wxDirItemData*)(treeCtrl.GetItemData(id));
         wxDir dir = data->m_path;
+        wxFileName fileName(data->m_path);
 
-        if ((!dir.HasFiles()) && (!dir.HasSubDirs()))
+
+        if (fileName.IsDirReadable())
         {
-            treeCtrl.SetItemTextColour(id, wxColor(128, 128, 128));
+            if ((!dir.HasFiles()) && (!dir.HasSubDirs()))
+            {
+                treeCtrl.SetItemTextColour(id, wxColor(128, 128, 128));
+            }
         }
         id = treeCtrl.GetNextChild(treeItemId, cookie);
     }

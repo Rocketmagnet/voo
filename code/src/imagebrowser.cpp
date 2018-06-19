@@ -322,7 +322,7 @@ void ImageBrowser::ReNumberImages(wxCommandEvent &evt)
     wxTreeItemId id = dirTreeCtrl->GetPopupMenuItem();
     wxDirItemData *data = (wxDirItemData*)(dirTreeCtrl->GetTreeCtrl()->GetItemData(id));
 
-    cout << "ReNumberImages " << data->m_path << endl;
+
 }
 
 
@@ -513,15 +513,28 @@ void ImageBrowser::RefreshDirTree(wxString path)
 
 void ImageBrowser::DirectoryWasDeleted(wxString path)
 {
-    wxFileName dir(path);
-    dir.RemoveLastDir();
+    dirTreeCtrl->SelectPath(path);
+    
+    wxTreeItemId removedId = treeCtrl->GetSelection();
+    wxTreeItemId siblingId = treeCtrl->GetNextSibling(removedId);
 
-    path = dir.GetFullPath();
+    if (!siblingId.IsOk())
+    {
+        siblingId = treeCtrl->GetPrevSibling(removedId);
 
-    dirTreeCtrl->CollapsePath(path);
-    dirTreeCtrl->ExpandPath(  path);
+        if (!siblingId.IsOk())
+        {
+            siblingId = treeCtrl->GetItemParent(removedId);
+        }
+    }
 
-    currentDirectory = path;
+    treeCtrl->SelectItem(siblingId);
+    treeCtrl->Delete(removedId);
+    treeCtrl->EnsureVisible(siblingId);
+
+    wxDirItemData *siblingData = (wxDirItemData*)treeCtrl->GetItemData(siblingId);
+
+    currentDirectory = siblingData->m_path;
     thumbnailCanvas->HideImageViewer();
     thumbnailCanvas->LoadThumbnails(currentDirectory);
     thumbnailCanvas->Refresh();
@@ -530,20 +543,17 @@ void ImageBrowser::DirectoryWasDeleted(wxString path)
 
 void ImageBrowser::OnDirClicked(wxTreeEvent& event)
 {
-	cout << "OnDirClicked" << endl;
 
 	if (dirTreeCtrl)
 	{
         wxTreeItemId id = event.GetItem();
         currentDirectory = dirTreeCtrl->GetPath(id);
-        //dirTreeCtrl->GetTreeCtrl()->SetItemTextColour(id, wxColour(128, 128, 128));
+        dirTreeCtrl->GetTreeCtrl()->EnsureVisible(id);
 		cout << "Chose " << currentDirectory << endl;
 
 		thumbnailCanvas->LoadThumbnails(currentDirectory);
 		thumbnailCanvas->Refresh();
 	}
-
-    
 
 	event.Skip();
 }
@@ -648,7 +658,6 @@ bool RemoveDirectory(wxString pathName)
 }
 
 
-
 void ImageBrowser::OnDeleteDirectory(wxCommandEvent &event)
 {
     wxString path = GetCurrentDir();
@@ -659,6 +668,7 @@ void ImageBrowser::OnDeleteDirectory(wxCommandEvent &event)
         DirectoryWasDeleted(path);
     }
 }
+
 
 void ImageBrowser::OnArchiveDirectory(wxCommandEvent &event)
 {
@@ -683,57 +693,6 @@ bool ImageBrowser::DeleteDirectory(wxString path)
         return false;
     }
 }
-
-/*
-wxString CorrectDirectoryName(wxString name)
-{
-    int n = name.Find(wxT(":"));
-    if (n >= 0)
-    {
-        return name.Mid(n - 1, 2);
-    }
-
-    return name;
-}
-
-wxTreeItemId  ImageBrowser::GetTreeItemId(wxString path, wxTreeItemId root)
-{
-    wxFileName fileName(path);
-
-    wxArrayString dirs = fileName.GetDirs();
-    int i, n=dirs.GetCount();
-
-    wxString dir = dirs[0];
-    fileName.RemoveDir(0);
-    cout << "Finding " << dir << endl;
-
-    wxTreeItemIdValue cookie;
-    wxTreeItemId id = treeCtrl->GetFirstChild(root, cookie);
-    wxTreeItemId invalidId;
-
-    while (id.IsOk())
-    {
-        wxString name = CorrectDirectoryName(treeCtrl->GetItemText(id));
-
-        cout << "  " << name << endl;
-
-        if (name == dir)                        // Did we find it?
-        {
-            cout << "    MATCH!" << endl;
-            if (dirs.Count() == 1)              // Are we looking for this one, ..
-            {
-                return id;
-            }
-            else                                // .. or one of its children?
-            {
-                return invalidId;
-            }
-        }
-
-        id = treeCtrl->GetNextChild(root, cookie);
-    }
-}
-*/
 
 
 void ImageBrowser::ReportDirectoryInfo(wxString path, wxTreeItemId id, int flags)

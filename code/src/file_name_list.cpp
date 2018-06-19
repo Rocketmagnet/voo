@@ -3,6 +3,7 @@
 #include <iostream>
 #include <algorithm>
 #include "status_bar.h"
+#include "natural_sort.h"
 using namespace std;
 
 
@@ -21,16 +22,20 @@ FileNameList::FileNameList(wxString dir)
 
 bool FileSortNatural(const DirSortingItem &fn1, const DirSortingItem &fn2)
 {
-    return (fn1.fileName.GetName().CmpNoCase(fn2.fileName.GetName()) < 0);
+    //return (fn1.fileName.GetName().CmpNoCase(fn2.fileName.GetName()) < 0);
+    return (wxCmpNatural(fn1.fileName.GetName(), fn2.fileName.GetName()) < 0);
 }
 
 void FileNameList::LoadFileList(wxString dir)
 {
-    cout << "LoadFileList" << endl;
+    cout << "LoadFileList(" << dir << ")" << endl;
     files.clear();
     directory.Open(dir);
 
-    cout << directory.GetName() << endl;
+    cout << directory.GetName() << directory.IsOpened() << endl;
+
+    if (!directory.IsOpened())
+        return;
 
     wxString filename;
     int i, n = filters.size();
@@ -41,7 +46,7 @@ void FileNameList::LoadFileList(wxString dir)
         while (cont)
         {
             wxFileName fn = directory.GetName() + wxT("\\") + filename;
-
+            
             files.emplace_back(fn, fn.GetModificationTime(), FileSortNatural);
             //files.push_back(directory.GetName() + wxT("\\") + filename);
             cont = directory.GetNext(&filename);

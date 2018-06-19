@@ -133,6 +133,7 @@
     <ClInclude Include="..\..\src\image_loader.h" />
     <ClInclude Include="..\..\src\image_server.h" />
     <ClInclude Include="..\..\src\jpeg_turbo.h" />
+    <ClInclude Include="..\..\src\natural_sort.h" />
     <ClInclude Include="..\..\src\status_bar.h" />
     <ClInclude Include="..\..\src\thumbnail_canvas.h" />
     <ClInclude Include="..\..\src\vector3d.h" />
@@ -148,6 +149,7 @@
     <ClCompile Include="..\..\src\image_browserapp.cpp" />
     <ClCompile Include="..\..\src\image_loader.cpp" />
     <ClCompile Include="..\..\src\jpeg_turbo.c" />
+    <ClCompile Include="..\..\src\natural_sort.cpp" />
     <ClCompile Include="..\..\src\thumbnail_canvas.cpp" />
     <ClCompile Include="..\..\src\vector3d.cpp" />
   </ItemGroup>
