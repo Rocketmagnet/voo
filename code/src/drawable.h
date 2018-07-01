@@ -54,12 +54,26 @@ public:
     //void rotate(int angle);
     //void setHotspotCentered();
 
+    bool IsFullyVisible() const;
+
     void CopyScaleAndPositionFrom(const GL_Image &image)
     {
-        //std::cout << this << "  Copying scale " << image.scale << "  (" << x << ", " << y << ")  from " << &image << std::endl;
-        scale = image.scale;
-        x     = image.x;
-        y     = image.y;
+        if (image.IsFullyVisible())
+        {
+            std::cout << "Fully visible" << std::endl;
+            scale = 0.01;
+            x = 0;
+            y = 0;
+            ExpandToSides();
+        }
+        else
+        {
+            std::cout << "Not fully visible" << std::endl;
+            //std::cout << this << "  Copying scale " << image.scale << "  (" << x << ", " << y << ")  from " << &image << std::endl;
+            scale = image.scale;
+            x = image.x;
+            y = image.y;
+        }
     }
 
     void SetScaleAndPosition(float xx, float yy, float sc)
@@ -88,14 +102,14 @@ public:
         //std::cout << this << "  Move Rel(" << x << ", " << y << ")" << std::endl;
     }
 
-    void ClampToSides();
-    void ExpandToSides();
-    void CreateFakeImage();
-    void CopyImageLine(int y);
+    void   ClampToSides();
+    void   ExpandToSides();
+    void   CreateFakeImage();
+    void   CopyImageLine(int y);
     double GetScaleDifference(const GL_Image& glImage) const;
 
-    wxString    GetInfoString();
-    wxString    GetZoomInfo();
+    wxString    GetInfoString() const;
+    wxString    GetZoomInfo()   const;
     void        SetFileName(wxString fn);
 
     //friend class ImageLoader;

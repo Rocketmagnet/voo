@@ -238,7 +238,10 @@ void BasicGLPanel::Clear()
 
 void BasicGLPanel::Render(bool blankScreen)
 {
+    cout << endl;
     NoteTime(wxT("BasicGLPanel::Render"));
+    if (currentImage)
+        cout << "Current = " << currentImage->width << endl;
 
     if (!IsShown())         return;
     if (!glewInitialised)   return;
@@ -258,10 +261,14 @@ void BasicGLPanel::Render(bool blankScreen)
 
         if (currentImage)
         {
+            bool isFullyVisible = currentImage->IsFullyVisible();
+
             newImage->CopyScaleAndPositionFrom(*currentImage);
             cout << "Scale Diff = " << currentImage->GetScaleDifference(*newImage) << endl;
             if (newImage->width > 400)
             {
+                if (isFullyVisible)
+                    newImage->SetScaleAndPosition(0, 0, 0.01);
                 newImage->ExpandToSides();
             }
         }

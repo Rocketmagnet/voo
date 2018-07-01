@@ -79,13 +79,26 @@ ImageViewer::ImageViewer(ThumbnailCanvas* parent, wxWindowID id, const wxString&
   myParent(parent)
 {
     Init();
-    Create( parent, id, caption, wxPoint(-5,0), wxSize(wxSystemSettings::GetMetric(wxSYS_SCREEN_X), wxSystemSettings::GetMetric(wxSYS_SCREEN_Y)), style | wxMAXIMIZE);
+
+    wxSize sz(wxSystemSettings::GetMetric(wxSYS_SCREEN_X)+16, wxSystemSettings::GetMetric(wxSYS_SCREEN_Y));
+
+    Create( parent, id, caption, wxPoint(-8,-8), sz, style );
 }
 
 
 /*
  * ImageViewer creator
  */
+
+
+static int32_t emptyMask[] = { 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                               0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                               0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                               0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                               0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                               0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                               0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                               0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
 
 bool ImageViewer::Create(ThumbnailCanvas* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style )
 {
@@ -94,6 +107,16 @@ bool ImageViewer::Create(ThumbnailCanvas* parent, wxWindowID id, const wxString&
 
     CreateControls();
     Layout();
+    wxBitmap bitmap((char*)emptyMask, 32, 32);
+    wxBitmap   mask((char*)emptyMask, 32, 32);
+
+    bitmap.SetMask(new wxMask(mask));
+    wxImage hiddenImage = bitmap.ConvertToImage();
+    hiddenImage.SetOption(wxIMAGE_OPTION_CUR_HOTSPOT_X, 16);
+    hiddenImage.SetOption(wxIMAGE_OPTION_CUR_HOTSPOT_Y, 16);
+    wxCursor hiddenCursor = wxCursor(hiddenImage);
+
+    SetCursor(hiddenCursor);
     //Centre();
 ////@end ImageViewer creation
     return true;

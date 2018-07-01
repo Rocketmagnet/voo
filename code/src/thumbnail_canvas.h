@@ -401,6 +401,7 @@ public:
 	void ClearThumbnails();
 	void LoadThumbnails(wxString directory);
 	void KillAllThreads();
+    void DirectoryWasDeleted(wxString path);
 
 	void OnSize(wxSizeEvent &event);
 	//void Paint();

@@ -75,6 +75,21 @@ GL_Image::~GL_Image()
     glDeleteTextures(1, &ID);
 }
 
+bool GL_Image::IsFullyVisible() const
+{
+    cout << scale << endl;
+    cout << scale * width << " " << basicGLPanel->GetWidth() << endl;
+    cout << scale * height << " " << basicGLPanel->GetHeight() << endl;
+
+    if (scale*width > basicGLPanel->GetWidth())
+        return false;
+
+    if (scale*height > basicGLPanel->GetHeight())
+        return false;
+
+    return true;
+}
+
 
 void GL_Image::ExpandToSides()
 {
@@ -83,30 +98,35 @@ void GL_Image::ExpandToSides()
     double screenWidth  = basicGLPanel->GetWidth();
     double screenHeight = basicGLPanel->GetHeight();
 
-    //cout << "GL_Image::ExpandToSides()" << endl;
-    //cout << "x      = " << x << endl;
-    //cout << "y      = " << y << endl;
-    //cout << "width  = " << width << endl;
-    //cout << "height = " << height << endl;
-    //cout << "scale  = " << scale << endl;
-    //cout << "imageAspect = " << imageAspect << endl;
+    cout << "GL_Image::ExpandToSides()" << endl;
+    cout << "screenWidth  = " << screenWidth  << endl;
+    cout << "screenHeight = " << screenHeight << endl;
+    cout << "x      = " << x << endl;
+    cout << "y      = " << y << endl;
+    cout << "width  = " << width << endl;
+    cout << "height = " << height << endl;
+    cout << "scale  = " << scale << endl;
+    cout << "imageAspect = " << imageAspect << endl;
 
     if (imageAspect > screenAspect)     // If image is more WideScreen than the screen
     {                                   // then touch the sides, and leave gaps at the top and bottom
         if (width*scale < screenWidth)
         {
-            x      = 0;
+            x     = 0;
             scale = screenWidth / width;
-            y      = 0.5 * (screenHeight - height*scale);
+            y     = 0;
         }
     }
     else                                // If screen is more Widescreen than the image
     {
         if (height*scale < screenHeight)
         {
-            y = 0;
+            y     = 0;
             scale = screenHeight / height;
-            x = 0.5 * (screenWidth - width*scale);
+            x     = 0;
+            cout << "x      = " << x << endl;
+            cout << "y      = " << y << endl;
+            cout << "scale  = " << scale << endl;
         }
     }
 
@@ -137,6 +157,19 @@ void GL_Image::ClampToSides()
     double    topGap = hScreenHeight + top;
     double bottomGap = bottom - hScreenHeight;
 
+    //cout << " left          " << left << endl;
+    //cout << " right         " << right << endl;
+    //cout << " top           " << top << endl;
+    //cout << " bottom        " << bottom << endl;
+    //cout << " screenWidth   " << screenWidth << endl;
+    //cout << " screenHeight  " << screenHeight << endl;
+    //cout << " hScreenWidth  " << hScreenWidth << endl;
+    //cout << " hScreenHeight " << hScreenHeight << endl;
+    //cout << "  leftGap      " << leftGap << endl;
+    //cout << " rightGap      " << rightGap << endl;
+    //cout << "    topGap     " << topGap << endl;
+    //cout << " bottomGap     " << bottomGap << endl;
+
     //cout << "x=" << x << "    left=" << left << "   gap" << leftGap << " width=" << screenWidth << "  hWidth=" << hScreenWidth << endl;
     if (width*scale >= screenWidth)           // If image is wider than the screen
     {
@@ -165,7 +198,7 @@ void GL_Image::ClampToSides()
     }
 
 
-    if (height*scale >= screenHeight)           // If image is wider than the screen
+    if (height*scale >= screenHeight)           // If image is taller than the screen
     {
         if (topGap > 0.0)              //     If there's a space on the LEFT hand side
         {
@@ -202,8 +235,6 @@ void GL_Image::Render()
     if (!uploadedTexture)
         UploadNextBlock();
 
-    //cout << "Render()" << endl;
-
     glLoadIdentity();
 
 
@@ -217,30 +248,13 @@ void GL_Image::Render()
 
     glTranslatef(screenWidth * 0.5, screenHeight * 0.5, 0);
 
-    //glBindTexture(GL_TEXTURE_2D, ID);
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, tex_coord_y);    glVertex2f(left, top);
+        glTexCoord2f(tex_coord_x, tex_coord_y);    glVertex2f(right, top);
+        glTexCoord2f(tex_coord_x, 0);    glVertex2f(right, bottom);
+        glTexCoord2f(0, 0);    glVertex2f(left, bottom);
+    glEnd();
 
-    //if (uploadedTexture)
-    {
-        glBegin(GL_QUADS);
-            glTexCoord2f(0, tex_coord_y);    glVertex2f(left, top);
-            glTexCoord2f(tex_coord_x, tex_coord_y);    glVertex2f(right, top);
-            glTexCoord2f(tex_coord_x, 0);    glVertex2f(right, bottom);
-            glTexCoord2f(0, 0);    glVertex2f(left, bottom);
-            //glVertex2f(left, top);
-            //glVertex2f(right, top);
-            //glVertex2f(right, bottom);
-            //glVertex2f(left, bottom);
-        glEnd();
-    }
-    //else
-    //{
-    //    glBegin(GL_QUADS);
-    //        glVertex2f(left, top);
-    //        glVertex2f(right, top);
-    //        glVertex2f(right, bottom);
-    //        glVertex2f(left, bottom);
-    //    glEnd();
-    //}
     NoteTime(wxT("GL_Image::Render Quad"));
 }
 
@@ -607,7 +621,7 @@ void GL_Image::CreateFakeImage()
     glDeleteTextures(1, &ID);
 }
 
-wxString GL_Image::GetInfoString()
+wxString GL_Image::GetInfoString() const
 {
     return fileName;
 }
@@ -617,7 +631,7 @@ void GL_Image::SetFileName(wxString fn)
     fileName.Printf("%s  %dx%d", fn, width, height);
 }
 
-wxString GL_Image::GetZoomInfo()
+wxString GL_Image::GetZoomInfo() const
 {
     wxString s;
 

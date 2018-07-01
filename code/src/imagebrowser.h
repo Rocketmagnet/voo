@@ -22,6 +22,8 @@
 ////@begin includes
 #include "wx/frame.h"
 #include "wx/treectrl.h"
+#include "config_parser.h"
+
 ////@end includes
 
 /*!
@@ -132,7 +134,7 @@ public:
 
     void MenuDeleteDirectory(wxCommandEvent &evt);
     bool DeleteDirectory(wxString path);
-    void DirectoryWasDeleted(wxString path);
+    void DirectoryWasDeleted(wxString path, wxTreeItemId);
     void OnDeleteDirectory(wxCommandEvent &event);
     void OnArchiveDirectory(wxCommandEvent &event);
 
@@ -159,6 +161,8 @@ public:
 
     wxTimer              decorationTimer;
     bool                 allowTreeDecoration;
+
+    ConfigParser         configParser;
 ////@end ImageBrowser member variables
 };
 

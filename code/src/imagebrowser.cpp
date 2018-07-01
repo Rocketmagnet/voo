@@ -39,11 +39,11 @@
 #include <iostream>
 using namespace std;
 
-#define PRIVATE_DIRS_FILE_NAME "prvdirs.txt"
+#define PRIVATE_DIRS_FILE_NAME     "prvdirs.txt"
+#define CONFIG_FILE_NAME           "config.txt"
+#define DIRFLAGS_CONTAINS_FILES    1
 
-#define DIRFLAGS_CONTAINS_FILES     1
 
- 
 ////@begin XPM images
 ////@end XPM images
 
@@ -77,14 +77,16 @@ END_EVENT_TABLE()
 
 ImageBrowser::ImageBrowser()
 : allowTreeDecoration(false),
-  decorationTimer(this, 555)
+  decorationTimer(this, 555),
+  configParser(CONFIG_FILE_NAME)
 {
     Init();
 }
 
 ImageBrowser::ImageBrowser( wxWindow* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style )
 : allowTreeDecoration(false),
-  decorationTimer(this, 555)
+  decorationTimer(this, 555),
+  configParser(CONFIG_FILE_NAME)
 {
     Init();
     Create( parent, id, caption, pos, size, style );
@@ -115,8 +117,8 @@ bool ImageBrowser::Create( wxWindow* parent, wxWindowID id, const wxString& capt
 
 ImageBrowser::~ImageBrowser()
 {
-////@begin ImageBrowser destruction
-////@end ImageBrowser destruction
+    configParser.SetString("currentDirectory", currentDirectory.ToStdString());
+    configParser.Write();
 }
 
 
@@ -380,7 +382,7 @@ void ImageBrowser::MenuDeleteDirectory(wxCommandEvent &evt)
 
     if (success)
     {
-        DirectoryWasDeleted(path);
+        DirectoryWasDeleted(path, id);
     }
 }
 
@@ -458,7 +460,15 @@ void ImageBrowser::CreateControls()
 	splitter1->SetSashGravity(0.0);
 
 	LoadPrivateDirs();
-	dirTreeCtrl->ExpandPath(wxGetCwd());
+
+    currentDirectory = configParser.GetString("currentDirectory");
+    if (currentDirectory.IsEmpty())
+    {
+        currentDirectory = wxGetCwd();
+        configParser.SetString("currentDirectory", currentDirectory.ToStdString());
+        configParser.Write();
+    }
+	dirTreeCtrl->ExpandPath(currentDirectory);
 	 
     wxAcceleratorEntry entries[1];
     entries[0].Set(wxACCEL_CTRL, (int) 'D', ID_DELETE_DIRECTORY);
@@ -511,39 +521,46 @@ void ImageBrowser::RefreshDirTree(wxString path)
     dirTreeCtrl->ExpandPath(path);
 }
 
-void ImageBrowser::DirectoryWasDeleted(wxString path)
+void ImageBrowser::DirectoryWasDeleted(wxString path, wxTreeItemId removedId)
 {
+    //cout << "ImageBrowser::DirectoryWasDeleted(" << path << endl;
+
     dirTreeCtrl->SelectPath(path);
     
-    wxTreeItemId removedId = treeCtrl->GetSelection();
-    wxTreeItemId siblingId = treeCtrl->GetNextSibling(removedId);
+    wxTreeItemId siblingId = treeCtrl->GetNextSibling(removedId);   // siblingId is the nearest node to the one being deleted.
+                                                                    // Either the next ...
+    if (!siblingId.IsOk())                                          // 
+    {                                                               // 
+        siblingId = treeCtrl->GetPrevSibling(removedId);            // or the previous ...
+                                                                    // 
+        if (!siblingId.IsOk())                                      // 
+        {                                                           // 
+            siblingId = treeCtrl->GetItemParent(removedId);         // or the parent.
+        }                                                           // 
+    }                                                               // 
 
-    if (!siblingId.IsOk())
-    {
-        siblingId = treeCtrl->GetPrevSibling(removedId);
+    if (currentDirectory.Contains(path))                            // If we're deleting the currently selected path,
+    {                                                               // 
+        treeCtrl->SelectItem(siblingId);                            // then we need to jump to the sibling path
+        treeCtrl->Delete(removedId);                                // before we delete it.
+        treeCtrl->EnsureVisible(siblingId);                         // 
+        wxDirItemData *siblingData = (wxDirItemData*)treeCtrl->GetItemData(siblingId);
+        currentDirectory = siblingData->m_path;                     // 
+    }                                                               // 
+    else                                                            // otherwise
+    {                                                               // 
+        treeCtrl->Delete(removedId);                                // just delete it. No problems.
+    }                                                               // 
 
-        if (!siblingId.IsOk())
-        {
-            siblingId = treeCtrl->GetItemParent(removedId);
-        }
-    }
-
-    treeCtrl->SelectItem(siblingId);
-    treeCtrl->Delete(removedId);
-    treeCtrl->EnsureVisible(siblingId);
-
-    wxDirItemData *siblingData = (wxDirItemData*)treeCtrl->GetItemData(siblingId);
-
-    currentDirectory = siblingData->m_path;
+    thumbnailCanvas->DirectoryWasDeleted(path);
     thumbnailCanvas->HideImageViewer();
-    thumbnailCanvas->LoadThumbnails(currentDirectory);
-    thumbnailCanvas->Refresh();
+    //thumbnailCanvas->LoadThumbnails(currentDirectory);
+    //thumbnailCanvas->Refresh();
 }
 
 
 void ImageBrowser::OnDirClicked(wxTreeEvent& event)
 {
-
 	if (dirTreeCtrl)
 	{
         wxTreeItemId id = event.GetItem();
@@ -616,6 +633,13 @@ bool RemoveDirectory(wxString pathName)
 {
     wxString fn;
     wxDir dir(pathName);
+
+    if (!dir.IsOpened())
+    {
+        cout << "Failed to open " << pathName << endl;
+        return false;
+    }
+
     bool cont = dir.GetFirst(&fn);
 
     cout << "RemoveDirectory(" << pathName << ")" << endl;
@@ -660,12 +684,16 @@ bool RemoveDirectory(wxString pathName)
 
 void ImageBrowser::OnDeleteDirectory(wxCommandEvent &event)
 {
-    wxString path = GetCurrentDir();
+    wxTreeItemId    id = dirTreeCtrl->GetPopupMenuItem();
+    wxDirItemData  *itemData = (wxDirItemData*)(dirTreeCtrl->GetTreeCtrl()->GetItemData(id));
+    wxString        path(itemData->m_path);
+
+    cout << "ImageBrowser::OnDeleteDirectory(" << path << ")" << endl;
     bool success = DeleteDirectory(path);
 
     if (success)
     {
-        DirectoryWasDeleted(path);
+        DirectoryWasDeleted(path, id);
     }
 }
 

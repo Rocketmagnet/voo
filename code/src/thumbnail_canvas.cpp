@@ -122,10 +122,15 @@ wxThread::ExitCode ThumbnailLoader::Entry()
 }
 
 
+
+
 Thumbnail::Thumbnail(const wxPoint &pos, wxFileName path)
 : fullPath(path),
   position(pos),
-  imageLoaded(false)
+  imageLoaded(false),
+  hasBeenDrawn(false),
+  imageSize(0, 0),
+  thumbnailLoader(0)
 {
 	thumbnailLoader = new ThumbnailLoader(path.GetFullPath(), *this);
 }
@@ -173,7 +178,6 @@ void Thumbnail::DrawLabelClipped(wxPaintDC &dc, wxString &labelRef, wxRect &rect
      
 
 }
-
 
 
 void Thumbnail::Erase(wxPaintDC &dc)
@@ -274,7 +278,7 @@ ThumbnailCanvas::ThumbnailCanvas(wxWindow *parent, wxWindowID id, const wxPoint 
   fileNameList(),
   inFocus(true),
   cursorP(tnColumns, fileNameList),
-  selectionStart(-1),
+  selectionStart(0),
   backgroundColor(wxColor(64, 64, 64)),
   tnSize(150, 150),
   thBorder(5),
@@ -368,16 +372,18 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
     wxString cursorFileName;
     wxSize   cursorImageSize;
 
+    //cout << "ThumbnailCanvas::OnPaint" << endl;
     if (!n)
         return;
 
-    cout << "Redraw type " << redrawType << endl;
+    //cout << "Redraw type " << redrawType << endl;
     switch (redrawType)
     {
         case REDRAW_ALL:
             //cout << "Redrawing ALL" << endl;
             for (int i = 0; i < n; i++)
             {
+                //cout << "  " << i << endl;
                 selected = selectionSetP.Contains(i);
                 if (cursorP.GetNumber() == i)
                 {
@@ -390,27 +396,34 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
                 {
                     onCursor = false;
                 }
-
+                //cout << "    Drawing" << endl;
                 thumbnailPointers[i]->Draw(dc, selected, onCursor);
             }
             break;
 
         case REDRAW_SELECTION:
+            //cout << "Redrawing Selection" << endl;
+            //cout << "  redrawSetP.size() = " << redrawSetP.size() << endl;
             redrawSetP.Print();
 
             for (int i = 0; i<redrawSetP.size(); i++)
             {
-                cout << "A: " << i << endl;
+
 				int th = redrawSetP[i];
-				if (i >= 0)
-					thumbnailPointers[th]->Erase(dc);
+                //cout << "  th = " << th << endl;
+                if (th >= 0)
+                {
+                    //cout << "    Erasing" << endl;
+                    thumbnailPointers[th]->Erase(dc);
+                }
             }
 
             for (int i=0; i<redrawSetP.size(); i++)
             {
-                cout << "B: " << i << endl;
                 int th = redrawSetP[i];
-				selected = selectionSetP.Contains(th);
+                //cout << "  redrawSetP.size() = " << redrawSetP.size() << endl;
+                //cout << "  th = " << th << endl;
+                selected = selectionSetP.Contains(th);
 
 				if (cursorP.GetNumber() == th)
                 {
@@ -424,16 +437,20 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
                     onCursor = false;
                 }
 
-                //cout << "  draw " << th << " " << selected << " " << onCursor << " " << cursor.GetNumber() << endl;
 
-                thumbnailPointers[th]->Draw(dc, selected, onCursor, inFocus);
+                if (th >= 0)
+                {
+                    //cout << "    Drawing" << endl;
+                    //cout << "  draw " << th << " " << selected << " " << onCursor << " " << cursorP.GetNumber() << endl;
+                    thumbnailPointers[th]->Draw(dc, selected, onCursor, inFocus);
+                }
             }
 
             redrawSetP.Clear();
             break;
     }
     
-    cout << "Redraw All" << endl;
+    //cout << "Redraw All" << endl;
     redrawType = REDRAW_ALL;
 }
 
@@ -443,7 +460,7 @@ void ThumbnailCanvas::HandleCursorScrolling()
 
     if ((cursorNumber == -1) || (thumbnailPointers.size() == 0))
     {
-        SetScrollPos(wxVERTICAL, 0);
+        Scroll(0, 0);
         return;
     }
 
@@ -626,6 +643,25 @@ wxString HumanFileSize(int bytes)
     return s;
 }
 
+
+void ThumbnailCanvas::DirectoryWasDeleted(wxString path)
+{
+    cout << "ThumbnailCanvas::DirectoryWasDeleted(" << path << ")" << endl;
+
+    if (path == fileNameList.directory.GetName())
+    {
+        cout << "This directory was deleted" << endl;
+
+        ClearThumbnails();
+
+        selectionSetP.Clear();
+        redrawSetP.Clear();
+        waitingSet.Clear();
+        loadingSet.Clear();
+    }
+}
+
+
 void ThumbnailCanvas::LoadThumbnails(wxString directory)
 {
 	//cout << "LoadThumbnails(" << directory << ")" << endl;
@@ -636,6 +672,7 @@ void ThumbnailCanvas::LoadThumbnails(wxString directory)
     int n = fileNameList.files.size();
     thumbnails.reserve(n);
     thumbnailPointers.reserve(n);
+    Scroll(0, 0);
 
     totalDirectorySizeBytes = 0;
 
@@ -680,14 +717,15 @@ bool ThumbnailCanvas::HandleThumbnailLoading()
 {
     int i, n = loadingSet.size();
 
-    //cout << "Checking" << endl;
+    cout << "ThumbnailCanvas::HandleThumbnailLoading()" << endl;
+
     for (i = 0; i < n; i++)
     {
         int th = loadingSet[i];
-        //cout << "  loadingSet[" << i << "] = " << th << endl;
+        cout << "  loadingSet[" << i << "] = " << th << endl;
         if (thumbnails[th].ImageIsLoaded())
         {
-            //cout << "    removing" << endl;
+            cout << th << " is complete" << endl;
             loadingSet.RemoveSingle(th);
             redrawSetP.AddSingle(th);
             i--;
@@ -695,13 +733,13 @@ bool ThumbnailCanvas::HandleThumbnailLoading()
         }
     }
 
-    //cout << n << " images loading" << endl;
+    cout << n << " images loading" << endl;
 
     n = maxLoading - loadingSet.size();
     if (n > waitingSet.size())
         n = waitingSet.size();
 
-    //cout << "Starting " << n << " more images loading" << endl;
+    cout << "Starting " << n << " more images loading" << endl;
 
     for (i = 0; i < n; i++)
     {
@@ -714,7 +752,7 @@ bool ThumbnailCanvas::HandleThumbnailLoading()
             i--;
             n--;
         }
-        //cout << "  * starting " << th << endl;
+        cout << "  * starting " << th << endl;
     }
 
     if (redrawSetP.size())
