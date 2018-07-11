@@ -395,6 +395,13 @@ void ImageBrowser::SetAcceleratorTable(const wxAcceleratorTable &accel)
 }
 
 
+wxTextCtrl          *debuggingWindow = 0;
+
+void SetDebuggingText(wxString text)
+{
+    if (debuggingWindow)
+        debuggingWindow->SetValue(text);
+}
 
 void ImageBrowser::CreateControls()
 {    
@@ -436,6 +443,13 @@ void ImageBrowser::CreateControls()
     treeCtrl = dirTreeCtrl->GetTreeCtrl();
 
     treeCtrl->Bind(wxEVT_TREE_ITEM_EXPANDED, &ImageBrowser::TreeExpanded, this, -1);
+
+    wxFrame *debuggingFrame = new wxFrame(this, -1, wxT("Debugging"), wxPoint(1500, 600), wxSize(400, 400));
+    debuggingWindow = new wxTextCtrl(debuggingFrame, -1, wxT("Test"), wxPoint(0,0), wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
+    wxBoxSizer *debugSizer = new wxBoxSizer(wxHORIZONTAL);
+    debuggingFrame->SetSizer(debugSizer);
+    debugSizer->Add(debuggingWindow, 1, wxEXPAND);
+    debuggingFrame->Show(true);
 
     //dirTreeCtrl->AddRightClickMenuItem("testFunc", this, (wxFrame::(*func)(wxCommandEvent &))ImageBrowser::testFunc);
     //int id = dirTreeCtrl->NewMenuItem("testFunc");

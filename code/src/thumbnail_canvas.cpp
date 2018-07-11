@@ -325,27 +325,34 @@ void ThumbnailCanvas::RecalculateRowsCols()
 {
     int xSize = GetSize().GetWidth();
     size_t i = 0;
-    size_t n = thumbnails.size();
+    size_t n = thumbnailPointers.size();
     size_t x, y;
 
-    xSize -= tnSpacingX;
+    int tnJumpX = tnSize.GetWidth()  + tnSpacingX;                          // The distance from the corner of one ThumbNail
+    int tnJumpY = tnSize.GetHeight() + tnSpacingY;                          // to the corner of the next
 
-    tnColumns = xSize / (tnSize.GetWidth() + tnSpacingX);
+    xSize -= tnSpacingX;                                                    // Because there'll be a border at the left edge
+
+    tnColumns = xSize / tnJumpX;                                            // Calculate the number of columns
     if (tnColumns < 1)                                                      // Can't have zero columns!
     {
         tnColumns = 1;
     }
-    tnRows    = (thumbnails.size() / tnColumns) + 1;
+    tnRows    = (int)ceil(((double)thumbnailPointers.size() / tnColumns));         // Calculate the number of rows
+
+    int virtualX = xSize;                                                   // 
+    int virtualY = (tnRows) * tnJumpY + tnSpacingY;                         // 
+    SetVirtualSize(virtualX, virtualY);                                     // Set the size of the scroll window
 
     x = 0;
     y = 0;
-    for (i = 0; i < n; i++)
+    for (i = 0; i < n; i++)                                                 // Now lay out the ThumbNails on the virtual window
     {
         int xPos = x * (tnSize.GetWidth()  + tnSpacingX) + tnSpacingX;
         int yPos = y * (tnSize.GetHeight() + tnSpacingY) + tnSpacingY;
 
         wxPoint pos(xPos, yPos);
-        thumbnails[i].SetPosition(pos);
+        thumbnailPointers[i]->SetPosition(pos);
 
         x++;
         if (x == tnColumns)
@@ -356,7 +363,6 @@ void ThumbnailCanvas::RecalculateRowsCols()
     }
 
     redrawSetP.Clear();
-    cout << "Redraw All" << endl;
     redrawType = REDRAW_ALL;
 }
 
@@ -372,7 +378,7 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
     wxString cursorFileName;
     wxSize   cursorImageSize;
 
-    //cout << "ThumbnailCanvas::OnPaint" << endl;
+    cout << "ThumbnailCanvas::OnPaint" << endl;
     if (!n)
         return;
 
@@ -380,15 +386,15 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
     switch (redrawType)
     {
         case REDRAW_ALL:
-            //cout << "Redrawing ALL" << endl;
+            cout << "Redrawing ALL" << endl;
             for (int i = 0; i < n; i++)
             {
-                //cout << "  " << i << endl;
+                cout << "  " << i << endl;
                 selected = selectionSetP.Contains(i);
                 if (cursorP.GetNumber() == i)
                 {
                     onCursor = true;
-                    cursorFileName = thumbnailPointers[i]->GetFullPath().GetFullName();
+                    cursorFileName  = thumbnailPointers[i]->GetFullPath().GetFullName();
                     cursorImageSize = thumbnailPointers[i]->GetImageSize();
                     //STATUS_TEXT(0, "%s  (%d, %d)", cursorFileName, cursorImageSize.GetWidth(), cursorImageSize.GetHeight());
                 }
@@ -396,7 +402,7 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
                 {
                     onCursor = false;
                 }
-                //cout << "    Drawing" << endl;
+                cout << "    Drawing" << endl;
                 thumbnailPointers[i]->Draw(dc, selected, onCursor);
             }
             break;
@@ -513,6 +519,8 @@ void ThumbnailCanvas::OnKeyEvent(wxKeyEvent &event)
         case WXK_LEFT:   cursorP.Move(-1,  0);							    break;
         case WXK_RIGHT:  cursorP.Move( 1,  0);							    break;
         case WXK_RETURN: imageViewer->DisplayImage(cursorP.GetNumber());    break;
+
+        case WXK_DELETE: DeleteSelection();                                 return;
 
         default:
 			//cout << "Key: " << event.GetKeyCode() << endl;
@@ -717,15 +725,15 @@ bool ThumbnailCanvas::HandleThumbnailLoading()
 {
     int i, n = loadingSet.size();
 
-    cout << "ThumbnailCanvas::HandleThumbnailLoading()" << endl;
+    //cout << "ThumbnailCanvas::HandleThumbnailLoading()" << endl;
 
     for (i = 0; i < n; i++)
     {
         int th = loadingSet[i];
-        cout << "  loadingSet[" << i << "] = " << th << endl;
+        //cout << "  loadingSet[" << i << "] = " << th << endl;
         if (thumbnails[th].ImageIsLoaded())
         {
-            cout << th << " is complete" << endl;
+            //cout << th << " is complete" << endl;
             loadingSet.RemoveSingle(th);
             redrawSetP.AddSingle(th);
             i--;
@@ -733,13 +741,13 @@ bool ThumbnailCanvas::HandleThumbnailLoading()
         }
     }
 
-    cout << n << " images loading" << endl;
+    //cout << n << " images loading" << endl;
 
     n = maxLoading - loadingSet.size();
     if (n > waitingSet.size())
         n = waitingSet.size();
 
-    cout << "Starting " << n << " more images loading" << endl;
+    //cout << "Starting " << n << " more images loading" << endl;
 
     for (i = 0; i < n; i++)
     {
@@ -752,7 +760,7 @@ bool ThumbnailCanvas::HandleThumbnailLoading()
             i--;
             n--;
         }
-        cout << "  * starting " << th << endl;
+        //cout << "  * starting " << th << endl;
     }
 
     if (redrawSetP.size())
@@ -965,4 +973,57 @@ void ThumbnailCanvas::SetCursor(int imageNumber)
 {
     cursorP.SetTo(imageNumber);
     HandleCursorScrolling();
+}
+
+// Delete the image on disk, and delete the thumbnail pointer, but keep the thumbnail.
+void ThumbnailCanvas::DeleteImage(int tn)
+{
+    cout << "Deleting " << tn << " " << thumbnailPointers[tn]->GetFullPath().GetFullName() << endl;
+
+    std::vector<Thumbnail*>::iterator iter = thumbnailPointers.begin();
+        
+    for (int i=0; i < tn; i++)
+    {
+        iter++;
+    }
+    thumbnailPointers.erase(iter);
+
+    RecalculateRowsCols();
+    redrawType = REDRAW_ALL;
+    Refresh(ERASE_BACKGROUND);
+}
+
+void ThumbnailCanvas::DeleteSelection()
+{
+    int i, n;
+    /*
+    if (!selectionSetP.size())
+    {
+        selectionSetP.AddSingle(cursorP.GetNumber());
+        n = 1;
+
+        if (thumbnailPointers.size() == 1)
+        {
+            cursorP.SetTo(-1);
+        }
+        else
+        {
+            if (cursorP.GetNumber() == 0)
+        }
+    }
+    else
+    {
+        n = selectionSetP.size();
+        cursorP.SetTo(selectionSetP[0]);
+    }
+    */
+    for (i = n-1; i >= 0; i--)
+    {
+        int tn = selectionSetP[i];
+        DeleteImage(tn);
+    }
+
+    selectionSetP.Clear();
+    
+    //wxRemoveFile(pathName + fn)
 }

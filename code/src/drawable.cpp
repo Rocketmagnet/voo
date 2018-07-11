@@ -19,6 +19,8 @@ extern "C"
 };
 
 extern void NoteTime(wxString s);
+void SetDebuggingText(wxString text);
+
 
 wxThread::ExitCode ImageLoader::Entry()
 {
@@ -227,7 +229,7 @@ void GL_Image::ClampToSides()
 
 void GL_Image::Render()
 {
-    NoteTime(wxT("GL_Image::Render"));
+    //NoteTime(wxT("GL_Image::Render"));
 
     if (!loadedImage)
         return;
@@ -237,6 +239,7 @@ void GL_Image::Render()
 
     glLoadIdentity();
 
+    glBindTexture(GL_TEXTURE_2D, ID);
 
     double left   = x - (width  * scale * 0.5);
     double right  = x + (width  * scale * 0.5);
@@ -255,7 +258,7 @@ void GL_Image::Render()
         glTexCoord2f(0, 0);    glVertex2f(left, bottom);
     glEnd();
 
-    NoteTime(wxT("GL_Image::Render Quad"));
+    //NoteTime(wxT("GL_Image::Render Quad"));
 }
 
 void GL_Image::UploadNextBlock()
@@ -419,12 +422,7 @@ void GL_Image::Load(wxString path)
 {
     //cout << "GL_Image::Load(" << path << ")" << endl;
 
-    //Invalidate();
-
-    loadedImage       = false;
-    uploadedTexture   = false;
-    //nextBlockToUpload = 0;
-
+    Invalidate();
 
 
     // check the file exists
@@ -451,17 +449,8 @@ void GL_Image::Load(wxString path)
         {
             int w = load_state->width, h = load_state->height;
 
-            //cout << "Image " << w << "x" << h << endl;
-            //int exitCode = read_JPEG_file((const  char*)fileName.c_str());
-            //char *imageBuffer = new char[w*h*3];
             wxImg.Create(w, h);
-            //wxImg.SetRGB(wxRect(0, 0, w, h), 128, 64, 0);
             JpegRead(wxImg.GetData(), load_state);
-
-
-            //wxLongLong endTime = wxGetLocalTimeMillis();
-            //cout << "exitCode = " << exitCode << endl;
-            //cout << "JPEG load time = " << endTime - startTime << endl;
         }
         else
         {
@@ -471,7 +460,6 @@ void GL_Image::Load(wxString path)
 	}
 	else
 	{
-        //cout << "  Using wxImage::Load()" << endl;
 		wxImg.SetOption(wxIMAGE_OPTION_GIF_TRANSPARENCY, wxIMAGE_OPTION_GIF_TRANSPARENCY_UNCHANGED);
 		wxImg.LoadFile(path);
 	}
@@ -491,7 +479,7 @@ void GL_Image::Load(wxString path)
 
     // Many graphics cards require that textures be power of two.
     // Below is a simple implementation, probably not optimal but working.
-    // If your texture sizes are not restricted to power of 2s, you can
+    // If your texture sizes are not restricted to powers of 2, you can
     // of course adapt the bit below as needed.
      
     float power_of_two_that_gives_correct_width = std::log((float)(width)) / std::log(2.0);
@@ -554,45 +542,22 @@ void GL_Image::Load(wxString path)
         for (int y = 0; y<height; y++)
         {
             CopyImageLine(y);
-            //for (int x = 0; x<newWidth; x++)
-            //{
-            //    if (x<width && y<height)
-            //    {
-            //        imageData[(x + y*newWidth)*bytesPerPixel + 0] = bitmapData[(x + (rev_val - y)*width)*old_bytesPerPixel + 0];
-            //        imageData[(x + y*newWidth)*bytesPerPixel + 1] = bitmapData[(x + (rev_val - y)*width)*old_bytesPerPixel + 1];
-            //        imageData[(x + y*newWidth)*bytesPerPixel + 2] = bitmapData[(x + (rev_val - y)*width)*old_bytesPerPixel + 2];
-            //
-            //        if (bytesPerPixel == 4)
-            //            imageData[(x + y*newWidth)*bytesPerPixel + 3] = alphaData[x + (rev_val - y)*width];
-            //    }
-            //    else
-            //    {
-            //        imageData[(x + y*newWidth)*bytesPerPixel + 0] = 0;
-            //        imageData[(x + y*newWidth)*bytesPerPixel + 1] = 0;
-            //        imageData[(x + y*newWidth)*bytesPerPixel + 2] = 0;
-            //        if (bytesPerPixel == 4)
-            //            imageData[(x + y*newWidth)*bytesPerPixel + 3] = 0;
-            //    }
-            //}
         }
     }
 
-    //cout << "W:" << width << " " << textureWidth << endl;
-    //cout << "H:" << height << " " << textureHeight << endl;
+    cout << "W:" << width << " " << textureWidth << endl;
+    cout << "H:" << height << " " << textureHeight << endl;
 
-    tex_coord_x = (float)width  / (float)textureWidth;
-    tex_coord_y = (float)height / (float)textureHeight;
+    tex_coord_x       = (float)width  / (float)textureWidth;
+    tex_coord_y       = (float)height / (float)textureHeight;
     nextBlockToUpload = 0;
-    blockSize = 100;
-    lastBlock = ceil((double)height / (double)blockSize) - 1;
+    blockSize         = 100;
+    lastBlock         = ceil((double)height / (double)blockSize) - 1;
 
-    loadedImage = true;
     wxImg.Destroy();
 
     wxLongLong endTime = wxGetLocalTimeMillis();
-    //cout << "upload time 2 = " << endTime - startTime << endl;
-
-    //cout << "Load() done" << endl;
+    loadedImage = true;
 }
 
 
@@ -670,32 +635,49 @@ double GL_Image::GetScaleDifference(const GL_Image& glImage) const
     //    return scaleY;
 }
 
+
+void GL_ImageServer::ClearCache()
+{
+    int i, n = imageSet.size();
+
+    for (i = 0; i < n; i++)
+    {
+        imageSet[i].imageNumber = -1;
+        imageSet[i].glImage.fileName = "";
+        imageSet[i].creationTime = 0;
+    }
+
+    UpdateDebuggingText();
+}
+
 void GL_ImageServer::SetFileNameList(FileNameList *fnl)
 {
+    cout << "GL_ImageServer::SetFileNameList()" << endl;
+
     fileNameList = fnl;
 }
 
 int GL_ImageServer::Cache(int imageNumber)
 {
-    //cout << "Cache(" << imageNumber << ")" << endl;
+    cout << "  Cache(" << imageNumber << ")" << endl;
 
     if (!fileNameList)
         return -1;
     
 
-    cout << "Caching.  fileNameList[" << imageNumber << " = " << (*fileNameList)[imageNumber] << endl;
+    cout << "  - Caching.  fileNameList[" << imageNumber << " = " << (*fileNameList)[imageNumber] << endl;
     int cacheLocation = GetCacheLocation(imageNumber);
 
     if (cacheLocation > -1)                             // Is the image already in the cache?
     {
-        cout << "  Already exists at " << cacheLocation << endl;
+        cout << "  - Already exists at " << cacheLocation << endl;
         return cacheLocation;                           // then no need to do anything.
     }
 
     t++;
 
     cacheLocation = GetOldestCacheLocation();
-    cout << "  Placing at " << cacheLocation << endl;
+    cout << "  - Placing at " << cacheLocation << endl;
 
     imageSet[cacheLocation].glImage.Invalidate();
     imageSet[cacheLocation].creationTime            = t;
@@ -707,13 +689,14 @@ int GL_ImageServer::Cache(int imageNumber)
 
 
     //imageSet[cacheLocation].glImage.Load(path);
-    cout << "Loading " << (*fileNameList)[imageNumber] << endl;
+    cout << "  - Loading " << (*fileNameList)[imageNumber] << endl;
     imageSet[cacheLocation].glImage.Load((*fileNameList)[imageNumber]);
-    cout << "Loading done" << endl;
+    cout << "  - Loading done" << endl;
 
     return cacheLocation;
 }
 
+/*
 GL_Image* GL_ImageServer::GetImage(int imageNumber)
 {
     testImage.Load((*fileNameList)[imageNumber]);
@@ -724,10 +707,17 @@ GL_Image* GL_ImageServer::GetImage(int imageNumber)
     testImage.SetFileName(fn.GetFullName());
     return &testImage;
 }
+*/
 
-/*
+
 GL_Image* GL_ImageServer::GetImage(int imageNumber)
 {
+    wxString text;
+
+    // text.Printf("GL_ImageServer::GetImage(%d)", imageNumber);
+
+    //SetDebuggingText(text);
+
     cout << endl << "GL_ImageServer::GetImage(" << imageNumber  << ")" << endl;
 
     int cacheLocation = GetCacheLocation(imageNumber);
@@ -738,15 +728,10 @@ GL_Image* GL_ImageServer::GetImage(int imageNumber)
     }
     cout << "  Found at " << cacheLocation << endl;
 
-    //while (!imageSet[cacheLocation].glImage.completedFlag)
-    //{
-    //    //cout << "Waiting" << endl;
-    //}
-
-    //cout << "Detected load complete" << endl;
+    imageSet[cacheLocation].glImage.SetFileName((*fileNameList)[imageNumber]);
     return &(imageSet[cacheLocation].glImage);
 }
-*/
+
 
 int GL_ImageServer::GetCacheLocation(int imageNumber)
 {
@@ -801,5 +786,34 @@ int  GL_ImageServer::NextImageToCache()
 
 void GL_ImageServer::HandleCaching()
 {
-    
+    UpdateDebuggingText();
+}
+
+void GL_ImageServer::UpdateDebuggingText()
+{
+    int i, n = imageSet.size();
+    wxString lines;
+
+    for (i = 0; i < n; i++)
+    {
+        wxString s;
+        wxFileName fullName = imageSet[i].glImage.fileName;
+        wxString fileName = fullName.GetName();
+
+        fileName += "              ";
+        fileName = fileName.Mid(0, 15);
+
+        wxChar loadedImage = '_', uploaded = '_', genTex = '_';
+        int crTime = imageSet[i].creationTime;
+
+        if (imageSet[i].glImage.loadedImage     == true)   loadedImage = '#';
+        if (imageSet[i].glImage.uploadedTexture == true)      uploaded = '#';
+        if (imageSet[i].glImage.hasGeneratedTexture == true)    genTex = '#';
+
+        s.Printf("%02d: %s  %c %c %c %d\n", imageSet[i].imageNumber, fileName, loadedImage, uploaded, genTex, crTime);
+
+        lines += s;
+    }
+
+    SetDebuggingText(lines);
 }

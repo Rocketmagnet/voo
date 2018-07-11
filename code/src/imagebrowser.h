@@ -61,6 +61,7 @@ class ThumbnailCanvas;
 
 #define ID_DIRECTORY_CTRL	100
 
+void SetDebuggingText(wxString text);
 
 class RightHandWindow : public wxWindow
 {

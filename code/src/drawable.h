@@ -177,10 +177,11 @@ public:
     void HandleCaching();
     int  NextImageToCache();
 
+    void ClearCache();
     int       Cache(int imageNumber);
     GL_Image* GetImage(int imageNumber);
 
-
+    void UpdateDebuggingText();
 
 private:
     int GetCacheLocation(int imageNumber);
@@ -194,6 +195,7 @@ private:
     wxGLContext                    *glContext;
 
     GL_Image                        testImage;
+    wxString                        currentDirectory;
 };
 
 #endif

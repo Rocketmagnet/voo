@@ -40,7 +40,7 @@ BasicGLPanel::BasicGLPanel(wxFrame* parent, int* args)
   scaling(1.0f),
   glewInitialised(false),
   currentImage(0),
-  imageServer(10),
+  imageServer(3),
   imageNumberToLoad(-1),
   screenFont()
 {
@@ -172,7 +172,6 @@ void BasicGLPanel::DisplayImage(int imageNumber)
     imageNumberToLoad = imageNumber;
     fontTimeRemaining = 100;
     zoomTimeRemaining = 100;
-
 }
 
 
@@ -180,7 +179,7 @@ void BasicGLPanel::OnPaint(wxPaintEvent& evt)
 {
     //cout << endl;
     //cout << "BasicGLPanel::OnPaint " << endl;
-    NoteTime(wxT("BasicGLPanel::OnPaint"));
+    //NoteTime(wxT("BasicGLPanel::OnPaint"));
 
     /*
     wxGLCanvas::SetCurrent(*m_context);
@@ -220,10 +219,10 @@ void BasicGLPanel::OnPaint(wxPaintEvent& evt)
         glewInitialised = true;
     }
 
-    NoteTime(wxT("BasicGLPanel::OnPaint Render start"));
+    //NoteTime(wxT("BasicGLPanel::OnPaint Render start"));
     Render(false);
 
-    NoteTime(wxT("BasicGLPanel::OnPaint done"));
+    //NoteTime(wxT("BasicGLPanel::OnPaint done"));
     //cout << "BasicGLPanel::OnPaint - Done" << endl;
 }
 
@@ -238,10 +237,10 @@ void BasicGLPanel::Clear()
 
 void BasicGLPanel::Render(bool blankScreen)
 {
-    cout << endl;
-    NoteTime(wxT("BasicGLPanel::Render"));
-    if (currentImage)
-        cout << "Current = " << currentImage->width << endl;
+    //cout << endl;
+    //NoteTime(wxT("BasicGLPanel::Render"));
+    //if (currentImage)
+    //    cout << "Current = " << currentImage->width << endl;
 
     if (!IsShown())         return;
     if (!glewInitialised)   return;
@@ -250,21 +249,22 @@ void BasicGLPanel::Render(bool blankScreen)
 
     //wxPaintDC(this); // only to be used in paint events. use wxClientDC to paint outside the paint event
 
+    imageServer.HandleCaching();
 
     wxGLCanvas::SetCurrent(*m_context);
-    NoteTime(wxT("Set Current"));
+    //NoteTime(wxT("Set Current"));
 
     if (imageNumberToLoad >= 0)
     {
         GL_Image *newImage = imageServer.GetImage(imageNumberToLoad);
-        NoteTime(wxT("Image Loaded"));
+        //NoteTime(wxT("Image Loaded"));
 
         if (currentImage)
         {
             bool isFullyVisible = currentImage->IsFullyVisible();
 
             newImage->CopyScaleAndPositionFrom(*currentImage);
-            cout << "Scale Diff = " << currentImage->GetScaleDifference(*newImage) << endl;
+            //cout << "Scale Diff = " << currentImage->GetScaleDifference(*newImage) << endl;
             if (newImage->width > 400)
             {
                 if (isFullyVisible)

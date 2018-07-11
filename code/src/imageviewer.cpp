@@ -81,8 +81,11 @@ ImageViewer::ImageViewer(ThumbnailCanvas* parent, wxWindowID id, const wxString&
     Init();
 
     wxSize sz(wxSystemSettings::GetMetric(wxSYS_SCREEN_X)+16, wxSystemSettings::GetMetric(wxSYS_SCREEN_Y));
+    Create(parent, id, caption, wxPoint(-8, -8), sz, style);
+    
+    //wxSize sz(400,400);
+    //Create(parent, id, caption, wxPoint(0, 0), sz, style);
 
-    Create( parent, id, caption, wxPoint(-8,-8), sz, style );
 }
 
 
@@ -469,11 +472,12 @@ void ImageViewer::OnTimer(wxTimerEvent &event)
     //TEXT_MSG("ImageViewer::OnTimer() %d", (t-onTimer).GetLo());
     //cout << "ImageViewer::OnTimer() " << (t - onTimer).GetLo() << endl;
     //onTimer = t;
-    NoteTime(wxT("ImageViewer::OnTimer"));
+
+    //NoteTime(wxT("ImageViewer::OnTimer"));
 
     if (!IsShown())
     {
-        TEXT_MSG(" No\n");
+        //TEXT_MSG(" No\n");
         return;
     }
 
@@ -496,18 +500,18 @@ void ImageViewer::OnTimer(wxTimerEvent &event)
         glPanel->DisplayImage(displayNumber);
         displayNumber = -1;
     }
-    NoteTime(wxT("  display"));
+    //NoteTime(wxT("  display"));
 
     if (currentImage >= 0)
     {
-        TEXT_MSG("  Render\n");
+        //TEXT_MSG("  Render\n");
         glPanel->Render(GL_PANEL_RENDER_IMAGE);
     }
     else
     {
-        TEXT_MSG("  Blank\n");
+        //TEXT_MSG("  Blank\n");
         glPanel->Render(GL_PANEL_BLANK_SCREEN);
     }
-    NoteTime(wxT("  render"));
+    //NoteTime(wxT("  render"));
 }
 

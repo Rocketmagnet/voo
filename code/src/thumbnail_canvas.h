@@ -94,14 +94,7 @@ public:
         {
             if (*i == s)                                // If this is already selected
             {
-                /*
-                for (int j = i; j<v.size() - 1; j++)    // Then slide the rest down one
-                {
-                    v[j] = v[j + 1];
-                }
-                */
                 v.erase(i);
-                //v.pop_back();                           // and delete the last one.
                 return;                                 // and we're finished.
             }
 
@@ -428,6 +421,9 @@ public:
     void UpdateStatusBar_File();
     void ClearStatusBar();
     void SetCursor(int imageNumber);
+
+    void DeleteImage(int i);
+    void DeleteSelection();
 
 private:
     void HandleCursorScrolling();
