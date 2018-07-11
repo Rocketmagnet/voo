@@ -434,6 +434,8 @@ private:
     //
     //void MoveCursor(int dx, int dy);
 
+    void FindNearestThumbnail();
+
 	std::vector<Thumbnail>	thumbnails;
     std::vector<Thumbnail*>	thumbnailPointers;
     int                     selectionStart;

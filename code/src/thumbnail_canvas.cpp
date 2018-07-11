@@ -979,9 +979,14 @@ void ThumbnailCanvas::SetCursor(int imageNumber)
 void ThumbnailCanvas::DeleteImage(int tn)
 {
     cout << "Deleting " << tn << " " << thumbnailPointers[tn]->GetFullPath().GetFullName() << endl;
+    wxRemoveFile(thumbnailPointers[tn]->GetFullPath().GetFullPath());
 
     std::vector<Thumbnail*>::iterator iter = thumbnailPointers.begin();
-        
+    
+    waitingSet.RemoveSingle(tn);
+    loadingSet.RemoveSingle(tn);
+    redrawSetP.Clear();
+
     for (int i=0; i < tn; i++)
     {
         iter++;
@@ -993,30 +998,50 @@ void ThumbnailCanvas::DeleteImage(int tn)
     Refresh(ERASE_BACKGROUND);
 }
 
+
+void ThumbnailCanvas::FindNearestThumbnail()
+{
+    int i, n = thumbnailPointers.size();
+    int bestCursor = -1;
+    int bestDistance = 9999;
+    int newCursorValue = -1;
+
+
+    for (i = 0; i < n; i++)
+    {
+        if (!selectionSetP.Contains(i))
+        {
+            newCursorValue++;
+
+            int distance = abs(i - cursorP.GetNumber());
+
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                bestCursor = newCursorValue;
+            }
+        }
+    }
+
+    if (bestCursor >= 0)
+    {
+        cursorP.SetTo(bestCursor);
+    }
+}
+
+
 void ThumbnailCanvas::DeleteSelection()
 {
     int i, n;
-    /*
-    if (!selectionSetP.size())
-    {
-        selectionSetP.AddSingle(cursorP.GetNumber());
-        n = 1;
+    
+    if (!selectionSetP.size())                              // If there are no images selected, 
+    {                                                       // 
+        selectionSetP.AddSingle(cursorP.GetNumber());       // then just select the one the cursor is on.
+    }
 
-        if (thumbnailPointers.size() == 1)
-        {
-            cursorP.SetTo(-1);
-        }
-        else
-        {
-            if (cursorP.GetNumber() == 0)
-        }
-    }
-    else
-    {
-        n = selectionSetP.size();
-        cursorP.SetTo(selectionSetP[0]);
-    }
-    */
+    n = selectionSetP.size();    
+    FindNearestThumbnail();                                 // Move the cursor to the nearest unselected one
+
     for (i = n-1; i >= 0; i--)
     {
         int tn = selectionSetP[i];
