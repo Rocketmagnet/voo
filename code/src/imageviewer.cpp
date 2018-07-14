@@ -82,7 +82,10 @@ ImageViewer::ImageViewer(ThumbnailCanvas* parent, wxWindowID id, const wxString&
 
     wxSize sz(wxSystemSettings::GetMetric(wxSYS_SCREEN_X)+16, wxSystemSettings::GetMetric(wxSYS_SCREEN_Y));
     Create(parent, id, caption, wxPoint(-8, -8), sz, style);
-    
+
+    wxTextCtrl* dropTarget = new wxTextCtrl(this, wxID_ANY, _("Drop files onto me!"), wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
+    dropTarget->DragAcceptFiles(true);
+
     //wxSize sz(400,400);
     //Create(parent, id, caption, wxPoint(0, 0), sz, style);
 

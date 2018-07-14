@@ -308,8 +308,52 @@ ThumbnailCanvas::ThumbnailCanvas(wxWindow *parent, wxWindowID id, const wxPoint 
     //imageViewer = new ImageViewer(this, -1, _T("Image Viewer"), wxDefaultPosition, wxDefaultSize, wxSTAY_ON_TOP);
     imageViewer = new ImageViewer(this, -1, _T("Image Viewer"), wxDefaultPosition, wxDefaultSize, wxRESIZE_BORDER );
     imageViewer->SetFileNameList(&fileNameList);
+    
+    DragAcceptFiles(true);
+    //Connect(wxEVT_DROP_FILES, ThumbnailCanvas::OnDropFiles, NULL, ThumbnailCanvas::OnDropFiles);
+    //Connect(wxEVT_DROP_FILES, &ThumbnailCanvas::OnDropFiles, NULL, this);
+    //Connect(wxEVT_DROP_FILES, )
+    Bind(wxEVT_DROP_FILES, &ThumbnailCanvas::OnDropFiles, this, -1);
 }
 
+void ThumbnailCanvas::OnDropFiles(wxDropFilesEvent& event)
+{
+    cout << "ThumbnailCanvas::OnDropFiles()" << endl;
+
+    if (event.GetNumberOfFiles() > 0)
+    {
+        wxString* dropped = event.GetFiles();
+        wxASSERT(dropped);
+
+        wxBusyCursor busyCursor;
+        wxWindowDisabler disabler;
+        //wxBusyInfo busyInfo(_("Adding files, wait please..."));
+
+        
+        wxArrayString files;
+
+        for (int i = 0; i < event.GetNumberOfFiles(); i++)
+        {
+            wxString name = dropped[i];
+            wxFileName fileName = name;
+
+            wxString destination = fileNameList.directory.GetName() + wxT("\\") + fileName.GetFullName();
+            cout << "  copy " << name << " to " << destination << endl;
+            wxCopyFile(name, destination);
+
+            thumbnails.emplace_back(wxPoint(0, 0), destination);
+            thumbnailPointers.push_back(&thumbnails.back());
+            waitingSet.AddSingle(thumbnails.size()-1);
+        }
+        RecalculateRowsCols();
+        //wxTextCtrl* textCtrl = dynamic_cast<wxTextCtrl*>(event.GetEventObject());
+        //wxASSERT(textCtrl);
+        //textCtrl->Clear();
+        //for (size_t i = 0; i < files.size(); i++) {
+        //    *textCtrl << files[i] << wxT('\n');
+        //}
+    }
+}
 
 ThumbnailCanvas::~ThumbnailCanvas()
 {
@@ -978,9 +1022,8 @@ void ThumbnailCanvas::SetCursor(int imageNumber)
 // Delete the image on disk, and delete the thumbnail pointer, but keep the thumbnail.
 void ThumbnailCanvas::DeleteImage(int tn)
 {
-    cout << "Deleting " << tn << " " << thumbnailPointers[tn]->GetFullPath().GetFullName() << endl;
     wxRemoveFile(thumbnailPointers[tn]->GetFullPath().GetFullPath());
-
+    
     std::vector<Thumbnail*>::iterator iter = thumbnailPointers.begin();
     
     waitingSet.RemoveSingle(tn);
@@ -1022,6 +1065,9 @@ void ThumbnailCanvas::FindNearestThumbnail()
             }
         }
     }
+
+    if (bestCursor >= thumbnailPointers.size() - selectionSetP.size())
+        bestCursor--;
 
     if (bestCursor >= 0)
     {

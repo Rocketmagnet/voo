@@ -406,6 +406,8 @@ public:
     void OnFocusEvent(wxFocusEvent &event);
     void OnFocusKillEvent(wxFocusEvent &event);
 
+    void OnDropFiles(wxDropFilesEvent& event);
+
     int     GetThumbnailFromPosition(wxPoint &position);
     wxPoint GetThumbnailPosition(size_t n);
 
