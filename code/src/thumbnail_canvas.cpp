@@ -344,7 +344,9 @@ void ThumbnailCanvas::OnDropFiles(wxDropFilesEvent& event)
             thumbnails.emplace_back(wxPoint(0, 0), destination);
             thumbnailPointers.push_back(&thumbnails.back());
             waitingSet.AddSingle(thumbnails.size()-1);
+            fileNameList.AddFileToList(destination);
         }
+        fileNameList.Resort();
         RecalculateRowsCols();
         //wxTextCtrl* textCtrl = dynamic_cast<wxTextCtrl*>(event.GetEventObject());
         //wxASSERT(textCtrl);
@@ -722,8 +724,8 @@ void ThumbnailCanvas::LoadThumbnails(wxString directory)
     fileNameList.LoadFileList(directory);
 
     int n = fileNameList.files.size();
-    thumbnails.reserve(n);
-    thumbnailPointers.reserve(n);
+    //thumbnails.reserve(n);
+    //thumbnailPointers.reserve(n);
     Scroll(0, 0);
 
     totalDirectorySizeBytes = 0;
@@ -1024,7 +1026,7 @@ void ThumbnailCanvas::DeleteImage(int tn)
 {
     wxRemoveFile(thumbnailPointers[tn]->GetFullPath().GetFullPath());
     
-    std::vector<Thumbnail*>::iterator iter = thumbnailPointers.begin();
+    std::deque<Thumbnail*>::iterator iter = thumbnailPointers.begin();
     
     waitingSet.RemoveSingle(tn);
     loadingSet.RemoveSingle(tn);
@@ -1066,11 +1068,18 @@ void ThumbnailCanvas::FindNearestThumbnail()
         }
     }
 
+    cout << "bestCursor               " << bestCursor << endl;
+    cout << "thumbnailPointers.size() " << thumbnailPointers.size()  << endl;
+    cout << "selectionSetP.size()     " << selectionSetP.size()  << endl;
+    
     if (bestCursor >= thumbnailPointers.size() - selectionSetP.size())
+    {
+        cout << "decrementing " << endl;
         bestCursor--;
-
+    }
     if (bestCursor >= 0)
     {
+        cout << "returning " << bestCursor << endl;
         cursorP.SetTo(bestCursor);
     }
 }

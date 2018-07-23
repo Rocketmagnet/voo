@@ -1,6 +1,7 @@
 
 #include "wx/scrolwin.h"
 #include <vector>
+#include <deque>
 #include <iostream>
 #include "wx/bitmap.h"
 #include "wx/filename.h"
@@ -438,8 +439,8 @@ private:
 
     void FindNearestThumbnail();
 
-	std::vector<Thumbnail>	thumbnails;
-    std::vector<Thumbnail*>	thumbnailPointers;
+	std::deque<Thumbnail>	thumbnails;
+    std::deque<Thumbnail*>	thumbnailPointers;
     int                     selectionStart;
 	bool                    inFocus;
 

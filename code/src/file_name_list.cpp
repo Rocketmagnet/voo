@@ -46,7 +46,6 @@ void FileNameList::LoadFileList(wxString dir)
         while (cont)
         {
             wxFileName fn = directory.GetName() + wxT("\\") + filename;
-            
             files.emplace_back(fn, fn.GetModificationTime(), FileSortNatural);
             //files.push_back(directory.GetName() + wxT("\\") + filename);
             cont = directory.GetNext(&filename);
@@ -57,8 +56,18 @@ void FileNameList::LoadFileList(wxString dir)
 }
 
 
-
 void FileNameList::AddFilter(wxString ext)
 {
     filters.push_back(ext);
+}
+
+void FileNameList::AddFileToList(wxString name)
+{
+    wxFileName fn(name);
+    files.emplace_back(fn, fn.GetModificationTime(), FileSortNatural);
+}
+
+void FileNameList::Resort()
+{
+    sort(files.begin(), files.end(), FileSortNatural);
 }

@@ -6,6 +6,10 @@
 #include <vector>
 #include <iostream>
 
+#define MAX_WIDTH          4096
+#define MAX_HEIGHT         4096
+#define BLOCK_SIZE_PIXELS (4096*32)
+
 class wxString;
 
 class GL_Image;
@@ -40,6 +44,31 @@ protected:
     wxGLContext   *glContext;
 };
 
+class TextureUpload
+{
+public:
+    TextureUpload()
+    : wxImg(0),
+      hasGeneratedTexture(false),
+      uploadedTexture(false)
+    {
+    }
+
+    void Init(wxImage *img, wxSize size, wxPoint topLeft, wxPoint bottomRight);
+    bool UploadNextBlock();
+
+    wxImage    *wxImg;
+    GLuint      ID;
+    wxSize      textureSize;
+    wxPoint     topLeft, bottomRight;
+
+    bool        hasGeneratedTexture;
+    bool        uploadedTexture;
+
+    int         nextBlockToUpload;
+    int         blockSize;
+    int         lastBlock;
+};
 
 class GL_Image
 {
@@ -107,31 +136,29 @@ public:
     void   CreateFakeImage();
     void   CopyImageLine(int y);
     double GetScaleDifference(const GL_Image& glImage) const;
+    void   CalculateTextureSizes();
 
     wxString    GetInfoString() const;
     wxString    GetZoomInfo()   const;
     void        SetFileName(wxString fn);
 
-    //friend class ImageLoader;
-    //friend class GL_ImageServer;
 
 //protected:
-    int              width, height, textureWidth, textureHeight;
+    int              width, height;                 // Actual image dimensions
     BasicGLPanel    *basicGLPanel;
-    //int         screenWidth, screenHeight;
 
     float       tex_coord_x, tex_coord_y;
-    //float       left, right, top, bottom;
 
-    GLuint      ID;
+    TextureUpload   textureUploads[4];
+
+    //GLuint      ID[4];
+    //wxSize      textureSizes[4];
     wxImage     wxImg;
     GLubyte    *imageData;
     int         nextBlockToUpload;
     int         blockSize;
     int         lastBlock;
     bool        loadedImage;
-    bool        uploadedTexture;
-    bool        hasGeneratedTexture;
     wxString    fileName;
 
 private:

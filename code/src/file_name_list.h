@@ -52,6 +52,8 @@ public:
     FileNameList(wxString dir);
     void LoadFileList(wxString dir);
     void AddFilter(wxString ext);
+    void AddFileToList(wxString name);
+    void Resort();
 
     size_t   MaxFileNumber()   { return files.size() - 1;         }
     wxString operator[](int i) { return files[i].fileName.GetFullPath();   }

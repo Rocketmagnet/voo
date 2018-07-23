@@ -434,7 +434,7 @@ void ImageBrowser::CreateControls()
     //m_statbmp->Move(rect.x + (rect.width - size.x) / 2, rect.y + (rect.height - size.y) / 2);
     
     //dirTreeCtrl = new PowerDirCtrl(splitter1, ID_DIRECTORY_CTRL, _T("C:\\"), wxDefaultPosition, wxSize(320, 200), wxDIRCTRL_DIR_ONLY);
-	dirTreeCtrl = new wxGenericDirCtrl(splitter1, ID_DIRECTORY_CTRL, _T("C:\\"), wxDefaultPosition, wxSize(320, 200), wxDIRCTRL_DIR_ONLY              |
+	dirTreeCtrl = new wxGenericDirCtrl(splitter1, ID_DIRECTORY_CTRL, _T("C:\\"), wxDefaultPosition, wxSize(640, 200), wxDIRCTRL_DIR_ONLY              |
 																													  wxDIRCTRL_EDIT_LABELS           |
 																													  wxDIRCTRL_POPUP_MENU           |
                                                                                                                       wxDIRCTRL_POPUP_MENU_SORT_NAME |

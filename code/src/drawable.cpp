@@ -25,30 +25,6 @@ void SetDebuggingText(wxString text);
 wxThread::ExitCode ImageLoader::Entry()
 {
 	glImage.Load(fileName);
-
-    // Generate a new texture
-    //if (glImage.hasGeneratedTexture)
-    //{
-    //    glDeleteTextures(1, &glImage.ID);
-    //}
-	//
-    //glGenTextures(1, &glImage.ID);
-    //glImage.hasGeneratedTexture = true;
-	//
-    //// check the file exists
-    //if (!wxFileExists(fileName))
-    //{
-    //    cout << ">   File doesn't exist: " << fileName << endl;
-    //    exit(1);
-    //}
-	//
-    //glImage.wxImg.SetOption(wxIMAGE_OPTION_GIF_TRANSPARENCY, wxIMAGE_OPTION_GIF_TRANSPARENCY_UNCHANGED);
-    //glImage.wxImg.LoadFile(fileName);
-	//
-    //glImage.width  = glImage.wxImg.GetWidth();
-    //glImage.height = glImage.wxImg.GetHeight();
-	//
-    //glImage.loadedImage = true;
     return 0;
 }
 
@@ -74,7 +50,7 @@ GL_Image::GL_Image()
 GL_Image::~GL_Image()
 {
     //cout << "Destructor deleting texture " << ID << endl;
-    glDeleteTextures(1, &ID);
+    glDeleteTextures(4, ID);
 }
 
 bool GL_Image::IsFullyVisible() const
@@ -100,15 +76,15 @@ void GL_Image::ExpandToSides()
     double screenWidth  = basicGLPanel->GetWidth();
     double screenHeight = basicGLPanel->GetHeight();
 
-    cout << "GL_Image::ExpandToSides()" << endl;
-    cout << "screenWidth  = " << screenWidth  << endl;
-    cout << "screenHeight = " << screenHeight << endl;
-    cout << "x      = " << x << endl;
-    cout << "y      = " << y << endl;
-    cout << "width  = " << width << endl;
-    cout << "height = " << height << endl;
-    cout << "scale  = " << scale << endl;
-    cout << "imageAspect = " << imageAspect << endl;
+    //cout << "GL_Image::ExpandToSides()" << endl;
+    //cout << "screenWidth  = " << screenWidth  << endl;
+    //cout << "screenHeight = " << screenHeight << endl;
+    //cout << "x      = " << x << endl;
+    //cout << "y      = " << y << endl;
+    //cout << "width  = " << width << endl;
+    //cout << "height = " << height << endl;
+    //cout << "scale  = " << scale << endl;
+    //cout << "imageAspect = " << imageAspect << endl;
 
     if (imageAspect > screenAspect)     // If image is more WideScreen than the screen
     {                                   // then touch the sides, and leave gaps at the top and bottom
@@ -126,9 +102,9 @@ void GL_Image::ExpandToSides()
             y     = 0;
             scale = screenHeight / height;
             x     = 0;
-            cout << "x      = " << x << endl;
-            cout << "y      = " << y << endl;
-            cout << "scale  = " << scale << endl;
+            //cout << "x      = " << x << endl;
+            //cout << "y      = " << y << endl;
+            //cout << "scale  = " << scale << endl;
         }
     }
 
@@ -239,7 +215,7 @@ void GL_Image::Render()
 
     glLoadIdentity();
 
-    glBindTexture(GL_TEXTURE_2D, ID);
+    glBindTexture(GL_TEXTURE_2D, ID[0]);
 
     double left   = x - (width  * scale * 0.5);
     double right  = x + (width  * scale * 0.5);
@@ -261,6 +237,126 @@ void GL_Image::Render()
     //NoteTime(wxT("GL_Image::Render Quad"));
 }
 
+void GL_Image::CalculateTextureSizes()
+{
+    int   auxWidth  = 0;
+    int   auxHeight = 0;
+
+    int width0  = width,  width1  = 0;      // Default texture sizes, assuming that the image isn't too big
+    int height0 = height, height1 = 0;
+
+    if (width > MAX_WIDTH)
+    {
+        float power_of_two_that_gives_correct_width = std::log((float)(width- MAX_WIDTH)) / std::log(2.0);
+        width1 = (int)std::pow(2.0, (int)(std::ceil(power_of_two_that_gives_correct_width)));
+        width0 = MAX_WIDTH;
+    }
+
+    if (height > MAX_HEIGHT)
+    {
+        float power_of_two_that_gives_correct_height = std::log((float)(width - MAX_HEIGHT)) / std::log(2.0);
+        height1 = (int)std::pow(2.0, (int)(std::ceil(power_of_two_that_gives_correct_height)));
+        height0 = MAX_WIDTH;
+    }
+
+    textureSizes[0] = wxSize(width0, height0);
+    textureSizes[1] = wxSize(width1, height0);
+    textureSizes[2] = wxSize(width0, height1);
+    textureSizes[3] = wxSize(width1, height1);
+}
+
+
+void TextureUpload::Init(wxImage *img, wxSize size, wxPoint TL, wxPoint BR)
+{
+    cout << "TextureUpload::Init(" << size.x << ", " << size.y << ")" << endl;
+    wxImg       = img;
+    textureSize = size;
+    topLeft     = TL;
+    bottomRight = BR;
+
+    uploadedTexture = false;
+
+    nextBlockToUpload = 0;
+    blockSize = size.y / (BLOCK_SIZE_PIXELS / size.x);
+    lastBlock = size.y / blockSize;
+
+    cout << "blockSize = " << blockSize << "    lastBlock = " << lastBlock << endl;
+}
+
+
+bool TextureUpload::UploadNextBlock()
+{
+    if (!wxImg)
+        return;
+
+    int imageWidth  = wxImg->GetSize().x;
+    int imageHeight = wxImg->GetSize().y;
+
+    if (nextBlockToUpload == 0)
+    {
+        if (hasGeneratedTexture)
+        {
+            cout << "UPLOAD: Deleting texture " << ID << endl;
+            hasGeneratedTexture = false;
+            glDeleteTextures(1, &ID);
+            //NoteTime(wxT("Delete texture"));
+        }
+
+        glGenTextures(1, &ID);
+        //NoteTime(wxT("Generate texture"));
+        //cout << "UPLOAD: Generating texture " << ID << endl;
+        hasGeneratedTexture = true;
+
+        //cout << "UPLOAD: Binding texture" << endl;
+        glBindTexture(GL_TEXTURE_2D, ID);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+        glBindTexture(GL_TEXTURE_2D, ID);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureSize.x, textureSize.y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    }
+    else
+    {
+        glBindTexture(GL_TEXTURE_2D, ID);
+    }
+
+    int texX = 0;
+    int texY = blockSize * nextBlockToUpload;
+    int uploadHeight = height - texY;
+    if (uploadHeight > blockSize)
+    {
+        uploadHeight = blockSize;
+    }
+    int startAddress = texY * textureSizes[0].x * 3;
+    int finalY = texY + uploadHeight;
+
+    cout << "UPLOAD: uploading " << texY << " " << uploadHeight << endl;
+
+    //glTexSubImage2D(GL_TEXTURE_2D, 0, texX, texY, textureSizes[0].x, uploadHeight, GL_RGB, GL_UNSIGNED_BYTE, &imageData[startAddress]);
+
+    for (int i = 0; i < uploadHeight; i++)
+    {
+        startAddress = (texY + i) * width * 3;
+        glTexSubImage2D(GL_TEXTURE_2D, 0, texX, texY + i, width, 1, GL_RGB, GL_UNSIGNED_BYTE, &imageData[startAddress]);
+
+        //glTexSubImage2D(GL_TEXTURE_2D, 0, texX, texY, textureSizes[0].x, uploadHeight, GL_RGB, GL_UNSIGNED_BYTE, &imageData[startAddress]);
+    }
+
+    if (nextBlockToUpload == lastBlock)
+    {
+        //cout << "UPLOAD: Deleting image data" << endl;
+        delete[] imageData;
+        NoteTime(wxT("delete[] imageData"));
+        imageData = 0;
+        uploadedTexture = true;
+        wxImg.Destroy();
+    }
+
+    nextBlockToUpload++;
+
+}
+
+
 void GL_Image::UploadNextBlock()
 {
     //cout << "UploadNextBlock() " << (int)imageData << endl;
@@ -276,22 +372,22 @@ void GL_Image::UploadNextBlock()
         {
             //cout << "UPLOAD: Deleting texture " << ID << endl;
             hasGeneratedTexture = false;
-            glDeleteTextures(1, &ID);
+            glDeleteTextures(4, ID);
             NoteTime(wxT("Delete texture"));
         }
 
-        glGenTextures(1, &ID);
+        glGenTextures(4, ID);
         NoteTime(wxT("Generate texture"));
         //cout << "UPLOAD: Generating texture " << ID << endl;
         hasGeneratedTexture = true;
 
         //cout << "UPLOAD: Binding texture" << endl;
-        glBindTexture(GL_TEXTURE_2D, ID);
+        glBindTexture(GL_TEXTURE_2D, ID[0]);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-        glBindTexture(GL_TEXTURE_2D, ID);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureWidth, textureHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+        glBindTexture(GL_TEXTURE_2D, ID[0]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureSizes[0].x, textureSizes[0].y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
     }
     else
     {
@@ -299,7 +395,7 @@ void GL_Image::UploadNextBlock()
         //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glBindTexture(GL_TEXTURE_2D, ID);
+        glBindTexture(GL_TEXTURE_2D, ID[0]);
     }
 
     int texX = 0;
@@ -309,21 +405,20 @@ void GL_Image::UploadNextBlock()
     {
         uploadHeight = blockSize;
     }
-    int startAddress = texY * textureWidth * 3;
+    int startAddress = texY * textureSizes[0].x * 3;
     int finalY = texY + uploadHeight;
 
     cout << "UPLOAD: uploading " << texY << " " << uploadHeight << endl;
 
-    glTexSubImage2D(GL_TEXTURE_2D, 0, texX, texY, textureWidth, uploadHeight, GL_RGB, GL_UNSIGNED_BYTE, &imageData[startAddress]);
-    //glGenerateMipmap(GL_TEXTURE_2D);
+    //glTexSubImage2D(GL_TEXTURE_2D, 0, texX, texY, textureSizes[0].x, uploadHeight, GL_RGB, GL_UNSIGNED_BYTE, &imageData[startAddress]);
 
-    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureWidth, textureHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);
-    //glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, textureWidth, lines1, GL_RGB, GL_UNSIGNED_BYTE, imageData);
-    //glTexSubImage2D(GL_TEXTURE_2D, 0, 0, lines1, textureWidth, lines2, GL_RGB, GL_UNSIGNED_BYTE, &imageData[halfWay*3]);
-    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureWidth, textureHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);
-
-
-    //nextBlockToUpload = lastBlock;
+    for (int i = 0; i < uploadHeight; i++)
+    {
+        startAddress = (texY+i) * width * 3;
+        glTexSubImage2D(GL_TEXTURE_2D, 0, texX, texY+i, width, 1, GL_RGB, GL_UNSIGNED_BYTE, &imageData[startAddress]);
+        
+      //glTexSubImage2D(GL_TEXTURE_2D, 0, texX, texY, textureSizes[0].x, uploadHeight, GL_RGB, GL_UNSIGNED_BYTE, &imageData[startAddress]);
+    }
 
     if (nextBlockToUpload == lastBlock)
     {
@@ -332,65 +427,19 @@ void GL_Image::UploadNextBlock()
         NoteTime(wxT("delete[] imageData"));
         imageData = 0;
         uploadedTexture = true;
+        wxImg.Destroy();
     }
     
     nextBlockToUpload++;
 }
 
-/*
-void GL_Image::UploadNextBlock()
-{
-    //cout << "UploadNextBlock() " << (int)imageData << endl;
 
-    if (!imageData)
-        return;
-
-    wxLongLong startTime = wxGetLocalTimeMillis();
-
-    if (hasGeneratedTexture)
-    {
-        hasGeneratedTexture = false;
-        glDeleteTextures(1, &ID);
-    }
-
-    glGenTextures(1, &ID);
-    hasGeneratedTexture = true;
-
-    glBindTexture(GL_TEXTURE_2D, ID);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-
-    gluBuild2DMipmaps(GL_TEXTURE_2D,
-        GL_RGB,
-        textureWidth, textureHeight,
-        GL_RGB,
-        GL_UNSIGNED_BYTE,
-        imageData);
-
-
-    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);
-
-    //glGenerateMipmap(GL_TEXTURE_2D);
-    //textureWidth = width;
-    //textureHeight = height;
-
-    delete[] imageData;
-    imageData = 0;
-
-    uploadedTexture = true;
-
-    wxLongLong endTime = wxGetLocalTimeMillis();
-    //cout << "upload time 1 = " << endTime-startTime << endl;
-
-    //cout << "UploadNextBlock() done" << endl;
-}
-*/
 void GL_Image::CopyImageLine(int y)
 {
     int srcStep = wxImg.HasAlpha() ? 4 : 3;
     GLubyte *bitmapData = wxImg.GetData();
     int src = (height-y-1) * width * srcStep;
-    int dst = y * textureWidth * 3;
+    int dst = y * textureSizes[0].x * 3;
 
     memcpy(&(imageData[dst]), &(bitmapData[src]), width * 3);
 
@@ -409,7 +458,7 @@ void GL_Image::Invalidate()
 {
     if (hasGeneratedTexture)
     {
-        glDeleteTextures(1, &ID);
+        glDeleteTextures(4, ID);
     }
 
     hasGeneratedTexture = false;
@@ -470,18 +519,20 @@ void GL_Image::Load(wxString path)
     startTime     = wxGetLocalTimeMillis();
     width         = wxImg.GetWidth();
     height        = wxImg.GetHeight();
-    textureWidth  = width;
-    textureHeight = height;
-
+    //textureWidth  = width;
+    //textureHeight = height;
+    CalculateTextureSizes();
     //cout << "  size = (" << width << ", " << height << ")" << endl;
 
+    imageData = wxImg.GetData();
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
     // Many graphics cards require that textures be power of two.
     // Below is a simple implementation, probably not optimal but working.
     // If your texture sizes are not restricted to powers of 2, you can
     // of course adapt the bit below as needed.
-     
+
+    /*
     float power_of_two_that_gives_correct_width = std::log((float)(width)) / std::log(2.0);
     float power_of_two_that_gives_correct_height = std::log((float)(height)) / std::log(2.0);
 
@@ -520,8 +571,8 @@ void GL_Image::Load(wxString path)
         int newWidth = (int)std::pow(2.0, (int)(std::ceil(power_of_two_that_gives_correct_width)));
         int newHeight = (int)std::pow(2.0, (int)(std::ceil(power_of_two_that_gives_correct_height)));
 
-        textureWidth = newWidth;
-        textureHeight = newHeight;
+        textureSizes[0].x = newWidth;
+        textureSizes[0].y = newHeight;
 
         //cout << "  size = (" << newWidth << ", " << newHeight << ")" << endl;
 
@@ -544,47 +595,21 @@ void GL_Image::Load(wxString path)
             CopyImageLine(y);
         }
     }
+    */
+    //cout << "W:" << width << " " << textureWidth << endl;
+    //cout << "H:" << height << " " << textureHeight << endl;
 
-    cout << "W:" << width << " " << textureWidth << endl;
-    cout << "H:" << height << " " << textureHeight << endl;
-
-    tex_coord_x       = (float)width  / (float)textureWidth;
-    tex_coord_y       = (float)height / (float)textureHeight;
+    tex_coord_x       = (float)width  / (float)textureSizes[0].x;
+    tex_coord_y       = (float)height / (float)textureSizes[0].y;
     nextBlockToUpload = 0;
     blockSize         = 100;
     lastBlock         = ceil((double)height / (double)blockSize) - 1;
 
-    wxImg.Destroy();
 
     wxLongLong endTime = wxGetLocalTimeMillis();
     loadedImage = true;
 }
 
-
-void GL_Image::CreateFakeImage()
-{
-    //cout << "GL_Image::CreateFakeImage()" << endl;
-    GLubyte	*imageData = new GLubyte[64*64];
-
-    glGenTextures(1, &ID);
-    hasGeneratedTexture = true;
-
-    glBindTexture(GL_TEXTURE_2D, ID);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-
-    gluBuild2DMipmaps(GL_TEXTURE_2D,
-        GL_RGB,
-        64,64,
-        GL_RGB,
-        GL_UNSIGNED_BYTE,
-        imageData);
-
-
-    delete[] imageData;
-
-    glDeleteTextures(1, &ID);
-}
 
 wxString GL_Image::GetInfoString() const
 {
