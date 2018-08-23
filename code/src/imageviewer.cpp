@@ -310,6 +310,17 @@ void ImageViewer::OnKeyDown(wxKeyEvent &event)
 	//cout << "Key: " << event.GetKeyCode() << endl;
     switch (event.GetKeyCode())
     {
+    case WXK_DELETE:
+        if (!NextImage())
+        {
+            if (!PrevImage())
+            {
+                Disappear();
+            }
+        }
+        myParent->DeleteImage(currentImage);
+        break;
+
     case WXK_ESCAPE:
 	case WXK_RETURN:
         Disappear();
@@ -426,10 +437,11 @@ void ImageViewer::EndImage()
     }
 }
 
-void ImageViewer::NextImage()
+bool ImageViewer::NextImage()
 {
     int newImage = currentImage;
     newImage++;
+
     if (newImage > fileNameList->MaxFileNumber())
         newImage = fileNameList->MaxFileNumber();
 
@@ -437,11 +449,16 @@ void ImageViewer::NextImage()
     {
         DisplayImage(newImage);
         Refresh();
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }
 
 
-void ImageViewer::PrevImage()
+bool ImageViewer::PrevImage()
 {
     int newImage = currentImage;
 
@@ -453,6 +470,11 @@ void ImageViewer::PrevImage()
     {
         DisplayImage(newImage);
         Refresh();
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }
 

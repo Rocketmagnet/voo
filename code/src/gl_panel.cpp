@@ -94,10 +94,10 @@ void BasicGLPanel::Prepare3DViewport(int topleft_x, int topleft_y, int bottomrig
     */
 
     //glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Black Background
-    glClearColor(0.0f, 0.0f, 0.5f, 1.0f); // Black Background
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Black Background
     glClearDepth(1.0f);	// Depth Buffer Setup
     glEnable(GL_DEPTH_TEST); // Enables Depth Testing
-    glDepthFunc(GL_LEQUAL); // The Type Of Depth Testing To Do
+    glDepthFunc(GL_ALWAYS); // The Type Of Depth Testing To Do
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
     glEnable(GL_COLOR_MATERIAL);

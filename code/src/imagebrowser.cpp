@@ -34,6 +34,7 @@
 #include "wx/textfile.h"
 #include "wx/arrstr.h"
 #include "directory_functions.h"
+#include "message.h"
 
 #include <functional>
 #include <iostream>
@@ -55,6 +56,7 @@ wxStatusBar  *sBarGlobal;
 
 IMPLEMENT_CLASS(ImageBrowser, wxFrame)
 
+LiquidMessageDispatcher liquidMessageDispatcher(0);
 
 /*
  * ImageBrowser event table definition
@@ -130,10 +132,14 @@ void ImageBrowser::Init()
 {
 }
 
+LiquidMessage someMessage(wxT("SomeMessage"));
+
 void ImageBrowser::OnDecorationTimer(wxTimerEvent& event)
 {
     cout << "Timer Triggered" << endl;
     allowTreeDecoration = true;
+    //liquidMessageDispatcher.ProcessMessage(someMessage);
+    cout << "DONE" << endl;
 }
 
 
@@ -465,12 +471,12 @@ void ImageBrowser::CreateControls()
     //directoryNameCtrl = rightHandWindow->GetDirectoryNameCtrl();
     //thumbnailCanvas   = rightHandWindow->GetThumbnailCanvas();
 
-    thumbnailCanvas = new ThumbnailCanvas(splitter1, ID_SCROLLEDWINDOW, wxDefaultPosition, wxDefaultSize);
+    thumbnailCanvas = new ThumbnailCanvas(&liquidMessageDispatcher, splitter1, ID_SCROLLEDWINDOW, wxDefaultPosition, wxDefaultSize);
 	thumbnailCanvas->SetScrollbars(10, 10, 50, 275);
 	thumbnailCanvas->LoadThumbnails(".");
 
     //splitter1->SplitVertically(dirTreeCtrl, rightHandWindow, 100);
-    splitter1->SplitVertically(dirTreeCtrl, thumbnailCanvas, 100);
+    splitter1->SplitVertically(dirTreeCtrl, thumbnailCanvas, 300);
 	splitter1->SetSashGravity(0.0);
 
 	LoadPrivateDirs();
@@ -751,16 +757,16 @@ void ImageBrowser::ReportDirectoryInfo(wxString path, wxTreeItemId id, int flags
 
 
 
-RightHandWindow::RightHandWindow(wxWindow *parent)
-: wxWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL)
-{
-    thumbnailCanvas   = new ThumbnailCanvas(this, ID_SCROLLEDWINDOW, wxDefaultPosition, wxDefaultSize);
-    directoryNameCtrl = new wxTextCtrl(this, wxID_ANY, wxT("Hello"), wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL | wxWANTS_CHARS);
-    boxSizer          = new wxBoxSizer(wxVERTICAL);
-
-    boxSizer->Add(directoryNameCtrl, 0, wxEXPAND);
-    boxSizer->Add(thumbnailCanvas, 1, wxEXPAND);
-
-    SetSizer(boxSizer);
-}
+//RightHandWindow::RightHandWindow(wxWindow *parent)
+//: wxWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL)
+//{
+//    thumbnailCanvas   = new ThumbnailCanvas(this, ID_SCROLLEDWINDOW, wxDefaultPosition, wxDefaultSize);
+//    directoryNameCtrl = new wxTextCtrl(this, wxID_ANY, wxT("Hello"), wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL | wxWANTS_CHARS);
+//    boxSizer          = new wxBoxSizer(wxVERTICAL);
+//
+//    boxSizer->Add(directoryNameCtrl, 0, wxEXPAND);
+//    boxSizer->Add(thumbnailCanvas, 1, wxEXPAND);
+//
+//    SetSizer(boxSizer);
+//}
 

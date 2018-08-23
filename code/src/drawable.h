@@ -4,11 +4,18 @@
 #include "wx/image.h"
 #include "wx/thread.h"
 #include <vector>
+
+#include "vector3d.h"
 #include <iostream>
 
 #define MAX_WIDTH          4096
-#define MAX_HEIGHT         4096
+#define MAX_HEIGHT         10000
 #define BLOCK_SIZE_PIXELS (4096*32)
+
+#define CLIP_NONE   0
+#define CLIP_TOP    1
+#define CLIP_LEFT   2
+#define CLIP_RIGHT  4
 
 class wxString;
 
@@ -17,6 +24,24 @@ class GL_ImageServer;
 class BasicGLPanel;
 class wxGLContext;
 class FileNameList;
+
+class RectangleVector
+{
+public:
+    RectangleVector()
+    : TL(0,0),
+      BR(0,0)
+    {}
+
+    RectangleVector(Vector2D tl, Vector2D br)
+    : TL(tl),
+      BR(br)
+    { }
+
+    double XSize() const { return BR.x - TL.x; };
+    double YSize() const { return BR.y - TL.y; } ;
+    Vector2D TL, BR;
+};
 
 class ImageLoader : public wxThread
 {
@@ -54,20 +79,26 @@ public:
     {
     }
 
-    void Init(wxImage *img, wxSize size, wxPoint topLeft, wxPoint bottomRight);
+    ~TextureUpload();
+
+
+    void Init(wxImage *img, Vector2D topLeft, Vector2D bottomRight, int clip);
     bool UploadNextBlock();
+    void Render(Vector2D scrTL, Vector2D scrBR);
 
-    wxImage    *wxImg;
-    GLuint      ID;
-    wxSize      textureSize;
-    wxPoint     topLeft, bottomRight;
+    wxImage          *wxImg;
+    GLuint            ID;
+    wxSize            textureSize;                        // The size of the texture for this piece of the image
 
-    bool        hasGeneratedTexture;
-    bool        uploadedTexture;
+    RectangleVector   myTexturePortion;             // Coordinates of this piece within the texture in float coordinates
+    RectangleVector   originalImagePortion;         // Coordinates of this piece within the original image in pixel coordinates
+    int               copyWidth;
 
-    int         nextBlockToUpload;
-    int         blockSize;
-    int         lastBlock;
+    bool              hasGeneratedTexture;
+    bool              uploadedTexture;
+    bool              valid;
+    int               currentY;
+    int               clips;
 };
 
 class GL_Image
@@ -151,8 +182,7 @@ public:
 
     TextureUpload   textureUploads[4];
 
-    //GLuint      ID[4];
-    //wxSize      textureSizes[4];
+    bool        uploadedTexture;
     wxImage     wxImg;
     GLubyte    *imageData;
     int         nextBlockToUpload;

@@ -4,7 +4,7 @@
 #include <cmath>
 #include <ostream>
 
-typedef float NonInt;///TODO What is this needed for? :)
+typedef double NonInt;///TODO What is this needed for? :)
 
 extern int Screen_Central_X;///TODO What is this needed for? :)
 extern int Screen_Central_Y;///TODO What is this needed for? :)
@@ -303,8 +303,8 @@ extern Vector3D randomvector();
 extern Vector3D ZERO_VECTOR;
 float cosangle ( Vector3D v1, Vector3D v2 );
 
-//    ostream& operator << (ostream& os, const Vector3D& v);
-//    ostream& operator << (ostream& os, const Vector3D& v);
+//ostream& operator << (ostream& os, const Vector2D& v);
+//ostream& operator << (ostream& os, const Vector3D& v);
 
 #endif
 

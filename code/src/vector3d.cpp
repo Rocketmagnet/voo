@@ -207,15 +207,15 @@ Vector3D Vector3D::NormalVector () const
   return Vector3D(y*inv_len, -x*inv_len, 0.);
 }
 
-ostream & operator << (ostream & os, const Vector3D & v)
-{
-  return os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
-}
-
-ostream & operator << (ostream & os, const Vector2D & v)
-{
-  return os << "(" << v.x << ", " << v.y << ")";
-}
+//ostream & operator << (ostream & os, const Vector3D & v)
+//{
+//  return os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
+//}
+//
+//ostream & operator << (ostream & os, const Vector2D & v)
+//{
+//  return os << "(" << v.x << ", " << v.y << ")";
+//}
 
 void Vector3D::Rotate(char axis, NonInt angle)
 {

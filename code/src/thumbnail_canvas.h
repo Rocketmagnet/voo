@@ -7,10 +7,12 @@
 #include "wx/filename.h"
 #include "file_name_list.h"
 #include "wx/thread.h"
+#include "message.h"
 
 class wxPaintDC;
 class ImageViewer;
 class Thumbnail;
+class ThumbnailCanvas;
 
 //-----------------------------------------------------------------------------
 // MyCanvas
@@ -283,16 +285,16 @@ private:
 
 
 
+// Loads a single thumbnail, then quits.
 class ThumbnailLoader : public wxThread
 {
 public:
     ThumbnailLoader(wxString fn, Thumbnail &tn)
-        : wxThread(wxTHREAD_DETACHED),
-          fileName(fn),
-          thumbnail(tn)
+    : wxThread(wxTHREAD_DETACHED),
+      fileName(fn),
+      thumbnail(tn)
     {
     }
-
 
 protected:
     ExitCode Entry();
@@ -302,12 +304,28 @@ protected:
 };
 
 
+// Reads the headers of all of the images, to get the image sizes.
+class ThumbnailHeaderReader : public wxThread
+{
+public:
+    ThumbnailHeaderReader(ThumbnailCanvas &tnc)
+    : wxThread(wxTHREAD_DETACHED),
+      thumbnailCanvas(tnc)
+    {
+    }
+
+
+protected:
+    ExitCode Entry();
+
+    ThumbnailCanvas        &thumbnailCanvas;
+};
 
 
 class Thumbnail : public wxObject
 {
 public:
-	Thumbnail(const wxPoint &pos, wxFileName filename);
+	Thumbnail(const wxPoint &pos, wxFileName filename, bool fetchHeader=false);
 	~Thumbnail();
 
     void StartLoadingImage() { if (thumbnailLoader) thumbnailLoader->Run(); }
@@ -319,6 +337,7 @@ public:
     static void SetLabelHeight(int height)               { labelHeight      = height; }
     static void SetBackgroundColor(const wxColor &color) { backgroundColor  = color;  }
 
+    void FetchHeader();
     void SetPosition(const wxPoint &pos)                 { position = pos; }
     void Erase(wxPaintDC &dc);
     bool IsMouseInside(const wxPoint &mousePos);
@@ -359,6 +378,7 @@ protected:
     wxFileName          fullPath;
     wxDateTime          dateTime;
     wxSize              imageSize;
+    wxSize              imageSizeTemp;
     ThumbnailLoader    *thumbnailLoader;
     wxPoint             position;
     static wxSize       tnSize;
@@ -387,14 +407,15 @@ class ThumbnailCanvas : public wxScrolledWindow
     };
 
 public:
-	ThumbnailCanvas(wxWindow *parent, wxWindowID, const wxPoint &pos, const wxSize &size);
+	ThumbnailCanvas(LiquidMessageDispatcher *dispatcher, wxWindow *parent, wxWindowID, const wxPoint &pos, const wxSize &size);
 	~ThumbnailCanvas();
 
 	void OnPaint(wxPaintEvent &event);
 	void CreateAntiAliasedBitmap();
 	void ClearThumbnails();
 	void LoadThumbnails(wxString directory);
-	void KillAllThreads();
+    void ReLoadThumbnails();
+    void KillAllThreads();
     void DirectoryWasDeleted(wxString path);
 
 	void OnSize(wxSizeEvent &event);
@@ -406,6 +427,8 @@ public:
 
     void OnFocusEvent(wxFocusEvent &event);
     void OnFocusKillEvent(wxFocusEvent &event);
+
+    int SomeCallback(LiquidMessage &/*message*/, wxString &/*tail*/, int /*messageInt*/);
 
     void OnDropFiles(wxDropFilesEvent& event);
 
@@ -428,6 +451,11 @@ public:
     void DeleteImage(int i);
     void DeleteSelection();
 
+    Thumbnail* GetThumbnail(int i)      {return &thumbnails[i];}
+    int        GetNumThumbnails()       {return  thumbnails.size();}
+
+    void ReadHeadersCompleted() { readHeadersCompleted = true; }
+
 private:
     void HandleCursorScrolling();
 
@@ -439,8 +467,8 @@ private:
 
     void FindNearestThumbnail();
 
-	std::deque<Thumbnail>	thumbnails;
-    std::deque<Thumbnail*>	thumbnailPointers;
+	std::vector<Thumbnail>	thumbnails;
+    std::vector<int>	    thumbnailIndex;
     int                     selectionStart;
 	bool                    inFocus;
 
@@ -463,5 +491,10 @@ private:
     int                     tnSpacingX, tnSpacingY;
     wxULongLong             totalDirectorySizeBytes;
     ImageViewer            *imageViewer;
+
+    LiquidMessageConnection     liquidMessageConnection;
+    LiquidMessage               someMessage;
+
+    bool                    readHeadersCompleted;
 	wxDECLARE_EVENT_TABLE();
 };

@@ -71,3 +71,22 @@ void FileNameList::Resort()
 {
     sort(files.begin(), files.end(), FileSortNatural);
 }
+
+bool FileNameList::DeleteFileNumber(int fileNumber)
+{
+    cout << "FileNameList::DeleteFile(" << fileNumber << ") = " << files[fileNumber].fileName.GetFullName() << endl;
+    bool success = wxRemoveFile(files[fileNumber].fileName.GetFullPath());
+
+    if (success)
+    {
+        std::vector<DirSortingItem>::iterator iter = files.begin();
+        for (int i = 0; i < fileNumber; i++)
+        {
+            iter++;
+        }
+        files.erase(iter);
+    }
+
+    return success;
+}
+

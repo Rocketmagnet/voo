@@ -115,8 +115,8 @@ public:
     void EnableClose() { closeEnabled = true; }
     void OnTimer(wxTimerEvent &event);
 
-    void NextImage();
-    void PrevImage();
+    bool NextImage();
+    bool PrevImage();
     void HomeImage();
     void  EndImage();
     void Disappear();

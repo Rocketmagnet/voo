@@ -92,6 +92,64 @@ jpeg_load_state* ReadJpegHeader(const char* filename)
     return load_state;
 }
 
+jpeg_load_state* ReadJpegHeaderOnly(const char* filename)
+{
+    //printf("ReadJpegHeader(%s)\n", filename);
+
+    FILE *infile;
+    if ((infile = fopen(filename, "rb")) == NULL)
+    {
+        printf("can't open %s\n", filename);
+        return 0;
+    }
+    else
+    {
+        //printf("opened %s\n", filename);
+    }
+
+    // If the file was successfully opened, then allocate memory.
+    jpeg_load_state* load_state = malloc(sizeof(jpeg_load_state));
+
+    load_state->infile = infile;
+    /* Step 1: allocate and initialize JPEG decompression object */
+
+    /* We set up the normal JPEG error routines, then override error_exit. */
+    load_state->cinfo.err = jpeg_std_error(&load_state->jerr.pub);
+    load_state->jerr.pub.error_exit = my_error_exit;
+
+    /* Establish the setjmp return context for my_error_exit to use. */
+    if (setjmp(load_state->jerr.setjmp_buffer))
+    {
+        /* If we get here, the JPEG code has signaled an error.
+        * We need to clean up the JPEG object, close the input file, and return.
+        */
+        printf("failed\n");
+        jpeg_destroy_decompress(&load_state->cinfo);
+        fclose(load_state->infile);
+
+        free(load_state);
+        return 0;
+    }
+
+
+    /* Now we can initialize the JPEG decompression object. */
+    jpeg_create_decompress(&load_state->cinfo);
+
+
+    /* Step 2: specify data source (eg, a file) */
+    jpeg_stdio_src(&load_state->cinfo, load_state->infile);
+
+
+    /* Step 3: read file parameters with jpeg_read_header() */
+    (void)jpeg_read_header(&load_state->cinfo, TRUE);
+    load_state->width  = load_state->cinfo.image_width;
+    load_state->height = load_state->cinfo.image_height;
+
+    jpeg_destroy_decompress(&load_state->cinfo);
+    fclose(load_state->infile);
+    free(load_state);
+    return load_state;
+}
 
 int JpegRead(unsigned char* imageBuffer, jpeg_load_state* load_state)
 {

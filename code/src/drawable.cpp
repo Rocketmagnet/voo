@@ -21,6 +21,9 @@ extern "C"
 extern void NoteTime(wxString s);
 void SetDebuggingText(wxString text);
 
+#define OVERLAP 10
+#define UNDERLAP 2
+
 
 wxThread::ExitCode ImageLoader::Entry()
 {
@@ -36,8 +39,7 @@ void ZoomAway(float &point, float centre, float amount)
 
 
 GL_Image::GL_Image()
-: hasGeneratedTexture(false),
-  basicGLPanel(0)
+: basicGLPanel(0)
 {
     //cout << this << "  GL_Image::GL_Image()" << endl;
 
@@ -50,7 +52,7 @@ GL_Image::GL_Image()
 GL_Image::~GL_Image()
 {
     //cout << "Destructor deleting texture " << ID << endl;
-    glDeleteTextures(4, ID);
+    //glDeleteTextures(4, ID);
 }
 
 bool GL_Image::IsFullyVisible() const
@@ -202,39 +204,110 @@ void GL_Image::ClampToSides()
     }
 }
     
+double Remap(double i, double sMin, double sMax, double dMin, double dMax)
+{
+    return (i - sMin) * ((dMax - dMin) / (sMax - sMin)) + (dMin);
+}
+
+void TextureUpload::Render(Vector2D scrTL, Vector2D scrBR)
+{
+    cout << "TextureUpload::Render()" << endl;
+    if (!valid)
+    {
+        cout << "         - " << endl;
+        return;
+    }
+
+    //myTexturePortion;
+    
+
+    float x0 = Remap(originalImagePortion.TL.x, 0, wxImg->GetSize().x, scrTL.x, scrBR.x);
+    float x1 = Remap(originalImagePortion.BR.x, 0, wxImg->GetSize().x, scrTL.x, scrBR.x);
+
+    float y0 = Remap(originalImagePortion.TL.y, 0, wxImg->GetSize().y, scrTL.y, scrBR.y);
+    float y1 = Remap(originalImagePortion.BR.y, 0, wxImg->GetSize().y, scrTL.y, scrBR.y);
+
+    if (clips & CLIP_LEFT )
+        x0 = Remap(originalImagePortion.TL.x + OVERLAP, 0, wxImg->GetSize().x, scrTL.x, scrBR.x);
+    //else
+    //    x1 = Remap(originalImagePortion.TL.x + 2, 0, wxImg->GetSize().x, scrTL.x, scrBR.x);
+
+    if (clips & CLIP_TOP  )        y0 = Remap(originalImagePortion.TL.y + OVERLAP, 0, wxImg->GetSize().y, scrTL.y, scrBR.y);
+
+    //if (clips & CLIP_LEFT)
+    //    y1 -= 100;
+    //else
+    //    y0 += 100;
+
+    glBindTexture(GL_TEXTURE_2D, ID);
+
+    cout << ID << "        (" << x0 << ", " << y0 << ") - (" << x1 << ", " << y1 << ")" << endl;
+    cout << "(" << myTexturePortion.TL.x << ", " << myTexturePortion.TL.y << ")";
+    cout << "(" << myTexturePortion.BR.x << ", " << myTexturePortion.BR.y << ")" << endl;
+
+    glBegin(GL_QUADS);
+        //glColor3f(1.0, 0.00, 0);    glVertex2f(x0, y0);
+        //glColor3f(1.0, 0.50, 0);    glVertex2f(x1, y0);
+        //glColor3f(1.0, 1.00, 0);    glVertex2f(x1, y1);
+        //glColor3f(1.0, 0.50, 0);    glVertex2f(x0, y1);
+
+        glTexCoord2f(myTexturePortion.TL.x, myTexturePortion.TL.y);    glVertex2f(x0, y0);
+        glTexCoord2f(myTexturePortion.BR.x, myTexturePortion.TL.y);    glVertex2f(x1, y0);
+        glTexCoord2f(myTexturePortion.BR.x, myTexturePortion.BR.y);    glVertex2f(x1, y1);
+        glTexCoord2f(myTexturePortion.TL.x, myTexturePortion.BR.y);    glVertex2f(x0, y1);
+
+        //glTexCoord2f(myTexturePortion.TL.x, myTexturePortion.TL.y);    glVertex2f(x0, y0);
+    //glTexCoord2f(myTexturePortion.BR.x, myTexturePortion.TL.y);    glVertex2f(x1, y0);
+    //glTexCoord2f(myTexturePortion.BR.x, myTexturePortion.BR.y);    glVertex2f(x1, y1);
+    //glTexCoord2f(myTexturePortion.TL.x, myTexturePortion.BR.y);    glVertex2f(x0, y1);
+    //glColor3f(0.1, 0.00, 0);    glVertex2f(x0, y0);
+        //glColor3f(0.1, 0.25, 0);    glVertex2f(x1, y0);
+        //glColor3f(0.1, 0.50, 0);    glVertex2f(x1, y1);
+        //glColor3f(0.1, 0.25, 0);    glVertex2f(x0, y1);
+    glEnd();
+
+}
 
 void GL_Image::Render()
 {
     //NoteTime(wxT("GL_Image::Render"));
+    cout << endl << endl << "GL_Image::Render()" << endl;
 
     if (!loadedImage)
         return;
 
     if (!uploadedTexture)
-        UploadNextBlock();
-
+    {
+        //uploadedTexture = true;
+        for (int i = 0; i < 4; i++)
+        {
+            if (!textureUploads[i].UploadNextBlock())
+            {
+                cout << "uploadedTexture = false  2" << endl;
+                uploadedTexture = false;
+            }
+        }
+    }
     glLoadIdentity();
 
-    glBindTexture(GL_TEXTURE_2D, ID[0]);
 
-    double left   = x - (width  * scale * 0.5);
-    double right  = x + (width  * scale * 0.5);
-    double top    = y - (height * scale * 0.5);
-    double bottom = y + (height * scale * 0.5);
-
-    float screenWidth  = basicGLPanel->GetWidth();
+    double scrLeft   = x - (width  * scale * 0.5);
+    double scrRight  = x + (width  * scale * 0.5);
+    double scrTop    = y - (height * scale * 0.5);
+    double scrBottom = y + (height * scale * 0.5);
+    cout << "WxH = " << width << " x " << height << endl;
+    cout << "Rendering (" << scrLeft << ", " << scrTop << ") - (" << scrRight << ", " << scrBottom << ")" << endl;
+    float screenWidth = basicGLPanel->GetWidth();
     float screenHeight = basicGLPanel->GetHeight();
 
     glTranslatef(screenWidth * 0.5, screenHeight * 0.5, 0);
 
-    glBegin(GL_QUADS);
-        glTexCoord2f(0, tex_coord_y);    glVertex2f(left, top);
-        glTexCoord2f(tex_coord_x, tex_coord_y);    glVertex2f(right, top);
-        glTexCoord2f(tex_coord_x, 0);    glVertex2f(right, bottom);
-        glTexCoord2f(0, 0);    glVertex2f(left, bottom);
-    glEnd();
-
-    //NoteTime(wxT("GL_Image::Render Quad"));
+    textureUploads[0].Render(Vector2D(scrLeft, scrTop), Vector2D(scrRight, scrBottom));
+    textureUploads[1].Render(Vector2D(scrLeft, scrTop), Vector2D(scrRight, scrBottom));
+    //for (int i = 0; i < 2; i++)
+    //{
+    //    textureUploads[i].Render(Vector2D(scrLeft, scrTop), Vector2D(scrRight, scrBottom));
+    //}
 }
 
 void GL_Image::CalculateTextureSizes()
@@ -242,58 +315,139 @@ void GL_Image::CalculateTextureSizes()
     int   auxWidth  = 0;
     int   auxHeight = 0;
 
-    int width0  = width,  width1  = 0;      // Default texture sizes, assuming that the image isn't too big
-    int height0 = height, height1 = 0;
+    int width0 = width;
+    int width1 = 0;
+
+    int height0 = height;
+    int height1 = 0;
 
     if (width > MAX_WIDTH)
     {
-        float power_of_two_that_gives_correct_width = std::log((float)(width- MAX_WIDTH)) / std::log(2.0);
-        width1 = (int)std::pow(2.0, (int)(std::ceil(power_of_two_that_gives_correct_width)));
         width0 = MAX_WIDTH;
+        width1 = width - width0;
     }
 
     if (height > MAX_HEIGHT)
     {
-        float power_of_two_that_gives_correct_height = std::log((float)(width - MAX_HEIGHT)) / std::log(2.0);
-        height1 = (int)std::pow(2.0, (int)(std::ceil(power_of_two_that_gives_correct_height)));
-        height0 = MAX_WIDTH;
+        height0 = MAX_HEIGHT;
+        height1 = height - height0;
     }
 
-    textureSizes[0] = wxSize(width0, height0);
-    textureSizes[1] = wxSize(width1, height0);
-    textureSizes[2] = wxSize(width0, height1);
-    textureSizes[3] = wxSize(width1, height1);
+    cout << width0 << ", " << height0 << ", " << width << ", " << height << endl;
+
+    textureUploads[0].Init(&wxImg, Vector2D(     0,       0), Vector2D(width0, height0), CLIP_NONE  );
+    textureUploads[1].Init(&wxImg, Vector2D(width0,       0), Vector2D(width , height0), CLIP_LEFT  );
+
+    //textureUploads[2].Init(&wxImg, Vector2D(     0, height0), Vector2D(width0, height ), CLIP_TOP           );
+    //textureUploads[3].Init(&wxImg, Vector2D(width0, height0), Vector2D(width , height ), CLIP_TOP|CLIP_LEFT );
+
+    //textureUploads[0].Init(&wxImg, Vector2D(0, 0), Vector2D(width0, height0));
+    //textureUploads[1].Init(&wxImg, Vector2D(width0 - 1, 0), Vector2D(width + 1, height0));
+    //textureUploads[2].Init(&wxImg, Vector2D(0, height0 - 1), Vector2D(width0, height + 1));
+    //textureUploads[3].Init(&wxImg, Vector2D(width0 - 1, height0 - 1), Vector2D(width + 1, height + 1));
+
+    //textureSizes[0] = wxSize(width0, height0);
+    //textureSizes[1] = wxSize(width1, height0);
+    //textureSizes[2] = wxSize(width0, height1);
+    //textureSizes[3] = wxSize(width1, height1);
 }
 
-
-void TextureUpload::Init(wxImage *img, wxSize size, wxPoint TL, wxPoint BR)
+TextureUpload::~TextureUpload()
 {
-    cout << "TextureUpload::Init(" << size.x << ", " << size.y << ")" << endl;
+    if (hasGeneratedTexture)
+    {
+        cout << "Deleting texture " << ID << endl;
+        glDeleteTextures(1, &ID);
+    }
+}
+
+void TextureUpload::Init(wxImage *img, Vector2D TL, Vector2D BR, int clip)
+{
+    cout << endl;
+    cout << "TextureUpload::Init(" << TL.x << ", " << TL.y << " - " << BR.x << ", " << BR.y << ")" << endl;
+    originalImagePortion = RectangleVector(TL, BR);
+    if ((originalImagePortion.XSize() == 0) || (originalImagePortion.YSize() == 0))
+    {
+        valid = false;
+        cout << "Valid = " << valid << endl;
+        return;
+    }
+    else
+    {
+        valid = true;
+        cout << "Valid = " << valid << endl;
+    }
+
+    clips = clip;
+    cout << "Clips = " << clips << endl;
+    if (clips & CLIP_LEFT)
+    {
+        TL.x -= OVERLAP; cout << "sub left" << endl;
+    }
+    //else
+    //{
+    //    BR.x += UNDERLAP; cout << "sub left" << endl;
+    //}
+
+    if (clips & CLIP_TOP)  { TL.y -= OVERLAP; cout << "sub top" << endl; }
+
+    int width  = BR.x - TL.x;
+    int height = BR.y - TL.y;
+
+    copyWidth = width;
+
+    float power_of_two_that_gives_correct_width  = std::log((float)(width -1)) / std::log(2.0);
+    float power_of_two_that_gives_correct_height = std::log((float)(height-1)) / std::log(2.0);
+    int textureWidth  = (int)std::pow(2.0, (int)(std::ceil(power_of_two_that_gives_correct_width )));
+    int textureHeight = (int)std::pow(2.0, (int)(std::ceil(power_of_two_that_gives_correct_height)));
+
+    textureSize = wxSize(textureWidth, textureHeight);
+
     wxImg       = img;
-    textureSize = size;
-    topLeft     = TL;
-    bottomRight = BR;
+
+    originalImagePortion = RectangleVector(TL, BR);
+    double top  = 0;
+    double left = 0;
+
+    if (clips & CLIP_LEFT) { left = OVERLAP / (double)textureWidth;  }
+    if (clips & CLIP_TOP ) { top  = OVERLAP / (double)textureHeight; }
+
+    myTexturePortion     = RectangleVector(Vector2D(left, top), Vector2D((double)width / (double)textureWidth, (double)height / (double)textureHeight));
+
+    cout << "textureSize = (" << textureWidth << ", " << textureHeight << ")" << endl;
+    cout << "copyWidth = " << copyWidth << endl;
+    cout << "originalImagePortion = (" << originalImagePortion.TL.x << ", " << originalImagePortion.TL.y << ") - (" << originalImagePortion.BR.x << ", " << originalImagePortion.BR.y << ")" << endl;
+    cout << "myTexturePortion = (" << myTexturePortion.TL.x << ", " << myTexturePortion.TL.y << ") - (" << myTexturePortion.BR.x << ", " << myTexturePortion.BR.y << ")" << endl;
+
+    //cout << "TL = " << topLeftFloat << "    BR = " << bottomRightFloat << endl;
 
     uploadedTexture = false;
 
-    nextBlockToUpload = 0;
-    blockSize = size.y / (BLOCK_SIZE_PIXELS / size.x);
-    lastBlock = size.y / blockSize;
-
-    cout << "blockSize = " << blockSize << "    lastBlock = " << lastBlock << endl;
+    currentY = 0;
+    //lastY    = originalImagePortion;
+    //cout << "blockSize = " << blockSize << "    lastBlock = " << lastBlock << endl;
 }
 
 
 bool TextureUpload::UploadNextBlock()
 {
     if (!wxImg)
-        return;
+        return true;
+
+    if (uploadedTexture)
+        return true;
+
+    if (!valid)
+        return true;
+
+    //return true;
 
     int imageWidth  = wxImg->GetSize().x;
     int imageHeight = wxImg->GetSize().y;
 
-    if (nextBlockToUpload == 0)
+    if (currentY == 0)
     {
+        currentY = originalImagePortion.TL.y;
         if (hasGeneratedTexture)
         {
             cout << "UPLOAD: Deleting texture " << ID << endl;
@@ -304,13 +458,15 @@ bool TextureUpload::UploadNextBlock()
 
         glGenTextures(1, &ID);
         //NoteTime(wxT("Generate texture"));
-        //cout << "UPLOAD: Generating texture " << ID << endl;
+        cout << "UPLOAD: Generating texture " << ID << endl;
         hasGeneratedTexture = true;
 
         //cout << "UPLOAD: Binding texture" << endl;
         glBindTexture(GL_TEXTURE_2D, ID);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+        cout << "Texture size = " << textureSize.x << ", " << textureSize.y << endl;
 
         glBindTexture(GL_TEXTURE_2D, ID);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureSize.x, textureSize.y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
@@ -320,148 +476,38 @@ bool TextureUpload::UploadNextBlock()
         glBindTexture(GL_TEXTURE_2D, ID);
     }
 
-    int texX = 0;
-    int texY = blockSize * nextBlockToUpload;
-    int uploadHeight = height - texY;
-    if (uploadHeight > blockSize)
+    for (int i = 0; i < 64; i++)
     {
-        uploadHeight = blockSize;
-    }
-    int startAddress = texY * textureSizes[0].x * 3;
-    int finalY = texY + uploadHeight;
+        int texX = 0;
+        int texY = currentY;
 
-    cout << "UPLOAD: uploading " << texY << " " << uploadHeight << endl;
+        cout << "(" << currentY << " x " << wxImg->GetSize().x << " + " << originalImagePortion.TL.x << ") * 3" << endl;
+        int srcAddress = (currentY * wxImg->GetSize().x + originalImagePortion.TL.x) * 3;
+        unsigned char* imageData = wxImg->GetData();
 
-    //glTexSubImage2D(GL_TEXTURE_2D, 0, texX, texY, textureSizes[0].x, uploadHeight, GL_RGB, GL_UNSIGNED_BYTE, &imageData[startAddress]);
+        cout << "Copying: (0, " << currentY << ")   size = (" << copyWidth << ", " << 1 << ")  from " << srcAddress << endl;
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, currentY, copyWidth, 1, GL_RGB, GL_UNSIGNED_BYTE, &imageData[srcAddress]);
 
-    for (int i = 0; i < uploadHeight; i++)
-    {
-        startAddress = (texY + i) * width * 3;
-        glTexSubImage2D(GL_TEXTURE_2D, 0, texX, texY + i, width, 1, GL_RGB, GL_UNSIGNED_BYTE, &imageData[startAddress]);
-
-        //glTexSubImage2D(GL_TEXTURE_2D, 0, texX, texY, textureSizes[0].x, uploadHeight, GL_RGB, GL_UNSIGNED_BYTE, &imageData[startAddress]);
-    }
-
-    if (nextBlockToUpload == lastBlock)
-    {
-        //cout << "UPLOAD: Deleting image data" << endl;
-        delete[] imageData;
-        NoteTime(wxT("delete[] imageData"));
-        imageData = 0;
-        uploadedTexture = true;
-        wxImg.Destroy();
-    }
-
-    nextBlockToUpload++;
-
-}
-
-
-void GL_Image::UploadNextBlock()
-{
-    //cout << "UploadNextBlock() " << (int)imageData << endl;
-    NoteTime(wxT("GL_Image::UploadNextBlock"));
-
-    if (!imageData)
-        return;
-
-
-    if (nextBlockToUpload == 0)
-    {
-        if (hasGeneratedTexture)
+        currentY++;
+        if (currentY == originalImagePortion.BR.y)
         {
-            //cout << "UPLOAD: Deleting texture " << ID << endl;
-            hasGeneratedTexture = false;
-            glDeleteTextures(4, ID);
-            NoteTime(wxT("Delete texture"));
+            cout << "uploadedTexture = true  1" << endl;
+            uploadedTexture = true;
         }
 
-        glGenTextures(4, ID);
-        NoteTime(wxT("Generate texture"));
-        //cout << "UPLOAD: Generating texture " << ID << endl;
-        hasGeneratedTexture = true;
-
-        //cout << "UPLOAD: Binding texture" << endl;
-        glBindTexture(GL_TEXTURE_2D, ID[0]);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-        glBindTexture(GL_TEXTURE_2D, ID[0]);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureSizes[0].x, textureSizes[0].y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-    }
-    else
-    {
-        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glBindTexture(GL_TEXTURE_2D, ID[0]);
+        if (uploadedTexture)
+            break;
     }
 
-    int texX = 0;
-    int texY = blockSize * nextBlockToUpload;
-    int uploadHeight = height - texY;
-    if (uploadHeight > blockSize)
-    {
-        uploadHeight = blockSize;
-    }
-    int startAddress = texY * textureSizes[0].x * 3;
-    int finalY = texY + uploadHeight;
-
-    cout << "UPLOAD: uploading " << texY << " " << uploadHeight << endl;
-
-    //glTexSubImage2D(GL_TEXTURE_2D, 0, texX, texY, textureSizes[0].x, uploadHeight, GL_RGB, GL_UNSIGNED_BYTE, &imageData[startAddress]);
-
-    for (int i = 0; i < uploadHeight; i++)
-    {
-        startAddress = (texY+i) * width * 3;
-        glTexSubImage2D(GL_TEXTURE_2D, 0, texX, texY+i, width, 1, GL_RGB, GL_UNSIGNED_BYTE, &imageData[startAddress]);
-        
-      //glTexSubImage2D(GL_TEXTURE_2D, 0, texX, texY, textureSizes[0].x, uploadHeight, GL_RGB, GL_UNSIGNED_BYTE, &imageData[startAddress]);
-    }
-
-    if (nextBlockToUpload == lastBlock)
-    {
-        //cout << "UPLOAD: Deleting image data" << endl;
-        delete[] imageData;
-        NoteTime(wxT("delete[] imageData"));
-        imageData = 0;
-        uploadedTexture = true;
-        wxImg.Destroy();
-    }
-    
-    nextBlockToUpload++;
+    return true;
 }
 
 
-void GL_Image::CopyImageLine(int y)
-{
-    int srcStep = wxImg.HasAlpha() ? 4 : 3;
-    GLubyte *bitmapData = wxImg.GetData();
-    int src = (height-y-1) * width * srcStep;
-    int dst = y * textureSizes[0].x * 3;
-
-    memcpy(&(imageData[dst]), &(bitmapData[src]), width * 3);
-
-    //cout << "srcStep = " << srcStep << endl;
-    //for (int x = 0; x < width; x++)
-    //{
-    //    imageData[dst++] = bitmapData[src+0];
-    //    imageData[dst++] = bitmapData[src+1];
-    //    imageData[dst++] = bitmapData[src+2];
-    //    src += srcStep;
-    //}
-}
 
 
 void GL_Image::Invalidate()
 {
-    if (hasGeneratedTexture)
-    {
-        glDeleteTextures(4, ID);
-    }
-
-    hasGeneratedTexture = false;
+    //hasGeneratedTexture = false;
     loadedImage         = false;
     uploadedTexture     = false;
 }
@@ -521,7 +567,6 @@ void GL_Image::Load(wxString path)
     height        = wxImg.GetHeight();
     //textureWidth  = width;
     //textureHeight = height;
-    CalculateTextureSizes();
     //cout << "  size = (" << width << ", " << height << ")" << endl;
 
     imageData = wxImg.GetData();
@@ -599,14 +644,9 @@ void GL_Image::Load(wxString path)
     //cout << "W:" << width << " " << textureWidth << endl;
     //cout << "H:" << height << " " << textureHeight << endl;
 
-    tex_coord_x       = (float)width  / (float)textureSizes[0].x;
-    tex_coord_y       = (float)height / (float)textureSizes[0].y;
-    nextBlockToUpload = 0;
-    blockSize         = 100;
-    lastBlock         = ceil((double)height / (double)blockSize) - 1;
+    CalculateTextureSizes();
+    
 
-
-    wxLongLong endTime = wxGetLocalTimeMillis();
     loadedImage = true;
 }
 
@@ -833,7 +873,7 @@ void GL_ImageServer::UpdateDebuggingText()
 
         if (imageSet[i].glImage.loadedImage     == true)   loadedImage = '#';
         if (imageSet[i].glImage.uploadedTexture == true)      uploaded = '#';
-        if (imageSet[i].glImage.hasGeneratedTexture == true)    genTex = '#';
+        //if (imageSet[i].glImage.hasGeneratedTexture == true)    genTex = '#';
 
         s.Printf("%02d: %s  %c %c %c %d\n", imageSet[i].imageNumber, fileName, loadedImage, uploaded, genTex, crTime);
 
