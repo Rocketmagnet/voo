@@ -81,8 +81,8 @@ ImageViewer::ImageViewer(ThumbnailCanvas* parent, wxWindowID id, const wxString&
 {
     Init();
 
-    //wxSize sz(wxSystemSettings::GetMetric(wxSYS_SCREEN_X)+16, wxSystemSettings::GetMetric(wxSYS_SCREEN_Y));
-    wxSize sz(400,400);
+    wxSize sz(wxSystemSettings::GetMetric(wxSYS_SCREEN_X)+16, wxSystemSettings::GetMetric(wxSYS_SCREEN_Y));
+    //wxSize sz(400,400);
     Create(parent, id, caption, wxPoint(-8, -8), sz, style);
 
     wxTextCtrl* dropTarget = new wxTextCtrl(this, wxID_ANY, _("Drop files onto me!"), wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
@@ -292,7 +292,7 @@ void ImageViewer::Disappear()
     currentImage = -1;
     ClearKeys();
     myParent->SetCursor(glPanel->GetImageNumber());
-    //Show(false);
+    Show(false);
     myParent->SetFocus();
     disappearState = DISAPPEAR_STATE_NONE;
     //ShowFullScreen(false);
