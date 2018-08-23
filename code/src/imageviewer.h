@@ -75,6 +75,14 @@ private:
 };
 
 
+enum DISAPPEAR_STATE
+{
+    DISAPPEAR_STATE_NONE      = 0,
+    DISAPPEAR_STATE_REQUESTED = 1,
+    DISAPPEAR_STATE_CLOSING   = 2,
+    DISAPPEAR_STATE_CLOSED    = 3
+};
+
 /*!
  * ImageViewer class declaration
  */
@@ -147,6 +155,7 @@ public:
     std::vector<char>        keys;
     int                      displayNumber;       // File to load and display, when the viewer becomes visible.
     bool                     closeEnabled;
+    DISAPPEAR_STATE          disappearState;
     wxTimer                  timer;
     wxTextCtrl              *textCtrl;
     ThumbnailCanvas         *myParent;

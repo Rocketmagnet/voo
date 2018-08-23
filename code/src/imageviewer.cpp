@@ -66,7 +66,7 @@ ImageViewer::ImageViewer()
     fileNameList(0),
     currentImage(0),
     displayNumber(-1),
-    closeEnabled(false)
+    disappearState(DISAPPEAR_STATE_NONE)
 {
     Init();
 }
@@ -76,11 +76,13 @@ ImageViewer::ImageViewer(ThumbnailCanvas* parent, wxWindowID id, const wxString&
   fileNameList(0),
   currentImage(0),
   displayNumber(-1),
-  myParent(parent)
+  myParent(parent),
+  disappearState(DISAPPEAR_STATE_NONE)
 {
     Init();
 
-    wxSize sz(wxSystemSettings::GetMetric(wxSYS_SCREEN_X)+16, wxSystemSettings::GetMetric(wxSYS_SCREEN_Y));
+    //wxSize sz(wxSystemSettings::GetMetric(wxSYS_SCREEN_X)+16, wxSystemSettings::GetMetric(wxSYS_SCREEN_Y));
+    wxSize sz(400,400);
     Create(parent, id, caption, wxPoint(-8, -8), sz, style);
 
     wxTextCtrl* dropTarget = new wxTextCtrl(this, wxID_ANY, _("Drop files onto me!"), wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
@@ -273,11 +275,12 @@ void ImageViewer::DisplayImage(int imageNumber)
     {
         TEXT_MSG("  Display\n");
         Show(true);
-        //ShowFullScreen(true);
+        ////ShowFullScreen(true);
         displayNumber = imageNumber;
         SetFocus();
         Refresh();
         timer.Start(10);
+        disappearState = DISAPPEAR_STATE_NONE;
     }
 
 }
@@ -289,8 +292,9 @@ void ImageViewer::Disappear()
     currentImage = -1;
     ClearKeys();
     myParent->SetCursor(glPanel->GetImageNumber());
-    Show(false);
+    //Show(false);
     myParent->SetFocus();
+    disappearState = DISAPPEAR_STATE_NONE;
     //ShowFullScreen(false);
 }
 
@@ -323,7 +327,7 @@ void ImageViewer::OnKeyDown(wxKeyEvent &event)
 
     case WXK_ESCAPE:
 	case WXK_RETURN:
-        Disappear();
+        disappearState = DISAPPEAR_STATE_REQUESTED;
         break;
 
     default:
@@ -527,15 +531,26 @@ void ImageViewer::OnTimer(wxTimerEvent &event)
     }
     //NoteTime(wxT("  display"));
 
-    if (currentImage >= 0)
+    cout << "disappearState = " << disappearState << endl;
+
+    switch (disappearState)
     {
-        //TEXT_MSG("  Render\n");
-        glPanel->Render(GL_PANEL_RENDER_IMAGE);
-    }
-    else
-    {
-        //TEXT_MSG("  Blank\n");
+    case DISAPPEAR_STATE_NONE:
+        if (currentImage >= 0)
+        {
+            glPanel->Render(GL_PANEL_RENDER_IMAGE);
+        }
+        break;
+
+    case DISAPPEAR_STATE_REQUESTED:
         glPanel->Render(GL_PANEL_BLANK_SCREEN);
+        disappearState = DISAPPEAR_STATE_CLOSING;
+        break;
+
+    case DISAPPEAR_STATE_CLOSING:
+        Disappear();
+        disappearState = DISAPPEAR_STATE_CLOSED;
+        break;
     }
     //NoteTime(wxT("  render"));
 }

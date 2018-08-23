@@ -177,6 +177,7 @@ void BasicGLPanel::DisplayImage(int imageNumber)
 
 void BasicGLPanel::OnPaint(wxPaintEvent& evt)
 {
+
     //cout << endl;
     //cout << "BasicGLPanel::OnPaint " << endl;
     //NoteTime(wxT("BasicGLPanel::OnPaint"));
@@ -220,7 +221,7 @@ void BasicGLPanel::OnPaint(wxPaintEvent& evt)
     }
 
     //NoteTime(wxT("BasicGLPanel::OnPaint Render start"));
-    Render(false);
+    //Render(false);
 
     //NoteTime(wxT("BasicGLPanel::OnPaint done"));
     //cout << "BasicGLPanel::OnPaint - Done" << endl;
