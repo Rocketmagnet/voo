@@ -57,9 +57,9 @@ GL_Image::~GL_Image()
 
 bool GL_Image::IsFullyVisible() const
 {
-    cout << scale << endl;
-    cout << scale * width << " " << basicGLPanel->GetWidth() << endl;
-    cout << scale * height << " " << basicGLPanel->GetHeight() << endl;
+    //cout << scale << endl;
+    //cout << scale * width << " " << basicGLPanel->GetWidth() << endl;
+    //cout << scale * height << " " << basicGLPanel->GetHeight() << endl;
 
     if (scale*width > basicGLPanel->GetWidth())
         return false;
@@ -70,10 +70,124 @@ bool GL_Image::IsFullyVisible() const
     return true;
 }
 
+double GL_Image::VisibilityAtScale(double sc) const
+{
+    double screenAspect = (double)basicGLPanel->GetWidth() / (double)basicGLPanel->GetHeight();
+    double screenWidth  = (double)basicGLPanel->GetWidth();
+    double screenHeight = (double)basicGLPanel->GetHeight();
+    double imageAspect  = (double)width / (double)height;
+
+    double scaleWidth   = width  * sc;
+    double scaleHeight  = height * sc;
+
+    double visWidth  = min(scaleWidth,  screenWidth);
+    double visHeight = min(scaleHeight, screenHeight);
+    double visArea = visWidth * visHeight;
+    double scaleArea = scaleWidth * scaleHeight;
+
+    return visArea / scaleArea;
+}
+
+
+// Try to zoom this image to seem like a similar amount of
+// zoom as the previous image.
+// Determine how much of the previous image is visible, and zoom this image
+// so that about the same amount of the image is visible.
+void GL_Image::CopyVisibilityFrom(const GL_Image &image)
+{
+    double  scaleLinear;     // scale above which the visibility changes as 1/(scale  )  (kind of)
+    double  scaleSquare;     // scale above which the visibility changes as 1/(scale^2)  (kind of)
+    double  visSquare;       // Visibility at scale == scaleSquare
+
+    double  prevVisArea = image.VisibilityAtScale(image.scale);  // We want to achieve this much visibility
+
+    double  screenAspect = (double)basicGLPanel->GetWidth() / (double)basicGLPanel->GetHeight();
+    double  imageAspect = (double)width / (double)height;
+    double  screenWidth = basicGLPanel->GetWidth();
+    double  screenHeight = basicGLPanel->GetHeight();
+    double  dI;
+    double  dS;
+
+    if (imageAspect > screenAspect)     // If image is more WideScreen than the screen
+    {                                   // then touch the sides, and leave gaps at the top and bottom
+        scaleLinear = screenWidth / width;
+        scaleSquare = screenHeight / height;
+        dI          = width;
+        dS          = screenWidth;
+        visSquare   = screenWidth / (width*scaleSquare);    // When the image is scaled to fit the height of the screen,
+                                                            // this much of the image is visible.
+    }
+    else                                // If screen is more Widescreen than the image
+    {
+        scaleLinear = screenHeight / height;
+        scaleSquare = screenWidth / width;
+        dI          = height;
+        dS          = screenHeight;
+        visSquare   = screenHeight / (height*scaleSquare);  // When the image is scaled to fit the width of the screen,
+                                                            // this much of the image is visible.
+    }
+
+    // Now, do we need to have both width and height bigger than the screen, or just one of them?
+    if (prevVisArea < visSquare)
+    {                                   // Full zoom
+        scale = sqrt((screenHeight*screenWidth) / (prevVisArea*height*width));
+    }
+    else
+    {                                   // Half zoom
+        scale = dS / (prevVisArea*height);
+    }
+}
+
+
+void GL_Image::CopyPositionFrom(const GL_Image &image)
+{
+    double prevWidth    = image.width  * image.scale;
+    double prevHeight   = image.height * image.scale;
+    double thisWidth    =       width  *       scale;
+    double thisHeight   =       height *       scale;
+    double screenWidth  = basicGLPanel->GetWidth();
+    double screenHeight = basicGLPanel->GetHeight();
+    double prevXPan = image.x / prevWidth;
+    double prevYPan = image.y / prevHeight;
+
+    double xPan = 0.0;
+    double yPan = 0.0;
+
+    x = prevXPan * thisWidth;
+    y = prevYPan * thisHeight;
+
+    //if (prevWidth  > screenWidth )  { xPan = (prevWidth  - screenWidth ) / prevWidth;  }
+    //if (prevHeight > screenHeight)  { yPan = (prevHeight - screenHeight) / prevHeight; }
+
+
+}
+
+void GL_Image::CopyScaleAndPositionFrom(const GL_Image &image)
+{
+    if (image.IsFullyVisible())
+    {
+        //std::cout << "Fully visible" << std::endl;
+        scale = 0.01;
+        x = 0;
+        y = 0;
+        ExpandToSides();
+    }
+    else
+    {
+        //std::cout << "Not fully visible" << std::endl;
+        //std::cout << th5is << "  Copying scale " << image.scale << "  (" << x << ", " << y << ")  from " << &image << std::endl;
+        scale = image.scale;
+        x = image.x;
+        y = image.y;
+        CopyVisibilityFrom(image);
+        CopyPositionFrom(image);
+    }
+}
+
 
 void GL_Image::ExpandToSides()
 {
-    double screenAspect = basicGLPanel->GetWidth() / basicGLPanel->GetHeight();
+    double screenAspect = (double)basicGLPanel->GetWidth() / (double)basicGLPanel->GetHeight();
     double imageAspect  = (double)width / (double)height;
     double screenWidth  = basicGLPanel->GetWidth();
     double screenHeight = basicGLPanel->GetHeight();
@@ -137,20 +251,6 @@ void GL_Image::ClampToSides()
     double    topGap = hScreenHeight + top;
     double bottomGap = bottom - hScreenHeight;
 
-    //cout << " left          " << left << endl;
-    //cout << " right         " << right << endl;
-    //cout << " top           " << top << endl;
-    //cout << " bottom        " << bottom << endl;
-    //cout << " screenWidth   " << screenWidth << endl;
-    //cout << " screenHeight  " << screenHeight << endl;
-    //cout << " hScreenWidth  " << hScreenWidth << endl;
-    //cout << " hScreenHeight " << hScreenHeight << endl;
-    //cout << "  leftGap      " << leftGap << endl;
-    //cout << " rightGap      " << rightGap << endl;
-    //cout << "    topGap     " << topGap << endl;
-    //cout << " bottomGap     " << bottomGap << endl;
-
-    //cout << "x=" << x << "    left=" << left << "   gap" << leftGap << " width=" << screenWidth << "  hWidth=" << hScreenWidth << endl;
     if (width*scale >= screenWidth)           // If image is wider than the screen
     {
         if (leftGap > 0.0)              //     If there's a space on the LEFT hand side
@@ -211,10 +311,10 @@ double Remap(double i, double sMin, double sMax, double dMin, double dMax)
 
 void TextureUpload::Render(Vector2D scrTL, Vector2D scrBR)
 {
-    cout << "TextureUpload::Render()" << endl;
+    //cout << "TextureUpload::Render()" << endl;
     if (!valid)
     {
-        cout << "         - " << endl;
+        //cout << "         - " << endl;
         return;
     }
 
@@ -241,9 +341,9 @@ void TextureUpload::Render(Vector2D scrTL, Vector2D scrBR)
 
     glBindTexture(GL_TEXTURE_2D, ID);
 
-    cout << ID << "        (" << x0 << ", " << y0 << ") - (" << x1 << ", " << y1 << ")" << endl;
-    cout << "(" << myTexturePortion.TL.x << ", " << myTexturePortion.TL.y << ")";
-    cout << "(" << myTexturePortion.BR.x << ", " << myTexturePortion.BR.y << ")" << endl;
+    //cout << ID << "        (" << x0 << ", " << y0 << ") - (" << x1 << ", " << y1 << ")" << endl;
+    //cout << "(" << myTexturePortion.TL.x << ", " << myTexturePortion.TL.y << ")";
+    //cout << "(" << myTexturePortion.BR.x << ", " << myTexturePortion.BR.y << ")" << endl;
 
     glBegin(GL_QUADS);
         //glColor3f(1.0, 0.00, 0);    glVertex2f(x0, y0);
@@ -271,7 +371,7 @@ void TextureUpload::Render(Vector2D scrTL, Vector2D scrBR)
 void GL_Image::Render()
 {
     //NoteTime(wxT("GL_Image::Render"));
-    cout << endl << endl << "GL_Image::Render()" << endl;
+    //cout << endl << endl << "GL_Image::Render()" << endl;
 
     if (!loadedImage)
         return;
@@ -283,7 +383,7 @@ void GL_Image::Render()
         {
             if (!textureUploads[i].UploadNextBlock())
             {
-                cout << "uploadedTexture = false  2" << endl;
+                //cout << "uploadedTexture = false  2" << endl;
                 uploadedTexture = false;
             }
         }
@@ -295,8 +395,8 @@ void GL_Image::Render()
     double scrRight  = x + (width  * scale * 0.5);
     double scrTop    = y - (height * scale * 0.5);
     double scrBottom = y + (height * scale * 0.5);
-    cout << "WxH = " << width << " x " << height << endl;
-    cout << "Rendering (" << scrLeft << ", " << scrTop << ") - (" << scrRight << ", " << scrBottom << ")" << endl;
+    //cout << "WxH = " << width << " x " << height << endl;
+    //cout << "Rendering (" << scrLeft << ", " << scrTop << ") - (" << scrRight << ", " << scrBottom << ")" << endl;
     float screenWidth = basicGLPanel->GetWidth();
     float screenHeight = basicGLPanel->GetHeight();
 
@@ -333,7 +433,7 @@ void GL_Image::CalculateTextureSizes()
         height1 = height - height0;
     }
 
-    cout << width0 << ", " << height0 << ", " << width << ", " << height << endl;
+    //cout << width0 << ", " << height0 << ", " << width << ", " << height << endl;
 
     textureUploads[0].Init(&wxImg, Vector2D(     0,       0), Vector2D(width0, height0), CLIP_NONE  );
     textureUploads[1].Init(&wxImg, Vector2D(width0,       0), Vector2D(width , height0), CLIP_LEFT  );
@@ -356,40 +456,45 @@ TextureUpload::~TextureUpload()
 {
     if (hasGeneratedTexture)
     {
-        cout << "Deleting texture " << ID << endl;
+        //cout << "Deleting texture " << ID << endl;
         glDeleteTextures(1, &ID);
     }
 }
 
 void TextureUpload::Init(wxImage *img, Vector2D TL, Vector2D BR, int clip)
 {
-    cout << endl;
-    cout << "TextureUpload::Init(" << TL.x << ", " << TL.y << " - " << BR.x << ", " << BR.y << ")" << endl;
+    //cout << endl;
+    //cout << "TextureUpload::Init(" << TL.x << ", " << TL.y << " - " << BR.x << ", " << BR.y << ")" << endl;
     originalImagePortion = RectangleVector(TL, BR);
     if ((originalImagePortion.XSize() == 0) || (originalImagePortion.YSize() == 0))
     {
         valid = false;
-        cout << "Valid = " << valid << endl;
+        //cout << "Valid = " << valid << endl;
         return;
     }
     else
     {
         valid = true;
-        cout << "Valid = " << valid << endl;
+        //cout << "Valid = " << valid << endl;
     }
 
     clips = clip;
-    cout << "Clips = " << clips << endl;
+    //cout << "Clips = " << clips << endl;
     if (clips & CLIP_LEFT)
     {
-        TL.x -= OVERLAP; cout << "sub left" << endl;
+        TL.x -= OVERLAP;
+        //cout << "sub left" << endl;
     }
     //else
     //{
     //    BR.x += UNDERLAP; cout << "sub left" << endl;
     //}
 
-    if (clips & CLIP_TOP)  { TL.y -= OVERLAP; cout << "sub top" << endl; }
+    if (clips & CLIP_TOP)
+    {
+        TL.y -= OVERLAP;
+        //cout << "sub top" << endl;
+    }
 
     int width  = BR.x - TL.x;
     int height = BR.y - TL.y;
@@ -414,10 +519,10 @@ void TextureUpload::Init(wxImage *img, Vector2D TL, Vector2D BR, int clip)
 
     myTexturePortion     = RectangleVector(Vector2D(left, top), Vector2D((double)width / (double)textureWidth, (double)height / (double)textureHeight));
 
-    cout << "textureSize = (" << textureWidth << ", " << textureHeight << ")" << endl;
-    cout << "copyWidth = " << copyWidth << endl;
-    cout << "originalImagePortion = (" << originalImagePortion.TL.x << ", " << originalImagePortion.TL.y << ") - (" << originalImagePortion.BR.x << ", " << originalImagePortion.BR.y << ")" << endl;
-    cout << "myTexturePortion = (" << myTexturePortion.TL.x << ", " << myTexturePortion.TL.y << ") - (" << myTexturePortion.BR.x << ", " << myTexturePortion.BR.y << ")" << endl;
+    //cout << "textureSize = (" << textureWidth << ", " << textureHeight << ")" << endl;
+    //cout << "copyWidth = " << copyWidth << endl;
+    //cout << "originalImagePortion = (" << originalImagePortion.TL.x << ", " << originalImagePortion.TL.y << ") - (" << originalImagePortion.BR.x << ", " << originalImagePortion.BR.y << ")" << endl;
+    //cout << "myTexturePortion = (" << myTexturePortion.TL.x << ", " << myTexturePortion.TL.y << ") - (" << myTexturePortion.BR.x << ", " << myTexturePortion.BR.y << ")" << endl;
 
     //cout << "TL = " << topLeftFloat << "    BR = " << bottomRightFloat << endl;
 
@@ -450,7 +555,7 @@ bool TextureUpload::UploadNextBlock()
         currentY = originalImagePortion.TL.y;
         if (hasGeneratedTexture)
         {
-            cout << "UPLOAD: Deleting texture " << ID << endl;
+            //cout << "UPLOAD: Deleting texture " << ID << endl;
             hasGeneratedTexture = false;
             glDeleteTextures(1, &ID);
             //NoteTime(wxT("Delete texture"));
@@ -458,7 +563,7 @@ bool TextureUpload::UploadNextBlock()
 
         glGenTextures(1, &ID);
         //NoteTime(wxT("Generate texture"));
-        cout << "UPLOAD: Generating texture " << ID << endl;
+        //cout << "UPLOAD: Generating texture " << ID << endl;
         hasGeneratedTexture = true;
 
         //cout << "UPLOAD: Binding texture" << endl;
@@ -466,7 +571,7 @@ bool TextureUpload::UploadNextBlock()
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-        cout << "Texture size = " << textureSize.x << ", " << textureSize.y << endl;
+        //cout << "Texture size = " << textureSize.x << ", " << textureSize.y << endl;
 
         glBindTexture(GL_TEXTURE_2D, ID);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureSize.x, textureSize.y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
@@ -481,17 +586,17 @@ bool TextureUpload::UploadNextBlock()
         int texX = 0;
         int texY = currentY;
 
-        cout << "(" << currentY << " x " << wxImg->GetSize().x << " + " << originalImagePortion.TL.x << ") * 3" << endl;
+        //cout << "(" << currentY << " x " << wxImg->GetSize().x << " + " << originalImagePortion.TL.x << ") * 3" << endl;
         int srcAddress = (currentY * wxImg->GetSize().x + originalImagePortion.TL.x) * 3;
         unsigned char* imageData = wxImg->GetData();
 
-        cout << "Copying: (0, " << currentY << ")   size = (" << copyWidth << ", " << 1 << ")  from " << srcAddress << endl;
+        //cout << "Copying: (0, " << currentY << ")   size = (" << copyWidth << ", " << 1 << ")  from " << srcAddress << endl;
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, currentY, copyWidth, 1, GL_RGB, GL_UNSIGNED_BYTE, &imageData[srcAddress]);
 
         currentY++;
         if (currentY == originalImagePortion.BR.y)
         {
-            cout << "uploadedTexture = true  1" << endl;
+            //cout << "uploadedTexture = true  1" << endl;
             uploadedTexture = true;
         }
 
@@ -720,6 +825,12 @@ void GL_ImageServer::SetFileNameList(FileNameList *fnl)
     cout << "GL_ImageServer::SetFileNameList()" << endl;
 
     fileNameList = fnl;
+}
+
+
+void GL_ImageServer::Reset()
+{
+    ClearCache();
 }
 
 int GL_ImageServer::Cache(int imageNumber)

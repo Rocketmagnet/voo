@@ -273,6 +273,11 @@ void BasicGLPanel::Render(bool blankScreen)
                 newImage->ExpandToSides();
             }
         }
+        else
+        {
+            newImage->Scale(0.01);
+            newImage->ExpandToSides();
+        }
 
         currentImage = newImage;
 

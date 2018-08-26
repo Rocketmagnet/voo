@@ -82,7 +82,7 @@ wxThread::ExitCode ThumbnailLoader::Entry()
     if ((fn.GetExt().Upper() == "JPG") ||
         (fn.GetExt().Upper() == "JPEG"))
     {
-        cout << "Using JpegTurbo to load thumbnail " << fileName << endl;
+        //cout << "Using JpegTurbo to load thumbnail " << fileName << endl;
 
         jpeg_load_state *load_state = ReadJpegHeader((const  char*)fileName.c_str());
 
@@ -115,7 +115,7 @@ wxThread::ExitCode ThumbnailLoader::Entry()
         }
         else
         {
-            cout << "Failed to load " << fileName << endl;
+            //cout << "Failed to load " << fileName << endl;
         }
     }
     return 0;
@@ -241,12 +241,14 @@ void Thumbnail::Draw(wxPaintDC &dc, bool selected, bool cursor, bool inFocus)
     {
 		if (inFocus)
 		{
+            //cout << "InFocus" << endl;
 			dc.SetBrush(wxBrush(wxS("blue")));
 			dc.SetPen(*wxBLACK_PEN);
 		}
 		else
 		{
-			dc.SetBrush(wxBrush(wxColor(48, 48, 48)));
+            //cout << "Out Focus" << endl;
+            dc.SetBrush(wxBrush(wxColor(48, 48, 48)));
 			dc.SetPen(wxColor(32, 32, 32));
 		}
 
@@ -297,10 +299,10 @@ void Thumbnail::Draw(wxPaintDC &dc, bool selected, bool cursor, bool inFocus)
         dc.SetBrush(wxBrush(wxColor(32,32,32)));
         dc.SetPen(*wxBLACK_PEN);
 
-        cout << "tn: " << imageSizeTemp.x << ", " << imageSizeTemp.y << endl;
+        //cout << "tn: " << imageSizeTemp.x << ", " << imageSizeTemp.y << endl;
         if (imageSizeTemp.x*imageSizeTemp.y > 0)
         {
-            cout << "Drawing sized blank" << endl;
+            //cout << "Drawing sized blank" << endl;
             int cx = position.x + (tnSize.x >> 1);
             int cy = position.y + (tnSize.y >> 1);
 
@@ -334,7 +336,7 @@ bool Thumbnail::IsMouseInside(const wxPoint &mousePos)
 ThumbnailCanvas::ThumbnailCanvas(LiquidMessageDispatcher *dispatcher, wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size)
 : wxScrolledWindow(parent, id, pos, size, wxSUNKEN_BORDER | wxVSCROLL | wxEXPAND | wxWANTS_CHARS),
   fileNameList(),
-  inFocus(true),
+  inFocus(false),
   cursorP(tnColumns, fileNameList),
   selectionStart(0),
   backgroundColor(wxColor(64, 64, 64)),
@@ -495,7 +497,7 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
     wxString cursorFileName;
     wxSize   cursorImageSize;
     
-    cout << "ThumbnailCanvas::OnPaint" << endl;
+    //cout << "ThumbnailCanvas::OnPaint" << endl;
     if (!n)
         return;
 
@@ -503,10 +505,10 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
     switch (redrawType)
     {
         case REDRAW_ALL:
-            cout << "Redrawing ALL" << endl;
+            //cout << "Redrawing ALL" << endl;
             for (int i = 0; i < n; i++)
             {
-                cout << "  " << i << endl;
+                //cout << "  " << i << endl;
                 selected = selectionSetP.Contains(i);
                 if (cursorP.GetNumber() == i)
                 {
@@ -519,7 +521,7 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
                 {
                     onCursor = false;
                 }
-                cout << "    Drawing" << endl;
+                //cout << "    Drawing" << endl;
                 thumbnails[thumbnailIndex[i]].Draw(dc, selected, onCursor);
             }
             break;
@@ -621,12 +623,12 @@ void ThumbnailCanvas::OnKeyEvent(wxKeyEvent &event)
     if (HandleAsNavigationKey(event))
         return;
 
-    cout << "OnKeyEvent(" << event.GetKeyCode() << ")" << endl;
+    //cout << "OnKeyEvent(" << event.GetKeyCode() << ")" << endl;
     int cursorToErase = -1;
 
     if (event.GetKeyCode() == 'D')
     {
-        cout << "ThumbnailCanvas(D)" << endl;
+        //cout << "ThumbnailCanvas(D)" << endl;
     }
 
     switch (event.GetKeyCode())
@@ -681,7 +683,7 @@ void ThumbnailCanvas::OnFocusEvent(wxFocusEvent &event)
     {
         //cursorNumberthumbnails[cursorNumber].Select();
         cursorP.SetupRedraw(redrawSetP);
-        cout << "Redraw Selection Focus" << endl;
+        //cout << "Redraw Selection Focus" << endl;
         //redrawType = REDRAW_SELECTION;
         redrawType = REDRAW_ALL;
         Refresh(DONT_ERASE_BACKGROUND);
@@ -790,7 +792,7 @@ void ThumbnailCanvas::DirectoryWasDeleted(wxString path)
 void ThumbnailCanvas::LoadThumbnails(wxString directory)
 {
 	//cout << "LoadThumbnails(" << directory << ")" << endl;
-
+    inFocus = false;
     ClearThumbnails();
     fileNameList.LoadFileList(directory);
 
@@ -884,7 +886,7 @@ bool ThumbnailCanvas::HandleThumbnailLoading()
         int th = waitingSet[i];
         if (th >= 0)
         {
-            cout << "Starting " << th << " loading " << &thumbnails[thumbnailIndex[th]] << endl;
+            //cout << "Starting " << th << " loading " << &thumbnails[thumbnailIndex[th]] << endl;
             thumbnails[thumbnailIndex[th]].StartLoadingImage();
             loadingSet.AddSingle(th);
             waitingSet.RemoveSingle(th);
@@ -967,16 +969,16 @@ void ThumbnailCanvas::OnMouseEvent(wxMouseEvent &event)
     //cout << "OnMouseEvent" << endl;
     if (event.LeftDClick())
     {
-        cout << "Dclick" << endl;
+        //cout << "Dclick" << endl;
         int th = GetThumbnailFromPosition(logicalPosition);
         imageViewer->DisplayImage(th);
-        cout << "Redraw All" << endl;
+        //cout << "Redraw All" << endl;
         redrawType = REDRAW_ALL;
     }
 
     if (event.LeftDown())
     {
-        cout << "Click" << endl;
+        //cout << "Click" << endl;
         SetFocus();
 
         int th = GetThumbnailFromPosition(logicalPosition);
@@ -990,7 +992,7 @@ void ThumbnailCanvas::OnMouseEvent(wxMouseEvent &event)
 				redrawSetP.SetRange(selectionEnd, th);
                 selectionSetP.SetRange(selectionStart, selectionEnd);
                 redrawType = REDRAW_SELECTION;
-                cout << "Redraw Selection" << endl;
+                //cout << "Redraw Selection" << endl;
                 Refresh(DONT_ERASE_BACKGROUND);
             }
             else
@@ -1006,7 +1008,7 @@ void ThumbnailCanvas::OnMouseEvent(wxMouseEvent &event)
                 selectionStart = th;
                 UpdateStatusBar_File();
 
-                cout << "Redraw Selection" << endl;
+                //cout << "Redraw Selection" << endl;
                 redrawType = REDRAW_SELECTION;
                 Refresh(DONT_ERASE_BACKGROUND);
             }
@@ -1039,7 +1041,7 @@ void ThumbnailCanvas::UpdateStatusBar_File()
             int index = thumbnailIndex[cursorP.GetNumber()];
             Thumbnail *tn = &thumbnails[index];
 
-            cout << "Update Status: " << tn->GetFullPath().GetFullPath() << endl;
+            //cout << "Update Status: " << tn->GetFullPath().GetFullPath() << endl;
 
             wxFileName fn = tn->GetFullPath();
             wxDateTime date = fn.GetModificationTime();
@@ -1116,7 +1118,7 @@ void ThumbnailCanvas::SetCursor(int imageNumber)
 // Delete the image on disk, and delete the thumbnail pointer, but keep the thumbnail.
 void ThumbnailCanvas::DeleteImage(int tn)
 {
-    cout << "ThumbnailCanvas::DeleteImage(" << tn << endl;
+    //cout << "ThumbnailCanvas::DeleteImage(" << tn << endl;
 
     fileNameList.DeleteFileNumber(tn);
     
@@ -1126,13 +1128,13 @@ void ThumbnailCanvas::DeleteImage(int tn)
     loadingSet.RemoveSingle(tn);
     redrawSetP.Clear();
 
-    cout << "Num thumbnails " << thumbnailIndex.size() << endl;
+    //cout << "Num thumbnails " << thumbnailIndex.size() << endl;
     for (int i=0; i < tn; i++)
     {
         iter++;
     }
     thumbnailIndex.erase(iter);
-    cout << "Num thumbnails " << thumbnailIndex.size() << endl;
+    //cout << "Num thumbnails " << thumbnailIndex.size() << endl;
 
     RecalculateRowsCols();
     redrawType = REDRAW_ALL;
@@ -1164,18 +1166,18 @@ void ThumbnailCanvas::FindNearestThumbnail()
         }
     }
 
-    cout << "bestCursor               " << bestCursor << endl;
-    cout << "thumbnailPointers.size() " << thumbnailIndex.size()  << endl;
-    cout << "selectionSetP.size()     " << selectionSetP.size()  << endl;
+    //cout << "bestCursor               " << bestCursor << endl;
+    //cout << "thumbnailPointers.size() " << thumbnailIndex.size()  << endl;
+    //cout << "selectionSetP.size()     " << selectionSetP.size()  << endl;
     
     if (bestCursor >= thumbnailIndex.size() - selectionSetP.size())
     {
-        cout << "decrementing " << endl;
+        //cout << "decrementing " << endl;
         bestCursor--;
     }
     if (bestCursor >= 0)
     {
-        cout << "returning " << bestCursor << endl;
+        //cout << "returning " << bestCursor << endl;
         cursorP.SetTo(bestCursor);
     }
 }

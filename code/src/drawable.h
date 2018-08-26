@@ -115,26 +115,10 @@ public:
     //void setHotspotCentered();
 
     bool IsFullyVisible() const;
-
-    void CopyScaleAndPositionFrom(const GL_Image &image)
-    {
-        if (image.IsFullyVisible())
-        {
-            std::cout << "Fully visible" << std::endl;
-            scale = 0.01;
-            x = 0;
-            y = 0;
-            ExpandToSides();
-        }
-        else
-        {
-            std::cout << "Not fully visible" << std::endl;
-            //std::cout << this << "  Copying scale " << image.scale << "  (" << x << ", " << y << ")  from " << &image << std::endl;
-            scale = image.scale;
-            x = image.x;
-            y = image.y;
-        }
-    }
+    void CopyPositionFrom(const GL_Image &image);
+    void CopyVisibilityFrom(const GL_Image &image);
+    void CopyScaleAndPositionFrom(const GL_Image &image);
+    double VisibilityAtScale(double sc) const;
 
     void SetScaleAndPosition(float xx, float yy, float sc)
     {
@@ -209,6 +193,7 @@ struct ImageAndNumber
     size_t     creationTime;
 };
 
+
 class GL_ImageServer
 {
 public:
@@ -230,6 +215,7 @@ public:
     }
 
     void SetFileNameList(FileNameList *fnl);
+    void Reset();
 
     void HandleCaching();
     int  NextImageToCache();

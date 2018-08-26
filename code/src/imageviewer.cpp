@@ -303,10 +303,10 @@ wxLongLong keyTime = 0;
 void ImageViewer::OnKeyDown(wxKeyEvent &event)
 {
     wxLongLong kt = wxGetLocalTimeMillis();
-    if (keyTime != 0)
-    {
-        cout << "keyTime = " << keyTime - kt << endl;
-    }
+    //if (keyTime != 0)
+    //{
+    //    cout << "keyTime = " << keyTime - kt << endl;
+    //}
     keyTime = kt;
 
 
@@ -531,7 +531,7 @@ void ImageViewer::OnTimer(wxTimerEvent &event)
     }
     //NoteTime(wxT("  display"));
 
-    cout << "disappearState = " << disappearState << endl;
+    //cout << "disappearState = " << disappearState << endl;
 
     switch (disappearState)
     {
