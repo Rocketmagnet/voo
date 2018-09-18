@@ -34,13 +34,14 @@ jpeg_load_state* ReadJpegHeader(const char* filename)
     }
     else
     {
-        //printf("opened %s\n", filename);
+        //printf("OPENED %s\n", filename);
     }
 
     // If the file was successfully opened, then allocate memory.
     jpeg_load_state* load_state = malloc(sizeof(jpeg_load_state));
 
     load_state->infile = infile;
+    strncpy(load_state->file_name, filename, 1024);
     /* Step 1: allocate and initialize JPEG decompression object */
 
     /* We set up the normal JPEG error routines, then override error_exit. */
@@ -55,6 +56,7 @@ jpeg_load_state* ReadJpegHeader(const char* filename)
         */
         printf("failed\n");
         jpeg_destroy_decompress(&load_state->cinfo);
+        //printf("CLOSE: %s\n", filename);
         fclose(load_state->infile);
 
         free(load_state);
@@ -104,7 +106,7 @@ jpeg_load_state* ReadJpegHeaderOnly(const char* filename)
     }
     else
     {
-        //printf("opened %s\n", filename);
+        //printf("OPENED %s\n", filename);
     }
 
     // If the file was successfully opened, then allocate memory.
@@ -125,6 +127,8 @@ jpeg_load_state* ReadJpegHeaderOnly(const char* filename)
         */
         printf("failed\n");
         jpeg_destroy_decompress(&load_state->cinfo);
+
+        //printf("CLOSE: %s\n", filename);
         fclose(load_state->infile);
 
         free(load_state);
@@ -146,6 +150,7 @@ jpeg_load_state* ReadJpegHeaderOnly(const char* filename)
     load_state->height = load_state->cinfo.image_height;
 
     jpeg_destroy_decompress(&load_state->cinfo);
+    //printf("CLOSE: %s\n", filename);
     fclose(load_state->infile);
     free(load_state);
     return load_state;
@@ -174,6 +179,7 @@ int JpegRead(unsigned char* imageBuffer, jpeg_load_state* load_state)
 
     (void)jpeg_finish_decompress(&load_state->cinfo);
     jpeg_destroy_decompress(&load_state->cinfo);
+    //printf("CLOSE: %s\n", load_state->file_name);
     fclose(load_state->infile);
     //fclose(outputFile);
 

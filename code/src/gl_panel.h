@@ -28,6 +28,7 @@ public:
     void Prepare2DViewport(int topleft_x, int topleft_y, int bottomrigth_x, int bottomrigth_y);
 
     void Clear();
+    void ClearCache();
 
     //void DisplayImage(wxString filename);
     void DisplayImage(int imageNumber);

@@ -219,12 +219,11 @@ void BasicGLPanel::OnPaint(wxPaintEvent& evt)
         LoadFont(wxFileName("Kyooshi Gothic.ttf"), screenFont, 24);
         glewInitialised = true;
     }
+}
 
-    //NoteTime(wxT("BasicGLPanel::OnPaint Render start"));
-    //Render(false);
-
-    //NoteTime(wxT("BasicGLPanel::OnPaint done"));
-    //cout << "BasicGLPanel::OnPaint - Done" << endl;
+void BasicGLPanel::ClearCache()
+{
+    imageServer.ClearCache();
 }
 
 void BasicGLPanel::Clear()

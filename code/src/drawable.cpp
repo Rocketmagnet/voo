@@ -808,6 +808,7 @@ double GL_Image::GetScaleDifference(const GL_Image& glImage) const
 
 void GL_ImageServer::ClearCache()
 {
+    cout << "GL_ImageServer::ClearCache()" << endl;
     int i, n = imageSet.size();
 
     for (i = 0; i < n; i++)

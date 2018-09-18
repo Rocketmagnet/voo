@@ -65,6 +65,7 @@ class ImagePanel : public wxPanel
 
 public:
     ImagePanel(wxWindow* parent, wxWindowID id = ID_IMAGEPANEL, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = 0);
+
     void DisplayImage(wxString filename);
     void OnPaint(wxPaintEvent &event);
     void OnMouseWheel(wxMouseEvent &event);
@@ -123,6 +124,7 @@ public:
     void EnableClose() { closeEnabled = true; }
     void OnTimer(wxTimerEvent &event);
 
+    void ClearCache();
     bool NextImage();
     bool PrevImage();
     void HomeImage();

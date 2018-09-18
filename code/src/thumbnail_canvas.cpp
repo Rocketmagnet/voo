@@ -176,10 +176,14 @@ void Thumbnail::FetchHeader()
 
 Thumbnail::~Thumbnail()
 {
-	if (!imageLoaded)
-		if (thumbnailLoader->IsRunning())
-			thumbnailLoader->Kill();
-
+    //cout << "~Thumbnail() " << fullPath.GetFullName() << endl;
+    if (!imageLoaded)
+    {
+        if (thumbnailLoader->IsRunning())
+        {
+            thumbnailLoader->Delete();
+        }
+    }
     //cout << "Destructing" << endl;
 }
 
@@ -773,11 +777,11 @@ wxString HumanFileSize(int bytes)
 
 void ThumbnailCanvas::DirectoryWasDeleted(wxString path)
 {
-    cout << "ThumbnailCanvas::DirectoryWasDeleted(" << path << ")" << endl;
+    //cout << "ThumbnailCanvas::DirectoryWasDeleted(" << path << ")" << endl;
 
     if (path == fileNameList.directory.GetName())
     {
-        cout << "This directory was deleted" << endl;
+        //cout << "This directory was deleted" << endl;
 
         ClearThumbnails();
 
@@ -788,12 +792,29 @@ void ThumbnailCanvas::DirectoryWasDeleted(wxString path)
     }
 }
 
+// Clear the canvas and delete all thumbnails if we are in this directory
+void ThumbnailCanvas::UnLoadThumbnails(wxString directory)
+{
+    //cout << "ThumbnailCanvas::UnLoadThumbnails(" << directory << ")" << endl;
+    //cout << "  " << fileNameList.directory.GetName() << endl;
+
+    if ( (                        directory.StartsWith(fileNameList.directory.GetNameWithSep()) ) ||
+         ( fileNameList.directory.GetName().StartsWith(directory)        )
+       )
+    {
+        //cout << "  Unloading" << endl;
+        ClearThumbnails();
+        imageViewer->ClearCache();
+        Scroll(0, 0);
+    }
+}
 
 void ThumbnailCanvas::LoadThumbnails(wxString directory)
 {
 	//cout << "LoadThumbnails(" << directory << ")" << endl;
     inFocus = false;
     ClearThumbnails();
+    imageViewer->ClearCache();
     fileNameList.LoadFileList(directory);
 
     int n = fileNameList.files.size();
@@ -823,9 +844,10 @@ void ThumbnailCanvas::LoadThumbnails(wxString directory)
         //cout << thumbnailIndex.back() << " at " << &thumbnails.back() << endl;
     }
 
-    readHeadersCompleted = false;
-    ThumbnailHeaderReader *thr = new ThumbnailHeaderReader(*this);
-    thr->Run();
+    readHeadersCompleted = true;
+    //readHeadersCompleted = false;
+    //ThumbnailHeaderReader *thr = new ThumbnailHeaderReader(*this);
+    //thr->Run();
 
     wxString hrs = HumanFileSize(totalDirectorySizeBytes.GetLo());
     STATUS_TEXT(STATUS_BAR_DIRECTORY_SUMMARY, "%d files (%s)", n, hrs.c_str());

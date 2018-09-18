@@ -33,6 +33,7 @@
 #include "wx/dirctrl.h"
 #include "wx/textfile.h"
 #include "wx/arrstr.h"
+#include "wx/filefn.h"
 #include "directory_functions.h"
 #include "message.h"
 
@@ -377,20 +378,6 @@ void ImageBrowser::MenuPopped(wxCommandEvent &event)
     menu->UpdateUI();
 }
 
-void ImageBrowser::MenuDeleteDirectory(wxCommandEvent &evt)
-{
-    wxTreeItemId id = dirTreeCtrl->GetPopupMenuItem();
-    wxDirItemData *data = (wxDirItemData*)(dirTreeCtrl->GetTreeCtrl()->GetItemData(id));
-
-    wxString path = data->m_path;
-
-    bool success = DeleteDirectory(path);
-
-    if (success)
-    {
-        DirectoryWasDeleted(path, id);
-    }
-}
 
 typedef std::function< void(int) > classFuncPtr;
 
@@ -489,10 +476,10 @@ void ImageBrowser::CreateControls()
         configParser.Write();
     }
 	dirTreeCtrl->ExpandPath(currentDirectory);
-	 
-    wxAcceleratorEntry entries[1];
+
+    wxAcceleratorEntry entries[2];
     entries[0].Set(wxACCEL_CTRL, (int) 'D', ID_DELETE_DIRECTORY);
-    entries[0].Set(wxACCEL_CTRL, (int) 'K', ID_ARCHIVE_DIRECTORY);
+    entries[1].Set(wxACCEL_CTRL, (int) 'K', ID_ARCHIVE_DIRECTORY);
     wxAcceleratorTable accel(1, entries);
     SetAcceleratorTable(accel);
 
@@ -601,6 +588,7 @@ void ImageBrowser::TreeExpanded(wxTreeEvent &event)
     wxTreeItemId id = event.GetItem();
     wxDirItemData *data = (wxDirItemData*)(treeCtrl->GetItemData(id));
     
+    cout << "ImageBrowser::TreeExpanded(" << data->m_path << ")" << endl;
     if (allowTreeDecoration)
     {
         GreyEmptyDirectories(*treeCtrl, id);
@@ -649,66 +637,148 @@ wxString ImageBrowser::GetCurrentDir()
     return currentDirectory;
 }
 
+
+void Pause(int timeMs)
+{
+    wxStopWatch sw;
+
+    sw.Start();
+    while (sw.Time() < timeMs)
+    {
+        cout << ".";
+    }
+    cout << endl;
+}
+
+wxString tabs = "";
+
 bool RemoveDirectory(wxString pathName)
 {
     wxString fn;
     wxDir dir(pathName);
+    wxArrayString paths;
+    int attemptsRemaining = 0;
+    int i = -2;
 
     if (!dir.IsOpened())
     {
-        cout << "Failed to open " << pathName << endl;
+        cout << tabs << "Failed to open " << pathName << endl;
         return false;
     }
 
     bool cont = dir.GetFirst(&fn);
 
-    cout << "RemoveDirectory(" << pathName << ")" << endl;
+    cout << endl;
+    cout << tabs << "RemoveDirectory(" << pathName << ")" << endl;
 
     // if there are files to process
     if (cont)
     {
         do {
-            // if the next filename is actually a directory
-            wxString subPath = dir.GetName() + wxFILE_SEP_PATH + fn + wxFILE_SEP_PATH;
+            wxString subPath = dir.GetName() + wxFILE_SEP_PATH + fn;
+            paths.Add(subPath);
+        }
+        while (dir.GetNext(&fn));
 
-            cout << "Checking for existence of " << subPath << " " << wxDirExists(subPath) << endl;
+        attemptsRemaining = paths.size() * 2;
 
-            if (wxDirExists(subPath))
+        do {
+            if (i < 0)
             {
-                cout << "deleting " << subPath << endl;
+                if (i == -2)
+                    Pause(100);
+                else
+                    Pause(10);
+                i = paths.size() - 1;
+            }
+
+            cout << tabs << "attemptsRemaining = " << attemptsRemaining << "  i = " << i << "  size = " << paths.size() << endl;
+            wxString subPath = paths[i--];
+            cout << tabs << "Checking for existence of " << subPath << " " << wxDirExists(subPath) << endl;
+
+            // if the next filename is actually a directory
+            if (wxDirExists(subPath + wxFILE_SEP_PATH))
+            {
+                cout << tabs << "deleting directory" << subPath + wxFILE_SEP_PATH << endl;
                 // delete this directory
-                RemoveDirectory(subPath);
+                tabs += "    ";
+                bool success = RemoveDirectory(subPath + wxFILE_SEP_PATH);
+
+                if (success)
+                {
+                    paths.Remove(subPath);
+                    cout << tabs << "successfully deleted sub path: " << subPath << endl;
+                }
             }
             else
             {
                 // otherwise attempt to delete this file
-                cout << "Attempt to remove file " << pathName + fn << endl;
-                if (!wxRemoveFile(pathName + fn))
-                {
-                    // error if we couldn't
-                    //wxLogError("Could not remove file \"" + pathName + fn + "\"");
-                    return false;
+                cout << tabs << "Attempt to remove file " << subPath << endl;
+                if (!wxRemoveFile(subPath))
+                { // failed
+                    cout << tabs << "failed to delete file: " << subPath << endl;
+                }
+                else
+                { // success
+                    paths.Remove(subPath);
+                    cout << tabs << "successfully deleted file: " << subPath << endl;
                 }
             }
-        }
-        // get the next file name
-        while (dir.GetNext(&fn));
+        } while ((attemptsRemaining--) && (paths.size()>0));
     }
 
-    cout << "Now remove directory " << pathName << endl;
+    cout << tabs << "Now remove directory " << pathName << endl;
     bool success = wxRmDir(pathName);
-    cout << "success = " << success << endl;
+    cout << tabs << "success = " << success << endl;
+
+    tabs = tabs.Left(tabs.Length() - 4);
     return true;
 }
 
 
 void ImageBrowser::OnDeleteDirectory(wxCommandEvent &event)
 {
-    wxTreeItemId    id = dirTreeCtrl->GetPopupMenuItem();
-    wxDirItemData  *itemData = (wxDirItemData*)(dirTreeCtrl->GetTreeCtrl()->GetItemData(id));
-    wxString        path(itemData->m_path);
+    cout << "ImageBrowser::OnDeleteDirectory(" << currentDirectory << ")" << endl;
 
-    cout << "ImageBrowser::OnDeleteDirectory(" << path << ")" << endl;
+    wxFileName parentPath = currentDirectory;
+    parentPath.RemoveLastDir();
+    wxString firstFile = wxFindFirstFile(parentPath.GetFullPath());
+    cout << "firstFile = " << firstFile << endl;
+    bool parentIsEmpty = firstFile.empty();
+
+    wxString pathToDelete;
+
+    if (parentIsEmpty)
+    {
+        pathToDelete = parentPath.GetFullPath();
+    }
+    else
+    {
+        pathToDelete = currentDirectory;
+    }
+
+    cout << "pathToDelete = " << pathToDelete << endl;
+    thumbnailCanvas->UnLoadThumbnails(pathToDelete);
+    bool success = DeleteDirectory(pathToDelete);
+
+    if (success)
+    {
+        dirTreeCtrl->SelectPath(pathToDelete);
+        wxTreeItemId id = dirTreeCtrl->GetTreeCtrl()->GetSelection();
+        DirectoryWasDeleted(pathToDelete, id);
+    }
+}
+
+
+// Called when user Right-clicks, and chooses "Delete Directory"
+// 
+void ImageBrowser::MenuDeleteDirectory(wxCommandEvent &evt)
+{
+    wxTreeItemId id = dirTreeCtrl->GetPopupMenuItem();
+    wxDirItemData *data = (wxDirItemData*)(dirTreeCtrl->GetTreeCtrl()->GetItemData(id));
+
+    wxString path = data->m_path;
+    thumbnailCanvas->UnLoadThumbnails(path);
     bool success = DeleteDirectory(path);
 
     if (success)
@@ -718,12 +788,16 @@ void ImageBrowser::OnDeleteDirectory(wxCommandEvent &event)
 }
 
 
+
 void ImageBrowser::OnArchiveDirectory(wxCommandEvent &event)
 {
 
 }
 
 
+// Pop up a dialog, asking the user to confirm delete
+// If YES, then call ImageBrowser::RemoveDirectory(path)
+// 
 bool ImageBrowser::DeleteDirectory(wxString path)
 {
     wxMessageDialog *test = new wxMessageDialog(nullptr, wxT("Delete ") + path, wxT("Warning"), wxYES_NO | wxNO_DEFAULT);

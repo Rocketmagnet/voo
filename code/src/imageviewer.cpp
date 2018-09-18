@@ -255,6 +255,10 @@ void ImageViewer::OnIdle(wxIdleEvent &event)
     event.RequestMore();
 }
 
+void ImageViewer::ClearCache()
+{
+    glPanel->ClearCache();
+}
 
 // Called by ThumbnailCanvas whenever an image is requested
 // to be displayed.

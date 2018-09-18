@@ -414,8 +414,9 @@ public:
 	void CreateAntiAliasedBitmap();
 	void ClearThumbnails();
 	void LoadThumbnails(wxString directory);
+    void UnLoadThumbnails(wxString directory);
     void ReLoadThumbnails();
-    void KillAllThreads();
+    //void KillAllThreads();
     void DirectoryWasDeleted(wxString path);
 
 	void OnSize(wxSizeEvent &event);

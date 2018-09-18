@@ -21,7 +21,8 @@ typedef struct
     JSAMPARRAY  buffer;             // Output row buffer
     int         row_stride;         // physical row width in output buffer
     int         exit_code;
-    int width, height;
+    int         width, height;
+    char        file_name[1024];
 }jpeg_load_state;
 
 
