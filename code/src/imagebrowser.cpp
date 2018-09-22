@@ -334,7 +334,6 @@ void ImageBrowser::ReNumberImages(wxCommandEvent &evt)
 
 }
 
-
 void ImageBrowser::MakeTopDirectory(wxCommandEvent &evt)
 {
     wxTreeItemId id = dirTreeCtrl->GetPopupMenuItem();
@@ -343,7 +342,18 @@ void ImageBrowser::MakeTopDirectory(wxCommandEvent &evt)
     cout << "Make Top " << data->m_path << endl;
 }
 
-/* 
+void ImageBrowser::MenuOpenDirectory(wxCommandEvent &evt)
+{
+    wxTreeItemId id = dirTreeCtrl->GetPopupMenuItem();
+    wxDirItemData *data = (wxDirItemData*)(dirTreeCtrl->GetTreeCtrl()->GetItemData(id));
+
+    wxString command = wxT("explorer \"") + data->m_path + wxT("\"");
+
+    wxExecute(command.c_str(), wxEXEC_ASYNC, NULL);
+    //cout << "Make Top " << data->m_path << endl;
+}
+
+/*
 void ImageBrowser::DirMenuPopped(wxCommandEvent &event)
 {
 	cout << "DirMenuPopped" << endl;
@@ -374,6 +384,11 @@ void ImageBrowser::MenuPopped(wxCommandEvent &event)
     menu->Append(id, "Make Top Directory");
     cout << "ID: " << id << endl;
     dirTreeCtrl->Bind(wxEVT_MENU, &ImageBrowser::MakeTopDirectory, this, id);
+
+    id = wxNewId();
+    menu->Append(id, "Open Directory");
+    cout << "ID: " << id << endl;
+    dirTreeCtrl->Bind(wxEVT_MENU, &ImageBrowser::MenuOpenDirectory, this, id);
 
     menu->UpdateUI();
 }
@@ -437,12 +452,12 @@ void ImageBrowser::CreateControls()
 
     treeCtrl->Bind(wxEVT_TREE_ITEM_EXPANDED, &ImageBrowser::TreeExpanded, this, -1);
 
-    wxFrame *debuggingFrame = new wxFrame(this, -1, wxT("Debugging"), wxPoint(1500, 600), wxSize(400, 400));
-    debuggingWindow = new wxTextCtrl(debuggingFrame, -1, wxT("Test"), wxPoint(0,0), wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
-    wxBoxSizer *debugSizer = new wxBoxSizer(wxHORIZONTAL);
-    debuggingFrame->SetSizer(debugSizer);
-    debugSizer->Add(debuggingWindow, 1, wxEXPAND);
-    debuggingFrame->Show(true);
+    //wxFrame *debuggingFrame = new wxFrame(this, -1, wxT("Debugging"), wxPoint(1500, 600), wxSize(400, 400));
+    //debuggingWindow = new wxTextCtrl(debuggingFrame, -1, wxT("Test"), wxPoint(0,0), wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
+    //wxBoxSizer *debugSizer = new wxBoxSizer(wxHORIZONTAL);
+    //debuggingFrame->SetSizer(debugSizer);
+    //debugSizer->Add(debuggingWindow, 1, wxEXPAND);
+    //debuggingFrame->Show(true);
 
     //dirTreeCtrl->AddRightClickMenuItem("testFunc", this, (wxFrame::(*func)(wxCommandEvent &))ImageBrowser::testFunc);
     //int id = dirTreeCtrl->NewMenuItem("testFunc");
@@ -458,7 +473,7 @@ void ImageBrowser::CreateControls()
     //directoryNameCtrl = rightHandWindow->GetDirectoryNameCtrl();
     //thumbnailCanvas   = rightHandWindow->GetThumbnailCanvas();
 
-    thumbnailCanvas = new ThumbnailCanvas(&liquidMessageDispatcher, splitter1, ID_SCROLLEDWINDOW, wxDefaultPosition, wxDefaultSize);
+    thumbnailCanvas = new ThumbnailCanvas(&configParser, splitter1, ID_SCROLLEDWINDOW, wxDefaultPosition, wxDefaultSize);
 	thumbnailCanvas->SetScrollbars(10, 10, 50, 275);
 	thumbnailCanvas->LoadThumbnails(".");
 
@@ -483,7 +498,7 @@ void ImageBrowser::CreateControls()
     wxAcceleratorTable accel(1, entries);
     SetAcceleratorTable(accel);
 
-////@end ImageBrowser content construction
+    ////@end ImageBrowser content construction
 }
 
 

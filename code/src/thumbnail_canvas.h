@@ -13,6 +13,7 @@ class wxPaintDC;
 class ImageViewer;
 class Thumbnail;
 class ThumbnailCanvas;
+class ConfigParser;
 
 //-----------------------------------------------------------------------------
 // MyCanvas
@@ -374,6 +375,7 @@ protected:
 
     bool                imageLoaded;
     bool                hasBeenDrawn;
+    bool                isLoading;
 	wxBitmap            bitmap;
     wxFileName          fullPath;
     wxDateTime          dateTime;
@@ -407,7 +409,7 @@ class ThumbnailCanvas : public wxScrolledWindow
     };
 
 public:
-	ThumbnailCanvas(LiquidMessageDispatcher *dispatcher, wxWindow *parent, wxWindowID, const wxPoint &pos, const wxSize &size);
+	ThumbnailCanvas(ConfigParser *cp, wxWindow *parent, wxWindowID, const wxPoint &pos, const wxSize &size);
 	~ThumbnailCanvas();
 
 	void OnPaint(wxPaintEvent &event);
@@ -428,8 +430,6 @@ public:
 
     void OnFocusEvent(wxFocusEvent &event);
     void OnFocusKillEvent(wxFocusEvent &event);
-
-    int SomeCallback(LiquidMessage &/*message*/, wxString &/*tail*/, int /*messageInt*/);
 
     void OnDropFiles(wxDropFilesEvent& event);
 
@@ -456,6 +456,8 @@ public:
     int        GetNumThumbnails()       {return  thumbnails.size();}
 
     void ReadHeadersCompleted() { readHeadersCompleted = true; }
+
+    ConfigParser* GetConfigParser() const {return configParser;}
 
 private:
     void HandleCursorScrolling();
@@ -493,9 +495,8 @@ private:
     wxULongLong             totalDirectorySizeBytes;
     ImageViewer            *imageViewer;
 
-    LiquidMessageConnection     liquidMessageConnection;
-    LiquidMessage               someMessage;
-
+    ConfigParser           *configParser;
+    wxString                videoFileExtensions;
     bool                    readHeadersCompleted;
 	wxDECLARE_EVENT_TABLE();
 };

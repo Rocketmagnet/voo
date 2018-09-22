@@ -133,6 +133,7 @@ public:
     void SetAcceleratorTable(const wxAcceleratorTable &accel);
     void RefreshDirTree(wxString path);
 
+    void MenuOpenDirectory(wxCommandEvent &event);
     void MenuDeleteDirectory(wxCommandEvent &evt);
     bool DeleteDirectory(wxString path);
     void DirectoryWasDeleted(wxString path, wxTreeItemId);

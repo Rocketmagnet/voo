@@ -8,7 +8,9 @@
 #include "wx/dcclient.h"
 #include "wx/dir.h"
 #include "wx/log.h"
+#include "wx/tokenzr.h"
 #include "status_bar.h"
+#include "config_parser.h"
 
 #include <iostream>
 using namespace std;
@@ -76,11 +78,13 @@ wxThread::ExitCode ThumbnailLoader::Entry()
     wxLogNull logNo;													// ... instead logging is suspended while this object is in scope
     wxImage   image;
 
+    thumbnail.isLoading = true;
     image.SetOption(wxIMAGE_OPTION_GIF_TRANSPARENCY, wxIMAGE_OPTION_GIF_TRANSPARENCY_UNCHANGED);
     wxFileName fn(fileName);
+    wxString   extension = fn.GetExt().Upper();
 
-    if ((fn.GetExt().Upper() == "JPG") ||
-        (fn.GetExt().Upper() == "JPEG"))
+    if ((extension == "JPG") ||
+        (extension == "JPEG"))
     {
         //cout << "Using JpegTurbo to load thumbnail " << fileName << endl;
 
@@ -102,7 +106,7 @@ wxThread::ExitCode ThumbnailLoader::Entry()
             thumbnail.imageLoaded = true;
         }
     }
-    else
+    else if (extension == "PNG")
     {
         if (image.LoadFile(fileName))
         {
@@ -118,6 +122,8 @@ wxThread::ExitCode ThumbnailLoader::Entry()
             //cout << "Failed to load " << fileName << endl;
         }
     }
+
+    thumbnail.isLoading = false;
     return 0;
 }
 
@@ -146,6 +152,7 @@ wxThread::ExitCode ThumbnailHeaderReader::Entry()
 Thumbnail::Thumbnail(const wxPoint &pos, wxFileName path, bool fetchHeader)
 : fullPath(path),
   position(pos),
+  isLoading(false),
   imageLoaded(false),
   hasBeenDrawn(false),
   imageSize(0, 0),
@@ -176,15 +183,18 @@ void Thumbnail::FetchHeader()
 
 Thumbnail::~Thumbnail()
 {
-    //cout << "~Thumbnail() " << fullPath.GetFullName() << endl;
+    cout << "~Thumbnail() " << fullPath.GetFullName() << endl;
     if (!imageLoaded)
     {
-        if (thumbnailLoader->IsRunning())
+        cout << "image loaded" << endl;
+        if (isLoading)
         {
+            cout << "loader running" << endl;
             thumbnailLoader->Delete();
+            cout << "killed" << endl;
         }
     }
-    //cout << "Destructing" << endl;
+    cout << "Destructing done" << endl;
 }
 
 
@@ -337,7 +347,7 @@ bool Thumbnail::IsMouseInside(const wxPoint &mousePos)
 
 
 
-ThumbnailCanvas::ThumbnailCanvas(LiquidMessageDispatcher *dispatcher, wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size)
+ThumbnailCanvas::ThumbnailCanvas(ConfigParser *cp, wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size)
 : wxScrolledWindow(parent, id, pos, size, wxSUNKEN_BORDER | wxVSCROLL | wxEXPAND | wxWANTS_CHARS),
   fileNameList(),
   inFocus(false),
@@ -354,14 +364,25 @@ ThumbnailCanvas::ThumbnailCanvas(LiquidMessageDispatcher *dispatcher, wxWindow *
   waitingSet(256),
   loadingSet(8),
   maxLoading(1),
-  liquidMessageConnection(dispatcher)
+  configParser(cp)
 {
     SetBackgroundColour(backgroundColor);
+
+    videoFileExtensions = configParser->GetString("videoExtensions");
 
     fileNameList.AddFilter(_T("*.png"));
     fileNameList.AddFilter(_T("*.gif"));
     fileNameList.AddFilter(_T("*.jpg"));
     fileNameList.AddFilter(_T("*.jpeg"));
+
+    wxStringTokenizer tokenizer(videoFileExtensions, " ");
+    while (tokenizer.HasMoreTokens())
+    {
+        wxString token = tokenizer.GetNextToken();
+        wxString filter = _T("*.") + token;
+        cout << "Adding filter: " << filter << endl;
+        fileNameList.AddFilter(filter);
+    }
 
     Thumbnail::SetSize(tnSize);
     Thumbnail::SetSelectBorder(3);
@@ -380,15 +401,8 @@ ThumbnailCanvas::ThumbnailCanvas(LiquidMessageDispatcher *dispatcher, wxWindow *
     //Connect(wxEVT_DROP_FILES, )
     Bind(wxEVT_DROP_FILES, &ThumbnailCanvas::OnDropFiles, this, -1);
 
-    //liquidMessageConnection.Disconnect();
-    //liquidMessageConnection.Connect(wxT("SomeMessage"), CREATE_LIQUID_CALLBACK(ThumbnailCanvas::SomeCallback), 0);
 }
 
-int ThumbnailCanvas::SomeCallback(LiquidMessage &message, wxString &/*tail*/, int /*messageInt*/)
-{
-    cout << "ThumbnailCanvas::SomeCallback" << message.messageName.messageName << endl;
-    return MESSAGE_CONTINUE;
-}
 
 void ThumbnailCanvas::OnDropFiles(wxDropFilesEvent& event)
 {

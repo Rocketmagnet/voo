@@ -150,6 +150,8 @@ void ImageViewer::Init()
 {
 ////@begin ImageViewer member initialisation
     keys.resize(512, 0);
+    videoFileExtensions = myParent->GetConfigParser()->GetString("videoExtensions");
+    videoPlayerPath     = myParent->GetConfigParser()->GetString("videoPlayer");
 ////@end ImageViewer member initialisation
 }
 
@@ -265,6 +267,20 @@ void ImageViewer::ClearCache()
 // 
 void ImageViewer::DisplayImage(int imageNumber)
 {
+    wxFileName fileName = (*fileNameList)[imageNumber];
+    wxString ext        = fileName.GetExt();
+    ext.MakeLower();
+
+    if (videoFileExtensions.Contains(ext))
+    {
+        wxString command = videoPlayerPath + wxT(" \"") + fileName.GetFullPath() + wxT("\"");
+        cout << command << endl;
+        wxExecute(command.c_str(), wxEXEC_ASYNC, NULL);
+
+        return;
+    }
+
+
     TEXT_MSG("ImageViewer::DisplayImage(%d)\n", imageNumber);
 
     if (imageNumber < 0)

@@ -16,6 +16,7 @@
 
 class FileNameList;
 class ThumbnailCanvas;
+class ConfigParser;
 
 /*!
  * Includes
@@ -161,6 +162,8 @@ public:
     wxTimer                  timer;
     wxTextCtrl              *textCtrl;
     ThumbnailCanvas         *myParent;
+    wxString                 videoFileExtensions;
+    wxString                 videoPlayerPath;
     ////@end ImageViewer member variables
 };
 
