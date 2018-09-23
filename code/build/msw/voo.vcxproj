@@ -139,6 +139,7 @@
     <ClInclude Include="..\..\src\status_bar.h" />
     <ClInclude Include="..\..\src\thumbnail_canvas.h" />
     <ClInclude Include="..\..\src\vector3d.h" />
+    <ClInclude Include="..\..\src\vector_renderer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\config_parser.cpp" />
@@ -156,6 +157,7 @@
     <ClCompile Include="..\..\src\natural_sort.cpp" />
     <ClCompile Include="..\..\src\thumbnail_canvas.cpp" />
     <ClCompile Include="..\..\src\vector3d.cpp" />
+    <ClCompile Include="..\..\src\vector_renderer.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

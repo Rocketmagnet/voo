@@ -337,6 +337,7 @@ public:
     static void SetSelectBorder(int border)              { selectBorderSize = border; }
     static void SetLabelHeight(int height)               { labelHeight      = height; }
     static void SetBackgroundColor(const wxColor &color) { backgroundColor  = color;  }
+    void CreateGenericIcon();
 
     void FetchHeader();
     void SetPosition(const wxPoint &pos)                 { position = pos; }

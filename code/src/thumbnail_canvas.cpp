@@ -11,6 +11,7 @@
 #include "wx/tokenzr.h"
 #include "status_bar.h"
 #include "config_parser.h"
+#include "vector_renderer.h"
 
 #include <iostream>
 using namespace std;
@@ -158,7 +159,31 @@ Thumbnail::Thumbnail(const wxPoint &pos, wxFileName path, bool fetchHeader)
   imageSize(0, 0),
   thumbnailLoader(0)
 {
-	thumbnailLoader = new ThumbnailLoader(path.GetFullPath(), *this);
+    wxString extension = path.GetExt();
+    extension.MakeUpper();
+
+    wxString exts("JPG JPEG PNG GIF");
+    if (exts.Contains(extension))
+    {
+        thumbnailLoader = new ThumbnailLoader(path.GetFullPath(), *this);
+    }
+    else
+    {
+        VectorRenderer vr;
+        bitmap.Create(tnSize);
+        wxString program("P(64,64,64) B(64,64,64) R(0,0,1,1) ");
+        program += wxT("P(160,160,160,2) B(250,250,250) R(0.19,0.08,0.61,0.83) ");
+        program += wxT("P(0,95,120,1) B(0,190,240) R(0.17,0.23,0.42,0.19) ");
+        //program += wxT("B(0,120,200,1) P(0,190,240) G(0.17,0.23,0.42,0.19) ");
+
+        program += wxT("P(255,255,255,1) T(0.26,0.25,");
+        program += extension;
+        program += ") ";
+        program += wxT("X");
+        vr.Render(program, bitmap);
+        imageLoaded = true;
+    }
+
 
     if (fetchHeader)
         FetchHeader();
@@ -180,21 +205,20 @@ void Thumbnail::FetchHeader()
 }
 
 
-
 Thumbnail::~Thumbnail()
 {
-    cout << "~Thumbnail() " << fullPath.GetFullName() << endl;
+    //cout << "~Thumbnail() " << fullPath.GetFullName() << endl;
     if (!imageLoaded)
     {
-        cout << "image loaded" << endl;
+        //cout << "image loaded" << endl;
         if (isLoading)
         {
-            cout << "loader running" << endl;
+            //cout << "loader running" << endl;
             thumbnailLoader->Delete();
-            cout << "killed" << endl;
+            //cout << "killed" << endl;
         }
     }
-    cout << "Destructing done" << endl;
+    //cout << "Destructing done" << endl;
 }
 
 
@@ -345,6 +369,11 @@ bool Thumbnail::IsMouseInside(const wxPoint &mousePos)
     return rect.Contains(mousePos);
 }
 
+
+void Thumbnail::CreateGenericIcon()
+{
+
+}
 
 
 ThumbnailCanvas::ThumbnailCanvas(ConfigParser *cp, wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size)
@@ -547,7 +576,7 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
         case REDRAW_SELECTION:
             //cout << "Redrawing Selection" << endl;
             //cout << "  redrawSetP.size() = " << redrawSetP.size() << endl;
-            redrawSetP.Print();
+            //redrawSetP.Print();
 
             for (int i = 0; i<redrawSetP.size(); i++)
             {
@@ -679,7 +708,7 @@ void ThumbnailCanvas::OnKeyEvent(wxKeyEvent &event)
 		selectionSetP.SelectFrom(cursorP.GetNumber());
 	}
 
-	selectionSetP.Print();
+	//selectionSetP.Print();
 	redrawSetP.AddFrom(selectionSetP);
 	//redrawSetP.Print();
 
