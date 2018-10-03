@@ -1,4 +1,3 @@
-
 #include "wx/scrolwin.h"
 #include <vector>
 #include <deque>
@@ -36,7 +35,7 @@ public:
 
     void AddFrom(SortedVectorInts &src)
     {
-        v.reserve(src.v.size());
+        v.reserve(v.size() + src.v.size());
 
         size_t i, n = src.v.size();
 
@@ -148,6 +147,21 @@ public:
         std::cout << "]" << std::endl;
     }
 
+    wxString SPrint()
+    {
+        wxString s;
+        wxString t;
+
+        s.Printf(wxT("%d ["), v.size());
+        for (size_t i = 0; i<v.size(); i++)
+        {
+            t.Printf(wxT("%d, "), v[i]);
+            s += t;
+        }
+        s += wxT("]\n");
+
+        return s;
+    }
 
     bool Contains(int s)
     {
@@ -337,6 +351,8 @@ public:
     static void SetSelectBorder(int border)              { selectBorderSize = border; }
     static void SetLabelHeight(int height)               { labelHeight      = height; }
     static void SetBackgroundColor(const wxColor &color) { backgroundColor  = color;  }
+    static void SetVideoThumb(wxString vThumb)           { videoThumb       = vThumb; }
+
     void CreateGenericIcon();
 
     void FetchHeader();
@@ -370,6 +386,7 @@ public:
     wxPoint GetPosition() { return position; }
 
     friend class ThumbnailLoader;
+    //friend class ThumbnailCanvas;
 protected:
 
     void DrawLabelClipped(wxPaintDC &dc, wxString &label, wxRect &rectangle);
@@ -389,6 +406,7 @@ protected:
     static int          labelHeight;
     static wxColor      backgroundColor;
     static wxArrayInt   arrayIntStatic;             // This is used when rendering labels. Two thumbnails never use at the same time.
+    static wxString     videoThumb;
 };
 
 
@@ -492,6 +510,8 @@ private:
     DRAG_STATE              dragState;
     REDRAW_TYPE             redrawType;
     wxPoint                 clickPoint;
+    SortedVectorInts        draggingSet;
+    int                     draggedThumb;
     int                     tnSpacingX, tnSpacingY;
     wxULongLong             totalDirectorySizeBytes;
     ImageViewer            *imageViewer;

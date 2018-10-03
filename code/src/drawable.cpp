@@ -22,7 +22,12 @@ extern void NoteTime(wxString s);
 void SetDebuggingText(wxString text);
 
 #define OVERLAP 10
-#define UNDERLAP 2
+#define UNDERLAP 4
+
+std::ostream & operator << (std::ostream & os, const RectangleVector & rv)
+{
+    return os << rv.TL << rv.BR;
+}
 
 
 wxThread::ExitCode ImageLoader::Entry()
@@ -323,21 +328,22 @@ void TextureUpload::Render(Vector2D scrTL, Vector2D scrBR)
 
     float x0 = Remap(originalImagePortion.TL.x, 0, wxImg->GetSize().x, scrTL.x, scrBR.x);
     float x1 = Remap(originalImagePortion.BR.x, 0, wxImg->GetSize().x, scrTL.x, scrBR.x);
-
     float y0 = Remap(originalImagePortion.TL.y, 0, wxImg->GetSize().y, scrTL.y, scrBR.y);
     float y1 = Remap(originalImagePortion.BR.y, 0, wxImg->GetSize().y, scrTL.y, scrBR.y);
 
-    if (clips & CLIP_LEFT )
-        x0 = Remap(originalImagePortion.TL.x + OVERLAP, 0, wxImg->GetSize().x, scrTL.x, scrBR.x);
+    //if (clips & CLIP_LEFT )
+    //    x0 = Remap(originalImagePortion.TL.x + OVERLAP, 0, wxImg->GetSize().x, scrTL.x, scrBR.x);
     //else
     //    x1 = Remap(originalImagePortion.TL.x + 2, 0, wxImg->GetSize().x, scrTL.x, scrBR.x);
 
-    if (clips & CLIP_TOP  )        y0 = Remap(originalImagePortion.TL.y + OVERLAP, 0, wxImg->GetSize().y, scrTL.y, scrBR.y);
+    //if (clips & CLIP_TOP  )        y0 = Remap(originalImagePortion.TL.y + OVERLAP, 0, wxImg->GetSize().y, scrTL.y, scrBR.y);
 
     //if (clips & CLIP_LEFT)
     //    y1 -= 100;
     //else
     //    y0 += 100;
+
+    //cout << renderableTexturePortion << endl;
 
     glBindTexture(GL_TEXTURE_2D, ID);
 
@@ -351,10 +357,10 @@ void TextureUpload::Render(Vector2D scrTL, Vector2D scrBR)
         //glColor3f(1.0, 1.00, 0);    glVertex2f(x1, y1);
         //glColor3f(1.0, 0.50, 0);    glVertex2f(x0, y1);
 
-        glTexCoord2f(myTexturePortion.TL.x, myTexturePortion.TL.y);    glVertex2f(x0, y0);
-        glTexCoord2f(myTexturePortion.BR.x, myTexturePortion.TL.y);    glVertex2f(x1, y0);
-        glTexCoord2f(myTexturePortion.BR.x, myTexturePortion.BR.y);    glVertex2f(x1, y1);
-        glTexCoord2f(myTexturePortion.TL.x, myTexturePortion.BR.y);    glVertex2f(x0, y1);
+        glTexCoord2f(renderableTexturePortion.TL.x, renderableTexturePortion.TL.y);    glVertex2f(x0, y0);
+        glTexCoord2f(renderableTexturePortion.BR.x, renderableTexturePortion.TL.y);    glVertex2f(x1, y0);
+        glTexCoord2f(renderableTexturePortion.BR.x, renderableTexturePortion.BR.y);    glVertex2f(x1, y1);
+        glTexCoord2f(renderableTexturePortion.TL.x, renderableTexturePortion.BR.y);    glVertex2f(x0, y1);
 
         //glTexCoord2f(myTexturePortion.TL.x, myTexturePortion.TL.y);    glVertex2f(x0, y0);
     //glTexCoord2f(myTexturePortion.BR.x, myTexturePortion.TL.y);    glVertex2f(x1, y0);
@@ -403,6 +409,7 @@ void GL_Image::Render()
     glTranslatef(screenWidth * 0.5, screenHeight * 0.5, 0);
 
     textureUploads[0].Render(Vector2D(scrLeft, scrTop), Vector2D(scrRight, scrBottom));
+    //glTranslatef(screenWidth * 0.05, screenHeight * 0.05, 0);
     textureUploads[1].Render(Vector2D(scrLeft, scrTop), Vector2D(scrRight, scrBottom));
     //for (int i = 0; i < 2; i++)
     //{
@@ -435,8 +442,8 @@ void GL_Image::CalculateTextureSizes()
 
     //cout << width0 << ", " << height0 << ", " << width << ", " << height << endl;
 
-    textureUploads[0].Init(&wxImg, Vector2D(     0,       0), Vector2D(width0, height0), CLIP_NONE  );
-    textureUploads[1].Init(&wxImg, Vector2D(width0,       0), Vector2D(width , height0), CLIP_LEFT  );
+    textureUploads[0].Init(&wxImg, Vector2D(     0,         0), Vector2D(width0, height0), OVERLAP_RIGHT );
+    textureUploads[1].Init(&wxImg, Vector2D(width0, 0), Vector2D(width , height0), OVERLAP_LEFT  );
 
     //textureUploads[2].Init(&wxImg, Vector2D(     0, height0), Vector2D(width0, height ), CLIP_TOP           );
     //textureUploads[3].Init(&wxImg, Vector2D(width0, height0), Vector2D(width , height ), CLIP_TOP|CLIP_LEFT );
@@ -461,11 +468,16 @@ TextureUpload::~TextureUpload()
     }
 }
 
-void TextureUpload::Init(wxImage *img, Vector2D TL, Vector2D BR, int clip)
+
+
+void TextureUpload::Init(wxImage *img, Vector2D TL, Vector2D BR, int overlap)
 {
     //cout << endl;
     //cout << "TextureUpload::Init(" << TL.x << ", " << TL.y << " - " << BR.x << ", " << BR.y << ")" << endl;
-    originalImagePortion = RectangleVector(TL, BR);
+
+      originalImagePortion = RectangleVector(TL, BR);
+      expandedImagePortion = RectangleVector(TL, BR);
+
     if ((originalImagePortion.XSize() == 0) || (originalImagePortion.YSize() == 0))
     {
         valid = false;
@@ -478,46 +490,74 @@ void TextureUpload::Init(wxImage *img, Vector2D TL, Vector2D BR, int clip)
         //cout << "Valid = " << valid << endl;
     }
 
-    clips = clip;
+    //clips = clip;
     //cout << "Clips = " << clips << endl;
-    if (clips & CLIP_LEFT)
+    if (overlap & OVERLAP_LEFT)
     {
-        TL.x -= OVERLAP;
-        //cout << "sub left" << endl;
-    }
-    //else
-    //{
-    //    BR.x += UNDERLAP; cout << "sub left" << endl;
-    //}
-
-    if (clips & CLIP_TOP)
-    {
-        TL.y -= OVERLAP;
-        //cout << "sub top" << endl;
+          expandedImagePortion.TL.x -= OVERLAP;
+        //renderableImagePortion.TL.x -= OVERLAP / 2;
     }
 
-    int width  = BR.x - TL.x;
-    int height = BR.y - TL.y;
+    if (overlap & OVERLAP_RIGHT)
+    {
+          expandedImagePortion.BR.x += OVERLAP;
+        //renderableImagePortion.BR.x += OVERLAP / 2;
+    }
+
+    //cout << "  originalImagePortion = " << originalImagePortion   << endl;
+    //cout << "  expandedImagePortion = " << expandedImagePortion   << endl;
+    //cout << "renderableImagePortion = " << renderableImagePortion << endl;
+
+
+    int width  = expandedImagePortion.XSize();
+    int height = expandedImagePortion.YSize();
 
     copyWidth = width;
 
-    float power_of_two_that_gives_correct_width  = std::log((float)(width -1)) / std::log(2.0);
-    float power_of_two_that_gives_correct_height = std::log((float)(height-1)) / std::log(2.0);
-    int textureWidth  = (int)std::pow(2.0, (int)(std::ceil(power_of_two_that_gives_correct_width )));
+    float power_of_two_that_gives_correct_width = std::log((float)(width - 1)) / std::log(2.0);
+    float power_of_two_that_gives_correct_height = std::log((float)(height - 1)) / std::log(2.0);
+    int textureWidth = (int)std::pow(2.0, (int)(std::ceil(power_of_two_that_gives_correct_width)));
     int textureHeight = (int)std::pow(2.0, (int)(std::ceil(power_of_two_that_gives_correct_height)));
 
-    textureSize = wxSize(textureWidth, textureHeight);
+    textureSize = RectangleVector(textureWidth, textureHeight);
+    //textureSize = wxSize(textureWidth, textureHeight);
 
-    wxImg       = img;
+    //cout << "textureSize = " << textureSize.TL << textureSize.BR << endl;
+    wxImg = img;
 
-    originalImagePortion = RectangleVector(TL, BR);
-    double top  = 0;
+    double top = 0;
     double left = 0;
 
-    if (clips & CLIP_LEFT) { left = OVERLAP / (double)textureWidth;  }
-    if (clips & CLIP_TOP ) { top  = OVERLAP / (double)textureHeight; }
+    //if (overlap & CLIP_LEFT) { left = OVERLAP / (double)textureWidth; }
+    //if (overlap & CLIP_TOP)  { top  = OVERLAP / (double)textureHeight; }
 
-    myTexturePortion     = RectangleVector(Vector2D(left, top), Vector2D((double)width / (double)textureWidth, (double)height / (double)textureHeight));
+
+     allocatedTexturePortion = RectangleVector( Vector2D(0,0),
+                                                textureSize.GetFraction(expandedImagePortion.Size()) );
+
+     renderableTexturePortion = originalImagePortion;
+     renderableTexturePortion.Subtract(expandedImagePortion.TL);
+
+     renderableTexturePortion = RectangleVector(textureSize.GetFraction(renderableTexturePortion.TL),
+                                                textureSize.GetFraction(renderableTexturePortion.BR)  );
+
+
+     //renderableTexturePortion.TL.x *= allocatedTexturePortion.TL.x;
+     //renderableTexturePortion.TL.y *= allocatedTexturePortion.TL.y;
+     //renderableTexturePortion.BR.x *= allocatedTexturePortion.BR.x;
+     //renderableTexturePortion.BR.y *= allocatedTexturePortion.BR.y;
+     //cout << "renderableTexturePortion = " << renderableTexturePortion << endl;;
+
+    // allocatedTexturePortion = RectangleVector( Vector2D(0,0),
+    //                                            textureSize.GetFraction(expandedImagePortion.Size()) );
+    //
+    //renderableTexturePortion = RectangleVector( textureSize.GetFraction(originalImagePortion.TL), 
+    //                                            textureSize.GetFraction(originalImagePortion.BR)  );
+
+    //cout << "  allocatedTexturePortion = " << allocatedTexturePortion << endl;
+    //cout << "  renderableTexturePortion = " << renderableTexturePortion << endl;
+
+    //myTexturePortion = RectangleVector(Vector2D(left, top), Vector2D((double)width / (double)textureWidth, (double)height / (double)textureHeight));
 
     //cout << "textureSize = (" << textureWidth << ", " << textureHeight << ")" << endl;
     //cout << "copyWidth = " << copyWidth << endl;
@@ -527,12 +567,11 @@ void TextureUpload::Init(wxImage *img, Vector2D TL, Vector2D BR, int clip)
     //cout << "TL = " << topLeftFloat << "    BR = " << bottomRightFloat << endl;
 
     uploadedTexture = false;
-
+    
     currentY = 0;
     //lastY    = originalImagePortion;
     //cout << "blockSize = " << blockSize << "    lastBlock = " << lastBlock << endl;
 }
-
 
 bool TextureUpload::UploadNextBlock()
 {
@@ -552,7 +591,7 @@ bool TextureUpload::UploadNextBlock()
 
     if (currentY == 0)
     {
-        currentY = originalImagePortion.TL.y;
+        currentY = expandedImagePortion.TL.y;
         if (hasGeneratedTexture)
         {
             //cout << "UPLOAD: Deleting texture " << ID << endl;
@@ -574,7 +613,7 @@ bool TextureUpload::UploadNextBlock()
         //cout << "Texture size = " << textureSize.x << ", " << textureSize.y << endl;
 
         glBindTexture(GL_TEXTURE_2D, ID);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureSize.x, textureSize.y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureSize.BR.x, textureSize.BR.y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
     }
     else
     {
@@ -587,14 +626,15 @@ bool TextureUpload::UploadNextBlock()
         int texY = currentY;
 
         //cout << "(" << currentY << " x " << wxImg->GetSize().x << " + " << originalImagePortion.TL.x << ") * 3" << endl;
-        int srcAddress = (currentY * wxImg->GetSize().x + originalImagePortion.TL.x) * 3;
+        int srcAddress = (currentY * wxImg->GetSize().x + expandedImagePortion.TL.x) * 3;
         unsigned char* imageData = wxImg->GetData();
-
+        int level = 0;
+        int leftEdge = 0;
         //cout << "Copying: (0, " << currentY << ")   size = (" << copyWidth << ", " << 1 << ")  from " << srcAddress << endl;
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, currentY, copyWidth, 1, GL_RGB, GL_UNSIGNED_BYTE, &imageData[srcAddress]);
+        glTexSubImage2D(GL_TEXTURE_2D, level, leftEdge, currentY, copyWidth, 1, GL_RGB, GL_UNSIGNED_BYTE, &imageData[srcAddress]);
 
         currentY++;
-        if (currentY == originalImagePortion.BR.y)
+        if (currentY == expandedImagePortion.BR.y)
         {
             //cout << "uploadedTexture = true  1" << endl;
             uploadedTexture = true;
@@ -808,7 +848,7 @@ double GL_Image::GetScaleDifference(const GL_Image& glImage) const
 
 void GL_ImageServer::ClearCache()
 {
-    cout << "GL_ImageServer::ClearCache()" << endl;
+    //cout << "GL_ImageServer::ClearCache()" << endl;
     int i, n = imageSet.size();
 
     for (i = 0; i < n; i++)
@@ -823,7 +863,7 @@ void GL_ImageServer::ClearCache()
 
 void GL_ImageServer::SetFileNameList(FileNameList *fnl)
 {
-    cout << "GL_ImageServer::SetFileNameList()" << endl;
+    //cout << "GL_ImageServer::SetFileNameList()" << endl;
 
     fileNameList = fnl;
 }
@@ -836,25 +876,25 @@ void GL_ImageServer::Reset()
 
 int GL_ImageServer::Cache(int imageNumber)
 {
-    cout << "  Cache(" << imageNumber << ")" << endl;
+    //cout << "  Cache(" << imageNumber << ")" << endl;
 
     if (!fileNameList)
         return -1;
     
 
-    cout << "  - Caching.  fileNameList[" << imageNumber << " = " << (*fileNameList)[imageNumber] << endl;
+    //cout << "  - Caching.  fileNameList[" << imageNumber << " = " << (*fileNameList)[imageNumber] << endl;
     int cacheLocation = GetCacheLocation(imageNumber);
 
     if (cacheLocation > -1)                             // Is the image already in the cache?
     {
-        cout << "  - Already exists at " << cacheLocation << endl;
+        //cout << "  - Already exists at " << cacheLocation << endl;
         return cacheLocation;                           // then no need to do anything.
     }
 
     t++;
 
     cacheLocation = GetOldestCacheLocation();
-    cout << "  - Placing at " << cacheLocation << endl;
+    //cout << "  - Placing at " << cacheLocation << endl;
 
     imageSet[cacheLocation].glImage.Invalidate();
     imageSet[cacheLocation].creationTime            = t;
@@ -866,9 +906,9 @@ int GL_ImageServer::Cache(int imageNumber)
 
 
     //imageSet[cacheLocation].glImage.Load(path);
-    cout << "  - Loading " << (*fileNameList)[imageNumber] << endl;
+    //cout << "  - Loading " << (*fileNameList)[imageNumber] << endl;
     imageSet[cacheLocation].glImage.Load((*fileNameList)[imageNumber]);
-    cout << "  - Loading done" << endl;
+    //cout << "  - Loading done" << endl;
 
     return cacheLocation;
 }
@@ -895,7 +935,7 @@ GL_Image* GL_ImageServer::GetImage(int imageNumber)
 
     //SetDebuggingText(text);
 
-    cout << endl << "GL_ImageServer::GetImage(" << imageNumber  << ")" << endl;
+    //cout << endl << "GL_ImageServer::GetImage(" << imageNumber  << ")" << endl;
 
     int cacheLocation = GetCacheLocation(imageNumber);
 
@@ -903,8 +943,8 @@ GL_Image* GL_ImageServer::GetImage(int imageNumber)
     {
         cacheLocation = Cache(imageNumber);
     }
-    cout << "  Found at " << cacheLocation << endl;
-
+    //cout << "  Found at " << cacheLocation << endl;
+    
     imageSet[cacheLocation].glImage.SetFileName((*fileNameList)[imageNumber]);
     return &(imageSet[cacheLocation].glImage);
 }
@@ -912,17 +952,17 @@ GL_Image* GL_ImageServer::GetImage(int imageNumber)
 
 int GL_ImageServer::GetCacheLocation(int imageNumber)
 {
-    cout << "GL_ImageServer::GetCacheLocation(" << imageNumber << ")" << endl;
+    //cout << "GL_ImageServer::GetCacheLocation(" << imageNumber << ")" << endl;
     int i, n = imageSet.size();
 
     for (i = 0; i < n; i++)
     {
-        cout << "  checking " << i << " = " << imageSet[i].imageNumber << endl;
+        //cout << "  checking " << i << " = " << imageSet[i].imageNumber << endl;
         if (imageSet[i].imageNumber == imageNumber)
             return i;
     }
 
-    cout << "  didn't find" << endl;
+    //cout << "  didn't find" << endl;
     return -1;
 }
 
@@ -992,5 +1032,5 @@ void GL_ImageServer::UpdateDebuggingText()
         lines += s;
     }
 
-    SetDebuggingText(lines);
+    //SetDebuggingText(lines);
 }

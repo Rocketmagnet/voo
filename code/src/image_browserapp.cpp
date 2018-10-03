@@ -98,7 +98,7 @@ bool Image_BrowserApp::OnInit()
 #if wxUSE_GIF
 	wxImage::AddHandler(new wxGIFHandler);
 #endif
-	imageBrowser = new ImageBrowser( NULL, -1, _T("Image Browser"), wxPoint(1000,0), wxSize(900, 640));
+	imageBrowser = new ImageBrowser( NULL, -1, _T("Image Browser"), wxPoint(700,0), wxSize(1200, 640));
     imageBrowser->Show(true);
 
 

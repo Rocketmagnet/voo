@@ -12,6 +12,9 @@
 #include "status_bar.h"
 #include "config_parser.h"
 #include "vector_renderer.h"
+#include "wx/generic/dragimgg.h"
+#include <wx/dnd.h>
+#define wxDragImage wxGenericDragImage
 
 #include <iostream>
 using namespace std;
@@ -39,7 +42,7 @@ wxArrayInt  Thumbnail::arrayIntStatic;
 int         Thumbnail::selectBorderSize;
 int         Thumbnail::labelHeight;
 wxColor     Thumbnail::backgroundColor;
-
+wxString    Thumbnail::videoThumb;
 
 
 bool SortedVectorInts::Test()
@@ -161,25 +164,20 @@ Thumbnail::Thumbnail(const wxPoint &pos, wxFileName path, bool fetchHeader)
 {
     wxString extension = path.GetExt();
     extension.MakeUpper();
-
     wxString exts("JPG JPEG PNG GIF");
+
     if (exts.Contains(extension))
     {
         thumbnailLoader = new ThumbnailLoader(path.GetFullPath(), *this);
     }
     else
     {
+
         VectorRenderer vr;
         bitmap.Create(tnSize);
-        wxString program("P(64,64,64) B(64,64,64) R(0,0,1,1) ");
-        program += wxT("P(160,160,160,2) B(250,250,250) R(0.19,0.08,0.61,0.83) ");
-        program += wxT("P(0,95,120,1) B(0,190,240) R(0.17,0.23,0.42,0.19) ");
-        //program += wxT("B(0,120,200,1) P(0,190,240) G(0.17,0.23,0.42,0.19) ");
-
-        program += wxT("P(255,255,255,1) T(0.26,0.25,");
-        program += extension;
-        program += ") ";
-        program += wxT("X");
+        wxString program = videoThumb;
+        program.Replace(wxT("$$EXT$$"), extension);
+        //program.Replace(wxT("$$EXT$$"), extension);
         vr.Render(program, bitmap);
         imageLoaded = true;
     }
@@ -392,12 +390,13 @@ ThumbnailCanvas::ThumbnailCanvas(ConfigParser *cp, wxWindow *parent, wxWindowID 
   redrawSetP(256),
   waitingSet(256),
   loadingSet(8),
+  draggingSet(256),
   maxLoading(1),
   configParser(cp)
 {
     SetBackgroundColour(backgroundColor);
 
-    videoFileExtensions = configParser->GetString("videoExtensions");
+    videoFileExtensions   = configParser->GetString("videoExtensions");
 
     fileNameList.AddFilter(_T("*.png"));
     fileNameList.AddFilter(_T("*.gif"));
@@ -409,10 +408,11 @@ ThumbnailCanvas::ThumbnailCanvas(ConfigParser *cp, wxWindow *parent, wxWindowID 
     {
         wxString token = tokenizer.GetNextToken();
         wxString filter = _T("*.") + token;
-        cout << "Adding filter: " << filter << endl;
+        //cout << "Adding filter: " << filter << endl;
         fileNameList.AddFilter(filter);
     }
 
+    Thumbnail::SetVideoThumb(configParser->GetString("videoThumb"));
     Thumbnail::SetSize(tnSize);
     Thumbnail::SetSelectBorder(3);
     Thumbnail::SetLabelHeight(26);
@@ -803,8 +803,8 @@ wxString HumanFileSize(int bytes)
     {
         char mags[] = "  KMGT";
 
-        int scale = 1;
-        int si = 0;
+        long long scale = 1;
+        long long si = 0;
         while (scale <= bytes)
         {
             scale *= 1000;
@@ -1024,67 +1024,189 @@ void ThumbnailCanvas::SetCursorTo(int n)
     }
 }
 */
+void SetDebuggingText(wxString text);
 
 void ThumbnailCanvas::OnMouseEvent(wxMouseEvent &event)
 {
     wxPoint physicalPosition = event.GetPosition();
     wxPoint  logicalPosition = CalcUnscrolledPosition(physicalPosition);
+    int th = GetThumbnailFromPosition(logicalPosition);
+
+    wxString lines, s;
 
     //ReportInt2(1, "Mouse: (%d, %d)", logicalPosition.x, logicalPosition.y);
     //cout << "OnMouseEvent" << endl;
     if (event.LeftDClick())
     {
-        //cout << "Dclick" << endl;
-        int th = GetThumbnailFromPosition(logicalPosition);
-        imageViewer->DisplayImage(th);
-        //cout << "Redraw All" << endl;
-        redrawType = REDRAW_ALL;
-    }
-
-    if (event.LeftDown())
-    {
-        //cout << "Click" << endl;
         SetFocus();
-
-        int th = GetThumbnailFromPosition(logicalPosition);
-        
+        //cout << "Dclick" << endl;
         if (th > -1)
         {
-            if (event.ShiftDown())
-            {
-                //cout << "Selecting range " << selectionStart << "-" << th << endl;
-				int selectionEnd = th;
-				redrawSetP.SetRange(selectionEnd, th);
-                selectionSetP.SetRange(selectionStart, selectionEnd);
-                redrawType = REDRAW_SELECTION;
-                //cout << "Redraw Selection" << endl;
-                Refresh(DONT_ERASE_BACKGROUND);
-            }
-            else
-            {
-                //cout << "Redrawing:" << endl;
-                //cout << "  selectionSet: ";  selectionSet.Print();
-                //cout << "     redrawSet: ";     redrawSet.Print();
+            lines.Printf(wxT("event.LeftDClick()\nDisplayImage(%d)\n"), th);
+            imageViewer->DisplayImage(th);
+            //cout << "Redraw All" << endl;
+            redrawType = REDRAW_ALL;
+        }
+        else
+        {
+            lines.Printf(wxT("event.LeftDClick()\n"));
+        }
+    }
 
+    /*
+    if (event.LeftUp() && event.ControlDown())
+    {
+        if (th > -1)
+        {
+            lines.Printf(wxT("event.LeftUp() && event.ControlDown()    %d\n"), th);
+            //cout << "Selecting range " << selectionStart << "-" << th << endl;
+            int selectionEnd = th;
+            redrawSetP.SetRange(selectionEnd, th);
+            //selectionSetP.SetRange(selectionStart, selectionEnd);
+            selectionSetP.AddSingle(th);
+            lines += wxT("selectionSetP = ");
+            lines += selectionSetP.SPrint();
+
+            redrawType = REDRAW_SELECTION;
+            //cout << "Redraw Selection" << endl;
+            Refresh(DONT_ERASE_BACKGROUND);
+            UpdateStatusBar_File();
+        }
+    }
+    */
+
+    if (event.LeftDown() && event.ShiftDown())
+    {
+        lines.Printf(wxT("event.LeftDown() && event.ShiftDown()    %d\n"), th);
+        SetFocus();
+
+        cursorP.SetTo(th);
+        cursorP.SetupRedraw(redrawSetP);
+        redrawSetP.AddFrom(selectionSetP);      // Need to erase any previously selected thumbs
+        selectionSetP.SetRange(selectionStart, th);
+        s.Printf("selectionSetP.SetRange(%d, %d)\n", selectionStart, th);
+        lines += s;
+        lines += wxT("selectionSetP = ");                   lines += selectionSetP.SPrint();
+        cout << "selectionSetP = ";
+        selectionSetP.Print();
+        dragState = TNC_DRAG_STATE_NONE;
+
+        UpdateStatusBar_File();
+        Refresh(DONT_ERASE_BACKGROUND);
+    }
+    else if (event.LeftDown() && event.ControlDown())
+    {
+        lines.Printf(wxT("event.LeftDown() && event.ShiftDown()    %d\n"), th);
+        SetFocus();
+
+        cursorP.SetTo(th);
+        cursorP.SetupRedraw(redrawSetP);
+        redrawSetP.AddFrom(selectionSetP);      // Need to erase any previously selected thumbs
+        selectionSetP.ToggleSingle(th);
+        s.Printf("selectionSetP.AddSingle(%d)\n", th);
+        lines += s;
+        lines += wxT("selectionSetP = ");                   lines += selectionSetP.SPrint();
+        cout << "selectionSetP = ";
+        selectionSetP.Print();
+        dragState = TNC_DRAG_STATE_NONE;
+
+        UpdateStatusBar_File();
+        Refresh(DONT_ERASE_BACKGROUND);
+    }
+    else if (event.LeftDown())
+    {
+        SetFocus();
+
+        if (th > -1)
+        {
+            lines.Printf(wxT("event.LeftDown()    %d\n"), th);
+
+            if (!selectionSetP.Contains(th))                // Clicking on an unselected thumb
+            {
                 cursorP.SetTo(th);
                 cursorP.SetupRedraw(redrawSetP);
                 redrawSetP.AddFrom(selectionSetP);
                 selectionSetP.Clear();
+                selectionSetP.AddSingle(th);
+                lines += wxT("selectionSetP.Clear()\n");
                 selectionStart = th;
-                UpdateStatusBar_File();
-
-                //cout << "Redraw Selection" << endl;
-                redrawType = REDRAW_SELECTION;
-                Refresh(DONT_ERASE_BACKGROUND);
+            }
+            else                                            // Clicking on a SELECTED thumb
+            {
+                lines += wxT("selectionSetP.Contains(th)\n");
             }
 
-            dragState = TNC_DRAG_STATE_CLICKED;
+            UpdateStatusBar_File();
             clickPoint = event.GetPosition();
+
+            dragState = TNC_DRAG_STATE_CLICKED;
+            redrawType = REDRAW_SELECTION;
+            Refresh(DONT_ERASE_BACKGROUND);
+
+            s.Printf(wxT("selectionStart = %d\n"), selectionStart);  lines += s;
         }
-        return;
     }
 
+    if (event.Dragging() && dragState != TNC_DRAG_STATE_NONE)
+    {
+        lines.Printf(wxT("event.Dragging() && dragState != TNC_DRAG_STATE_NONE    %d\n"), th);
+        if (dragState == TNC_DRAG_STATE_CLICKED)
+        {
+            // We will start dragging if we've moved beyond a couple of pixels
 
+            int tolerance = 2;
+            int dx = abs(event.GetPosition().x - clickPoint.x);
+            int dy = abs(event.GetPosition().y - clickPoint.y);
+
+            if (dx <= tolerance && dy <= tolerance)
+                return;
+
+            // Start the drag.
+            dragState = TNC_DRAG_STATE_DRAGGING;
+            if (selectionSetP.Contains(th))
+            {
+                draggingSet.CopyFrom(selectionSetP);
+                lines += wxT("copied from selectionSetP\n");
+            }
+            else
+            {
+                draggingSet.Clear();
+                draggingSet.AddSingle(th);
+                lines += wxT("set to single\n");
+            }
+            //cout << "Dragging set:";
+            //draggingSet.Print();
+
+            wxWindow::SetCursor(wxCursor(wxCURSOR_HAND));
+
+            //wxPoint beginDragHotSpot =clickPoint - m_draggedShape->GetPosition();
+        }
+        else if (dragState == TNC_DRAG_STATE_DRAGGING)
+        {
+            wxString fileList;
+            //wxFileDataObject my_data;
+
+            for (int i = 0; i < draggingSet.size(); i++)
+            {
+                int draggedThumbP = draggingSet[i];
+                int draggedThumb = thumbnailIndex[draggedThumbP];
+                fileList.Append(thumbnails[draggedThumb].GetFullPath().GetFullPath());
+                fileList.Append("\n");
+                //my_data.AddFile(thumbnails[draggedThumb].GetFullPath().GetFullPath());
+            }
+            wxTextDataObject my_data(fileList);
+            wxDropSource dragSource(this);
+            dragSource.SetData(my_data);
+            wxDragResult result = dragSource.DoDragDrop(true);
+            //cout << "wxDragResult = " << result << endl;
+        }
+    }
+
+    lines += wxT("selectionSetP = ");                   lines += selectionSetP.SPrint();
+    lines += wxT("draggingSet   = ");                   lines += draggingSet.SPrint();
+    s.Printf(wxT("dragState     = %d\n"), dragState);   lines += s;
+
+    SetDebuggingText(lines);
     //cout << "Done" << endl;
     //Update();
 }

@@ -164,6 +164,7 @@ public:
     ThumbnailCanvas         *myParent;
     wxString                 videoFileExtensions;
     wxString                 videoPlayerPath;
+    wxString                 videoThumb;
     ////@end ImageViewer member variables
 };
 

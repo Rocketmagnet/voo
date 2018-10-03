@@ -8,14 +8,14 @@
 #include "vector3d.h"
 #include <iostream>
 
-#define MAX_WIDTH          4096
+#define MAX_WIDTH          (4096 - 10)
 #define MAX_HEIGHT         10000
 #define BLOCK_SIZE_PIXELS (4096*32)
 
-#define CLIP_NONE   0
-#define CLIP_TOP    1
-#define CLIP_LEFT   2
-#define CLIP_RIGHT  4
+#define OVERLAP_NONE   0
+#define OVERLAP_TOP    1
+#define OVERLAP_LEFT   2
+#define OVERLAP_RIGHT  4
 
 class wxString;
 
@@ -38,10 +38,32 @@ public:
       BR(br)
     { }
 
-    double XSize() const { return BR.x - TL.x; };
-    double YSize() const { return BR.y - TL.y; } ;
+    RectangleVector(int width, int height)
+      : TL(0,0),
+        BR(width, height)
+    { }
+
+    Vector2D GetFraction(Vector2D v) const
+    {
+        double x = (v.x - TL.x) / (BR.x - TL.x);
+        double y = (v.y - TL.y) / (BR.y - TL.y);
+
+        return Vector2D(x, y);
+    }
+
+    void Subtract(Vector2D v)
+    {
+        TL -= v;
+        BR -= v;
+    }
+
+    double   XSize() const { return BR.x - TL.x; };
+    double   YSize() const { return BR.y - TL.y; } ;
+    Vector2D  Size() const { return Vector2D(BR.x - TL.x, BR.y - TL.y); };
     Vector2D TL, BR;
 };
+
+std::ostream& operator << (std::ostream& os, const RectangleVector& v);
 
 class ImageLoader : public wxThread
 {
@@ -88,10 +110,17 @@ public:
 
     wxImage          *wxImg;
     GLuint            ID;
-    wxSize            textureSize;                        // The size of the texture for this piece of the image
+    //wxSize            textureSize;                        // The size of the texture for this piece of the image
 
-    RectangleVector   myTexturePortion;             // Coordinates of this piece within the texture in float coordinates
-    RectangleVector   originalImagePortion;         // Coordinates of this piece within the original image in pixel coordinates
+    RectangleVector   textureSize;                          // In pixels
+    RectangleVector     originalImagePortion;               //   
+    RectangleVector     expandedImagePortion;               //   
+    //RectangleVector   renderableImagePortion;               // 
+
+    RectangleVector    allocatedTexturePortion;             // In texture coordinates (0.0 .. 1.0)
+    RectangleVector   renderableTexturePortion;             // 
+
+
     int               copyWidth;
 
     bool              hasGeneratedTexture;

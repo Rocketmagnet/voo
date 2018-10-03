@@ -137,10 +137,10 @@ LiquidMessage someMessage(wxT("SomeMessage"));
 
 void ImageBrowser::OnDecorationTimer(wxTimerEvent& event)
 {
-    cout << "Timer Triggered" << endl;
+    //cout << "Timer Triggered" << endl;
     allowTreeDecoration = true;
     //liquidMessageDispatcher.ProcessMessage(someMessage);
-    cout << "DONE" << endl;
+    //cout << "DONE" << endl;
 }
 
 
@@ -339,7 +339,7 @@ void ImageBrowser::MakeTopDirectory(wxCommandEvent &evt)
     wxTreeItemId id = dirTreeCtrl->GetPopupMenuItem();
     wxDirItemData *data = (wxDirItemData*)(dirTreeCtrl->GetTreeCtrl()->GetItemData(id));
 
-    cout << "Make Top " << data->m_path << endl;
+    //cout << "Make Top " << data->m_path << endl;
 }
 
 void ImageBrowser::MenuOpenDirectory(wxCommandEvent &evt)
@@ -452,13 +452,15 @@ void ImageBrowser::CreateControls()
 
     treeCtrl->Bind(wxEVT_TREE_ITEM_EXPANDED, &ImageBrowser::TreeExpanded, this, -1);
 
-    //wxFrame *debuggingFrame = new wxFrame(this, -1, wxT("Debugging"), wxPoint(1500, 600), wxSize(400, 400));
-    //debuggingWindow = new wxTextCtrl(debuggingFrame, -1, wxT("Test"), wxPoint(0,0), wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
-    //wxBoxSizer *debugSizer = new wxBoxSizer(wxHORIZONTAL);
-    //debuggingFrame->SetSizer(debugSizer);
-    //debugSizer->Add(debuggingWindow, 1, wxEXPAND);
-    //debuggingFrame->Show(true);
-
+    if (1)
+    {
+        wxFrame *debuggingFrame = new wxFrame(this, -1, wxT("Debugging"), wxPoint(200, 600), wxSize(400, 400));
+        debuggingWindow = new wxTextCtrl(debuggingFrame, -1, wxT("Test"), wxPoint(0, 0), wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
+        wxBoxSizer *debugSizer = new wxBoxSizer(wxHORIZONTAL);
+        debuggingFrame->SetSizer(debugSizer);
+        debugSizer->Add(debuggingWindow, 1, wxEXPAND);
+        debuggingFrame->Show(true);
+    }
     //dirTreeCtrl->AddRightClickMenuItem("testFunc", this, (wxFrame::(*func)(wxCommandEvent &))ImageBrowser::testFunc);
     //int id = dirTreeCtrl->NewMenuItem("testFunc");
     //dirTreeCtrl->Bind(wxEVT_MENU, &ImageBrowser::MenuPopped, this, id);
@@ -588,7 +590,7 @@ void ImageBrowser::OnDirClicked(wxTreeEvent& event)
         wxTreeItemId id = event.GetItem();
         currentDirectory = dirTreeCtrl->GetPath(id);
         dirTreeCtrl->GetTreeCtrl()->EnsureVisible(id);
-		cout << "Chose " << currentDirectory << endl;
+		//cout << "Chose " << currentDirectory << endl;
 
 		thumbnailCanvas->LoadThumbnails(currentDirectory);
 		thumbnailCanvas->Refresh();
@@ -603,7 +605,7 @@ void ImageBrowser::TreeExpanded(wxTreeEvent &event)
     wxTreeItemId id = event.GetItem();
     wxDirItemData *data = (wxDirItemData*)(treeCtrl->GetItemData(id));
     
-    cout << "ImageBrowser::TreeExpanded(" << data->m_path << ")" << endl;
+    //cout << "ImageBrowser::TreeExpanded(" << data->m_path << ")" << endl;
     if (allowTreeDecoration)
     {
         GreyEmptyDirectories(*treeCtrl, id);
@@ -614,7 +616,7 @@ void ImageBrowser::TreeExpanded(wxTreeEvent &event)
 
 void ImageBrowser::OnKeyDown(wxKeyEvent &event)
 {
-    cout << "ImageBrowser::OnKeyDown(" << event.GetKeyCode() << ")" << endl;
+    //cout << "ImageBrowser::OnKeyDown(" << event.GetKeyCode() << ")" << endl;
 }
 
 

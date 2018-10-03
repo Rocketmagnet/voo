@@ -303,8 +303,8 @@ extern Vector3D randomvector();
 extern Vector3D ZERO_VECTOR;
 float cosangle ( Vector3D v1, Vector3D v2 );
 
-//ostream& operator << (ostream& os, const Vector2D& v);
-//ostream& operator << (ostream& os, const Vector3D& v);
+std::ostream& operator << (std::ostream& os, const Vector2D& v);
+std::ostream& operator << (std::ostream& os, const Vector3D& v);
 
 #endif
 
