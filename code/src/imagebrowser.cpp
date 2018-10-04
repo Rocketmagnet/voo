@@ -578,6 +578,7 @@ void ImageBrowser::DirectoryWasDeleted(wxString path, wxTreeItemId removedId)
 
     thumbnailCanvas->DirectoryWasDeleted(path);
     thumbnailCanvas->HideImageViewer();
+    treeCtrl->SetFocus();
     //thumbnailCanvas->LoadThumbnails(currentDirectory);
     //thumbnailCanvas->Refresh();
 }
@@ -589,7 +590,9 @@ void ImageBrowser::OnDirClicked(wxTreeEvent& event)
 	{
         wxTreeItemId id = event.GetItem();
         currentDirectory = dirTreeCtrl->GetPath(id);
-        dirTreeCtrl->GetTreeCtrl()->EnsureVisible(id);
+        //dirTreeCtrl->GetTreeCtrl()->EnsureVisible(id);
+        dirTreeCtrl->GetTreeCtrl()->SetScrollPos(wxHORIZONTAL, 0, true);
+        //dirTreeCtrl->SetScrollPos(wxHORIZONTAL, 0, true);
 		//cout << "Chose " << currentDirectory << endl;
 
 		thumbnailCanvas->LoadThumbnails(currentDirectory);

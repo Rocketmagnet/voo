@@ -302,7 +302,6 @@ void ImageViewer::DisplayImage(int imageNumber)
         timer.Start(10);
         disappearState = DISAPPEAR_STATE_NONE;
     }
-
 }
 
 
@@ -315,6 +314,7 @@ void ImageViewer::Disappear()
     Show(false);
     myParent->SetFocus();
     disappearState = DISAPPEAR_STATE_NONE;
+    myParent->SetFocus();
     //ShowFullScreen(false);
 }
 
