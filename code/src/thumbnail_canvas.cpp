@@ -12,6 +12,7 @@
 #include "status_bar.h"
 #include "config_parser.h"
 #include "vector_renderer.h"
+#include "imagebrowser.h"
 #include "wx/generic/dragimgg.h"
 #include <wx/dnd.h>
 #define wxDragImage wxGenericDragImage
@@ -374,7 +375,7 @@ void Thumbnail::CreateGenericIcon()
 }
 
 
-ThumbnailCanvas::ThumbnailCanvas(ConfigParser *cp, wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size)
+ThumbnailCanvas::ThumbnailCanvas(ImageBrowser *imgBrs, wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size)
 : wxScrolledWindow(parent, id, pos, size, wxSUNKEN_BORDER | wxVSCROLL | wxEXPAND | wxWANTS_CHARS),
   fileNameList(),
   inFocus(false),
@@ -392,11 +393,12 @@ ThumbnailCanvas::ThumbnailCanvas(ConfigParser *cp, wxWindow *parent, wxWindowID 
   loadingSet(8),
   draggingSet(256),
   maxLoading(1),
-  configParser(cp)
+  imageViewer(0),
+  imageBrowser(imgBrs)
 {
     SetBackgroundColour(backgroundColor);
-
-    videoFileExtensions   = configParser->GetString("videoExtensions");
+    cout << "ThumbnailCanvas::imageBrowser = " << imageBrowser << endl;
+    videoFileExtensions   = imageBrowser->GetConfigParser()->GetString("videoExtensions");
 
     fileNameList.AddFilter(_T("*.png"));
     fileNameList.AddFilter(_T("*.gif"));
@@ -412,24 +414,23 @@ ThumbnailCanvas::ThumbnailCanvas(ConfigParser *cp, wxWindow *parent, wxWindowID 
         fileNameList.AddFilter(filter);
     }
 
-    Thumbnail::SetVideoThumb(configParser->GetString("videoThumb"));
+    Thumbnail::SetVideoThumb(imageBrowser->GetConfigParser()->GetString("videoThumb"));
     Thumbnail::SetSize(tnSize);
     Thumbnail::SetSelectBorder(3);
     Thumbnail::SetLabelHeight(26);
     Thumbnail::SetBackgroundColor(backgroundColor);
 
     RecalculateRowsCols();
-
-    //imageViewer = new ImageViewer(this, -1, _T("Image Viewer"), wxDefaultPosition, wxDefaultSize, wxSTAY_ON_TOP);
-    imageViewer = new ImageViewer(this, -1, _T("Image Viewer"), wxDefaultPosition, wxDefaultSize, wxRESIZE_BORDER );
-    imageViewer->SetFileNameList(&fileNameList);
+    
     
     DragAcceptFiles(true);
-    //Connect(wxEVT_DROP_FILES, ThumbnailCanvas::OnDropFiles, NULL, ThumbnailCanvas::OnDropFiles);
-    //Connect(wxEVT_DROP_FILES, &ThumbnailCanvas::OnDropFiles, NULL, this);
-    //Connect(wxEVT_DROP_FILES, )
     Bind(wxEVT_DROP_FILES, &ThumbnailCanvas::OnDropFiles, this, -1);
+}
 
+void ThumbnailCanvas::SetImageViewer(ImageViewer *iv)
+{
+    imageViewer = iv;
+    imageViewer->SetFileNameList(&fileNameList);
 }
 
 
@@ -504,7 +505,7 @@ void ThumbnailCanvas::RecalculateRowsCols()
     {
         tnColumns = 1;
     }
-    tnRows    = (int)ceil(((double)thumbnailIndex.size() / tnColumns));         // Calculate the number of rows
+    tnRows = (int)ceil(((double)thumbnailIndex.size() / tnColumns));        // Calculate the number of rows
 
     int virtualX = xSize;                                                   // 
     int virtualY = (tnRows) * tnJumpY + tnSpacingY;                         // 
@@ -667,6 +668,9 @@ void ThumbnailCanvas::HandleCursorScrolling()
 
 void ThumbnailCanvas::OnKeyEvent(wxKeyEvent &event)
 {
+    bool skipping = true;
+    int  pageJump = GetNumRows();
+
     if (HandleAsNavigationKey(event))
         return;
 
@@ -680,17 +684,20 @@ void ThumbnailCanvas::OnKeyEvent(wxKeyEvent &event)
 
     switch (event.GetKeyCode())
     {
-        case WXK_UP:     cursorP.Move( 0, -1);							    break;
-        case WXK_DOWN:   cursorP.Move( 0,  1);							    break;
-        case WXK_LEFT:   cursorP.Move(-1,  0);							    break;
-        case WXK_RIGHT:  cursorP.Move( 1,  0);							    break;
+        case WXK_UP:        cursorP.Move( 0,         -1); skipping = false;         break;
+        case WXK_DOWN:      cursorP.Move( 0,          1); skipping = false;         break;
+        case WXK_LEFT:      cursorP.Move(-1,          0); skipping = false;         break;
+        case WXK_RIGHT:     cursorP.Move( 1,          0); skipping = false;         break;
+        case WXK_PAGEUP:    cursorP.Move( 0,  -pageJump); skipping = false;         break;
+        case WXK_PAGEDOWN:  cursorP.Move( 0,   pageJump); skipping = false;         break;
+
         case WXK_RETURN: imageViewer->DisplayImage(cursorP.GetNumber());    break;
 
         case WXK_DELETE: DeleteSelection();                                 return;
 
         default:
 			//cout << "Key: " << event.GetKeyCode() << endl;
-            event.Skip();
+            event.Skip(skipping);
             return;
     }
 
@@ -718,7 +725,7 @@ void ThumbnailCanvas::OnKeyEvent(wxKeyEvent &event)
     HandleCursorScrolling();
     UpdateStatusBar_File();
 
-    event.Skip(true);
+    event.Skip(skipping);
 }
 
 void ThumbnailCanvas::OnFocusEvent(wxFocusEvent &event)
@@ -916,7 +923,15 @@ void ThumbnailCanvas::LoadThumbnails(wxString directory)
 	//cout << "LoadThumbnails(" << directory << ")  done" << endl;
 }
 
-
+void ThumbnailCanvas::StopLoadingThumbnails(wxString directory)
+{
+    if ((directory.StartsWith(fileNameList.directory.GetNameWithSep())) ||
+        (fileNameList.directory.GetName().StartsWith(directory))
+        )
+    {
+        waitingSet.Clear();
+    }
+}
 
 bool ThumbnailCanvas::HandleThumbnailLoading()
 {
@@ -1214,9 +1229,9 @@ void ThumbnailCanvas::OnMouseEvent(wxMouseEvent &event)
 void ThumbnailCanvas::ClearStatusBar()
 {
     STATUS_TEXT(STATUS_BAR_DIRECTORY_SUMMARY, "");
-    STATUS_TEXT(STATUS_BAR_FILE_INFO,         "");
+    STATUS_TEXT(STATUS_BAR_FILE_SIZES,        "");
     STATUS_TEXT(STATUS_BAR_FILE_FORMAT,       "");
-    STATUS_TEXT(STATUS_BAR_FILE_DIMENSIONS,   "");
+    STATUS_TEXT(STATUS_BAR_INFORMATION,       "");
 }
 
 void ThumbnailCanvas::UpdateStatusBar_File()
@@ -1235,9 +1250,8 @@ void ThumbnailCanvas::UpdateStatusBar_File()
             wxString   dateString = date.Format("%d/%m/%Y  %H:%M");
             wxSize     imageSize = tn->GetImageSize();
 
-            STATUS_TEXT(STATUS_BAR_FILE_INFO, "%s,  %s", fn.GetHumanReadableSize().c_str(), dateString);
+            STATUS_TEXT(STATUS_BAR_FILE_SIZES, "%s,  %s - (%d x %d)", fn.GetHumanReadableSize().c_str(), dateString, imageSize.GetWidth(), imageSize.GetHeight());
             STATUS_TEXT(STATUS_BAR_FILE_FORMAT, fn.GetFullName().c_str());
-            STATUS_TEXT(STATUS_BAR_FILE_DIMENSIONS, "(%d x %d)", imageSize.GetWidth(), imageSize.GetHeight());
         }
     }
 }
@@ -1281,7 +1295,7 @@ void ThumbnailCanvas::OnMouseWheel(wxMouseEvent& event)
 
 void ThumbnailCanvas::OnClose(wxCloseEvent &event)
 {
-    imageViewer->EnableClose();
+    //imageViewer->EnableClose();
     Destroy();
 }
 
@@ -1315,7 +1329,6 @@ void ThumbnailCanvas::DeleteImage(int tn)
     loadingSet.RemoveSingle(tn);
     redrawSetP.Clear();
 
-    //cout << "Num thumbnails " << thumbnailIndex.size() << endl;
     for (int i=0; i < tn; i++)
     {
         iter++;
@@ -1334,16 +1347,17 @@ void ThumbnailCanvas::FindNearestThumbnail()
     int i, n = thumbnailIndex.size();
     int bestCursor = -1;
     int bestDistance = 9999;
-    int newCursorValue = -1;
+    int newCursorValue = n - selectionSetP.size();
 
 
-    for (i = 0; i < n; i++)
+    for (i = n-1; i>=0; i--)
     {
         if (!selectionSetP.Contains(i))
         {
-            newCursorValue++;
+            newCursorValue--;
 
-            int distance = abs(i - cursorP.GetNumber());
+            //int distance = abs(i - cursorP.GetNumber());
+            int distance = selectionSetP.DistanceTo(i);
 
             if (distance < bestDistance)
             {
@@ -1352,6 +1366,7 @@ void ThumbnailCanvas::FindNearestThumbnail()
             }
         }
     }
+
 
     //cout << "bestCursor               " << bestCursor << endl;
     //cout << "thumbnailPointers.size() " << thumbnailIndex.size()  << endl;

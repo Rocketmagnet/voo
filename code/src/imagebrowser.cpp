@@ -36,14 +36,21 @@
 #include "wx/filefn.h"
 #include "directory_functions.h"
 #include "message.h"
+#include "imageviewer.h"
+#include "image_browserapp.h"
+#include "file_name_list.h"
+#include "status_bar.h"
 
 #include <functional>
 #include <iostream>
 using namespace std;
 
-#define PRIVATE_DIRS_FILE_NAME     "prvdirs.txt"
-#define CONFIG_FILE_NAME           "config.txt"
-#define DIRFLAGS_CONTAINS_FILES    1
+
+extern "C"
+{
+#include "jpeg_turbo.h"
+};
+
 
 
 ////@begin XPM images
@@ -80,17 +87,18 @@ END_EVENT_TABLE()
 
 ImageBrowser::ImageBrowser()
 : allowTreeDecoration(false),
-  decorationTimer(this, 555),
-  configParser(CONFIG_FILE_NAME)
+  decorationTimer(this, 555)
 {
+    //cout << "ImageBrowser::ImageBrowser() " << this << endl;
     Init();
 }
 
-ImageBrowser::ImageBrowser( wxWindow* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style )
+ImageBrowser::ImageBrowser(Image_BrowserApp* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style )
 : allowTreeDecoration(false),
   decorationTimer(this, 555),
-  configParser(CONFIG_FILE_NAME)
+  image_BrowserApp(parent)
 {
+    //cout << "ImageBrowser::ImageBrowser(" << parent << ") " << this << endl;
     Init();
     Create( parent, id, caption, pos, size, style );
 }
@@ -100,12 +108,15 @@ ImageBrowser::ImageBrowser( wxWindow* parent, wxWindowID id, const wxString& cap
  * ImageBrowser creator
  */
 
-bool ImageBrowser::Create( wxWindow* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style )
+bool ImageBrowser::Create(Image_BrowserApp* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style )
 {
 ////@begin ImageBrowser creation
-    wxFrame::Create( parent, id, caption, pos, size, style );
+    //cout << "ImageBrowser::Create(" << parent << ")" << endl;
+    wxFrame::Create( NULL, id, caption, pos, size, style );
+    //cout << "ImageBrowser::Create done frame create" << endl;
 
     CreateControls();
+    //cout << "ImageBrowser::Create done CreateControls()" << endl;
     Centre();
 ////@end ImageBrowser creation
 
@@ -120,8 +131,6 @@ bool ImageBrowser::Create( wxWindow* parent, wxWindowID id, const wxString& capt
 
 ImageBrowser::~ImageBrowser()
 {
-    configParser.SetString("currentDirectory", currentDirectory.ToStdString());
-    configParser.Write();
 }
 
 
@@ -131,6 +140,7 @@ ImageBrowser::~ImageBrowser()
 
 void ImageBrowser::Init()
 {
+    //cout << "ImageBrowser::Init()" << endl;
 }
 
 LiquidMessage someMessage(wxT("SomeMessage"));
@@ -342,6 +352,22 @@ void ImageBrowser::MakeTopDirectory(wxCommandEvent &evt)
     //cout << "Make Top " << data->m_path << endl;
 }
 
+void ImageBrowser::MenuRescaleImages(wxCommandEvent &event)
+{
+    wxTreeItemId id = dirTreeCtrl->GetPopupMenuItem();
+    wxDirItemData *data = (wxDirItemData*)(dirTreeCtrl->GetTreeCtrl()->GetItemData(id));
+
+    thumbnailCanvas->StopLoadingThumbnails(data->m_path);
+
+
+    ImageResizer *imageResizer = new ImageResizer(data->m_path, 2000, 2000);
+
+    //ChooseRescaleSize *custom = new ChooseRescaleSize(*imageResizer);
+    //custom->ShowModal();
+
+    imageResizer->Run();
+}
+
 void ImageBrowser::MenuOpenDirectory(wxCommandEvent &evt)
 {
     wxTreeItemId id = dirTreeCtrl->GetPopupMenuItem();
@@ -384,6 +410,11 @@ void ImageBrowser::MenuPopped(wxCommandEvent &event)
     menu->Append(id, "Make Top Directory");
     cout << "ID: " << id << endl;
     dirTreeCtrl->Bind(wxEVT_MENU, &ImageBrowser::MakeTopDirectory, this, id);
+
+    id = wxNewId();
+    menu->Append(id, "Rescale Images");
+    cout << "ID: " << id << endl;
+    dirTreeCtrl->Bind(wxEVT_MENU, &ImageBrowser::MenuRescaleImages, this, id);
 
     id = wxNewId();
     menu->Append(id, "Open Directory");
@@ -475,7 +506,10 @@ void ImageBrowser::CreateControls()
     //directoryNameCtrl = rightHandWindow->GetDirectoryNameCtrl();
     //thumbnailCanvas   = rightHandWindow->GetThumbnailCanvas();
 
-    thumbnailCanvas = new ThumbnailCanvas(&configParser, splitter1, ID_SCROLLEDWINDOW, wxDefaultPosition, wxDefaultSize);
+    imageViewer     = new ImageViewer(this, -1, wxT("Image Viewer"), wxDefaultPosition, wxDefaultSize, 0);
+    thumbnailCanvas = new ThumbnailCanvas(this, splitter1, ID_SCROLLEDWINDOW, wxDefaultPosition, wxDefaultSize);
+    thumbnailCanvas->SetImageViewer(imageViewer);
+    imageViewer->SetThumbnailCanvas(thumbnailCanvas);
 	thumbnailCanvas->SetScrollbars(10, 10, 50, 275);
 	thumbnailCanvas->LoadThumbnails(".");
 
@@ -485,12 +519,12 @@ void ImageBrowser::CreateControls()
 
 	LoadPrivateDirs();
 
-    currentDirectory = configParser.GetString("currentDirectory");
+    currentDirectory = image_BrowserApp->GetConfigParser()->GetString("currentDirectory");
     if (currentDirectory.IsEmpty())
     {
         currentDirectory = wxGetCwd();
-        configParser.SetString("currentDirectory", currentDirectory.ToStdString());
-        configParser.Write();
+        image_BrowserApp->GetConfigParser()->SetString("currentDirectory", currentDirectory.ToStdString());
+        image_BrowserApp->GetConfigParser()->Write();
     }
 	dirTreeCtrl->ExpandPath(currentDirectory);
 
@@ -597,6 +631,9 @@ void ImageBrowser::OnDirClicked(wxTreeEvent& event)
 
 		thumbnailCanvas->LoadThumbnails(currentDirectory);
 		thumbnailCanvas->Refresh();
+
+        image_BrowserApp->GetConfigParser()->SetString("currentDirectory", currentDirectory.ToStdString());
+        image_BrowserApp->GetConfigParser()->Write();
 	}
 
 	event.Skip();
@@ -625,31 +662,6 @@ void ImageBrowser::OnKeyDown(wxKeyEvent &event)
 
 void ImageBrowser::LoadPrivateDirs()
 {
-	wxFileName  privateDirsFileName(PRIVATE_DIRS_FILE_NAME);
-	wxTextFile  privateDirsFile(PRIVATE_DIRS_FILE_NAME);
-
-	if (privateDirsFileName.Exists())
-	{
-		cout << "loading" << endl;
-		privateDirsFile.Open();
-	}
-	{
-		cout << "creating" << endl;
-		cout << privateDirsFile.Create() << endl;
-		privateDirsFile.Write();
-		privateDirsFile.Close();
-		return;
-	}
-
-	wxString str;
-
-	for (str = privateDirsFile.GetFirstLine(); !privateDirsFile.Eof(); str = privateDirsFile.GetNextLine())
-	{
-		cout << "Loaded " << str << endl;
-		// do something with the current line in str
-	}
-	cout << "Loaded " << str << endl;
-
 }
 
 wxString ImageBrowser::GetCurrentDir()
@@ -836,31 +848,196 @@ bool ImageBrowser::DeleteDirectory(wxString path)
     }
 }
 
+ConfigParser* ImageBrowser::GetConfigParser()
+{
+    //cout << "ImageBrowser::GetConfigParser()" << this << endl;
+    //cout << "  image_BrowserApp = " << image_BrowserApp << endl;
+
+    return image_BrowserApp->GetConfigParser();
+}
 
 void ImageBrowser::ReportDirectoryInfo(wxString path, wxTreeItemId id, int flags)
 {
-    if (flags | DIRFLAGS_CONTAINS_FILES)
+    //if (flags | DIRFLAGS_CONTAINS_FILES)
+    //{
+    //    treeCtrl->SetItemTextColour(id, wxColour(0, 0, 0));
+    //}
+    //else
+    //{
+    //    treeCtrl->SetItemTextColour(id, wxColour(128, 128, 128));
+    //}
+}
+
+void LoadImage2(wxImage &image, wxString fileName)
+{
+    image.SetOption(wxIMAGE_OPTION_GIF_TRANSPARENCY, wxIMAGE_OPTION_GIF_TRANSPARENCY_UNCHANGED);
+    wxFileName fn(fileName);
+    wxString   extension = fn.GetExt().Upper();
+
+    if ((extension == "JPG") ||
+        (extension == "JPEG"))
     {
-        treeCtrl->SetItemTextColour(id, wxColour(0, 0, 0));
+        //cout << "Using JpegTurbo to load thumbnail " << fileName << endl;
+
+        jpeg_load_state *load_state = ReadJpegHeader((const  char*)fileName.c_str());
+
+        if (load_state)
+        {
+            int w = load_state->width, h = load_state->height;
+
+            image.Create(w, h);
+            image.SetRGB(wxRect(0, 0, w, h), 128, 64, 0);
+            JpegRead(image.GetData(), load_state);
+        }
     }
-    else
+    else if (extension == "PNG")
     {
-        treeCtrl->SetItemTextColour(id, wxColour(128, 128, 128));
+        image.LoadFile(fileName);
     }
 }
 
+wxThread::ExitCode ImageResizer::Entry()
+{
+    //cout << "Rescaling begins" << endl;
+    const int X_OVERSIZE = 1;
+    const int Y_OVERSIZE = 2;
+    const int RESCALED   = 4;
+
+    FileNameList fileNameList;
+    wxImage      image;
+    wxString     s;
 
 
-//RightHandWindow::RightHandWindow(wxWindow *parent)
-//: wxWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL)
-//{
-//    thumbnailCanvas   = new ThumbnailCanvas(this, ID_SCROLLEDWINDOW, wxDefaultPosition, wxDefaultSize);
-//    directoryNameCtrl = new wxTextCtrl(this, wxID_ANY, wxT("Hello"), wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL | wxWANTS_CHARS);
-//    boxSizer          = new wxBoxSizer(wxVERTICAL);
-//
-//    boxSizer->Add(directoryNameCtrl, 0, wxEXPAND);
-//    boxSizer->Add(thumbnailCanvas, 1, wxEXPAND);
-//
-//    SetSizer(boxSizer);
-//}
+    fileNameList.AddFilter(wxT("*.jpg"));           // We ony rescale JPEGs
+    fileNameList.AddFilter(wxT("*.jpeg"));
+    fileNameList.LoadFileList(directory);
+
+    int n = fileNameList.NumFiles();
+
+    for (int i = 0; i < n; i++)
+    {
+        wxFileName fullPath = fileNameList.files[i].fileName.GetFullPath();
+
+        STATUS_TEXT(STATUS_BAR_INFORMATION, "Loading %d/%d", i, n);
+
+        LoadImage2(image, fullPath.GetFullPath());
+
+        float imageWidth  = image.GetSize().GetWidth();
+        float imageHeight = image.GetSize().GetHeight();
+
+        float ratioX = imageWidth  / (float)maxWidth;
+        float ratioY = imageHeight / (float)maxHeight;
+        int   newWidth, newHeight;
+
+        int   flags = 0;
+
+        if (ratioX > 1.0)   flags |= X_OVERSIZE;
+        if (ratioY > 1.0)   flags |= Y_OVERSIZE;
+
+        cout << "Ratios " << ratioX << ", " << ratioY << endl;
+
+        switch(flags)
+        {
+            default:
+            case 0:
+                break;
+
+            case X_OVERSIZE:
+                flags |= RESCALED;
+                newWidth  = int(imageWidth  / ratioX + 0.5);
+                newHeight = int(imageHeight / ratioX + 0.5);
+                break;
+
+            case Y_OVERSIZE:
+                flags |= RESCALED;
+                newWidth = int(imageWidth / ratioY + 0.5);
+                newHeight = int(imageHeight / ratioY + 0.5);
+                break;
+
+            case X_OVERSIZE | Y_OVERSIZE:
+                flags |= RESCALED;
+                if (ratioX > ratioY)
+                {
+                    newWidth = int(imageWidth / ratioX + 0.5);
+                    newHeight = int(imageHeight / ratioX + 0.5);
+                }
+                else
+                {
+                    newWidth = int(imageWidth / ratioY + 0.5);
+                    newHeight = int(imageHeight / ratioY + 0.5);
+                }
+                break;
+        }
+
+        if (flags & RESCALED)
+        {
+            STATUS_TEXT(STATUS_BAR_INFORMATION, "Rescaling %d/%d", i, n);
+            image.Rescale(newWidth, newHeight, wxIMAGE_QUALITY_HIGH);
+        }
+
+        STATUS_TEXT(STATUS_BAR_INFORMATION, "Saving %d/%d", i, n);
+
+        JpegWrite(fullPath.GetFullPath(), newWidth, newHeight, image.GetData());
+        image.Destroy();
+    }
+
+    STATUS_TEXT(STATUS_BAR_INFORMATION, " ");
+
+    return 0;
+}
+
+
+ChooseRescaleSize::ChooseRescaleSize(ImageResizer &ir)
+: wxDialog(NULL, wxID_ANY, wxT("Select maximum size"), wxDefaultPosition, wxSize(250, 230)),
+  imageResizer(ir)
+{
+    wxPanel *panel = new wxPanel(this, -1);
+
+    wxBoxSizer *vbox = new wxBoxSizer(wxVERTICAL);
+    wxBoxSizer *hbox = new wxBoxSizer(wxHORIZONTAL);
+
+    wxString widthString;
+    wxString heightString;
+
+     widthString.Printf("%d", imageResizer.maxWidth);
+    heightString.Printf("%d", imageResizer.maxHeight);
+
+    wxTextCtrl  *widthCtrl = new wxTextCtrl(panel, -1,  widthString);
+    wxTextCtrl *heightCtrl = new wxTextCtrl(panel, -1, heightString);
+    /*
+    wxStaticBox *st = new wxStaticBox(panel, -1, wxT("Colors"),
+        wxPoint(5, 5), wxSize(240, 150));
+    wxRadioButton *rb = new wxRadioButton(panel, -1,
+        wxT("256 Colors"), wxPoint(15, 30), wxDefaultSize, wxRB_GROUP);
+
+    wxRadioButton *rb1 = new wxRadioButton(panel, -1,
+        wxT("16 Colors"), wxPoint(15, 55));
+    wxRadioButton *rb2 = new wxRadioButton(panel, -1,
+        wxT("2 Colors"), wxPoint(15, 80));
+    wxRadioButton *rb3 = new wxRadioButton(panel, -1,
+        wxT("Custom"), wxPoint(15, 105));
+    wxTextCtrl *tc = new wxTextCtrl(panel, -1, wxT(""),
+        wxPoint(95, 105));
+
+    wxButton *okButton = new wxButton(this, -1, wxT("Ok"),
+        wxDefaultPosition, wxSize(70, 30));
+    wxButton *closeButton = new wxButton(this, -1, wxT("Close"),
+        wxDefaultPosition, wxSize(70, 30));
+
+    hbox->Add(okButton, 1);
+    hbox->Add(closeButton, 1, wxLEFT, 5);
+
+    vbox->Add(panel, 1);
+    vbox->Add(hbox, 0, wxALIGN_CENTER | wxTOP | wxBOTTOM, 10);
+    */
+
+    vbox->Add( widthCtrl, 1);
+    vbox->Add(heightCtrl, 1);
+    SetSizer(vbox);
+
+    Centre();
+    //ShowModal();
+
+    Destroy();
+}
 

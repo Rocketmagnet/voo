@@ -16,34 +16,20 @@
 
 class FileNameList;
 class ThumbnailCanvas;
+class ImageBrowser;
 class ConfigParser;
 
-/*!
- * Includes
- */
 
-////@begin includes
 #include "wx/frame.h"
-////@end includes
-
 #include "wx/image.h"
 #include "wx/dir.h"
 #include "wx/filename.h"
-#include <vector>
-#include  "wx/timer.h"
-#include  "wx/textctrl.h"
+#include "wx/timer.h"
+#include "wx/textctrl.h"
 #include "gl_panel.h"
+#include <vector>
 
-/*!
- * Forward declarations
- */
 
-////@begin forward declarations
-////@end forward declarations
-
-/*!
- * Control identifiers
- */
 
 ////@begin control identifiers
 #define ID_IMAGEVIEWER        10000
@@ -97,15 +83,16 @@ class ImageViewer: public wxFrame
 public:
     /// Constructors
     ImageViewer();
-    ImageViewer(ThumbnailCanvas* parent, wxWindowID id = SYMBOL_IMAGEVIEWER_IDNAME, const wxString& caption = SYMBOL_IMAGEVIEWER_TITLE, const wxPoint& pos = SYMBOL_IMAGEVIEWER_POSITION, const wxSize& size = SYMBOL_IMAGEVIEWER_SIZE, long style = SYMBOL_IMAGEVIEWER_STYLE);
-
-    bool Create(ThumbnailCanvas* parent, wxWindowID id = SYMBOL_IMAGEVIEWER_IDNAME, const wxString& caption = SYMBOL_IMAGEVIEWER_TITLE, const wxPoint& pos = SYMBOL_IMAGEVIEWER_POSITION, const wxSize& size = SYMBOL_IMAGEVIEWER_SIZE, long style = SYMBOL_IMAGEVIEWER_STYLE);
+    ImageViewer(ImageBrowser* parent, wxWindowID id = SYMBOL_IMAGEVIEWER_IDNAME, const wxString& caption = SYMBOL_IMAGEVIEWER_TITLE, const wxPoint& pos = SYMBOL_IMAGEVIEWER_POSITION, const wxSize& size = SYMBOL_IMAGEVIEWER_SIZE, long style = SYMBOL_IMAGEVIEWER_STYLE);
+    bool Create(ImageBrowser* parent, wxWindowID id = SYMBOL_IMAGEVIEWER_IDNAME, const wxString& caption = SYMBOL_IMAGEVIEWER_TITLE, const wxPoint& pos = SYMBOL_IMAGEVIEWER_POSITION, const wxSize& size = SYMBOL_IMAGEVIEWER_SIZE, long style = SYMBOL_IMAGEVIEWER_STYLE);
 
     /// Destructor
     ~ImageViewer();
 
     /// Initialises member variables
     void Init();
+    void SetThumbnailCanvas(ThumbnailCanvas *tnc) { thumbnailCanvas = tnc; }
+
     //void SetStatusBar(wxStatusBar            *sBar) { statusBar = sBar; }
     /// Creates the controls and sizers
     void CreateControls();
@@ -126,8 +113,8 @@ public:
     void OnTimer(wxTimerEvent &event);
 
     void ClearCache();
-    bool NextImage();
-    bool PrevImage();
+    bool NextImage(int jump = 1);
+    bool PrevImage(int jump = 1);
     void HomeImage();
     void  EndImage();
     void Disappear();
@@ -148,8 +135,6 @@ public:
     static bool ShowToolTips();
     void ClearKeys();
 
-////@begin ImageViewer member variables
-    //ImagePanel              *imagePanel;
     BasicGLPanel            *glPanel;
     FileNameList            *fileNameList;
 	int						 lastKeyCode;
@@ -161,12 +146,11 @@ public:
     DISAPPEAR_STATE          disappearState;
     wxTimer                  timer;
     wxTextCtrl              *textCtrl;
-    ThumbnailCanvas         *myParent;
+    ThumbnailCanvas         *thumbnailCanvas;
+    ImageBrowser            *imageBrowser;
     wxString                 videoFileExtensions;
     wxString                 videoPlayerPath;
     wxString                 videoThumb;
-    ////@end ImageViewer member variables
 };
 
 #endif
-    // _IMAGEVIEWER_H_

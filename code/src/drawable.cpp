@@ -442,8 +442,8 @@ void GL_Image::CalculateTextureSizes()
 
     //cout << width0 << ", " << height0 << ", " << width << ", " << height << endl;
 
-    textureUploads[0].Init(&wxImg, Vector2D(     0,         0), Vector2D(width0, height0), OVERLAP_RIGHT );
-    textureUploads[1].Init(&wxImg, Vector2D(width0, 0), Vector2D(width , height0), OVERLAP_LEFT  );
+    textureUploads[0].Init(&wxImg, Vector2D(     0,  0), Vector2D(width0, height0), OVERLAP_RIGHT );
+    textureUploads[1].Init(&wxImg, Vector2D(width0,  0), Vector2D(width , height0), OVERLAP_LEFT  );
 
     //textureUploads[2].Init(&wxImg, Vector2D(     0, height0), Vector2D(width0, height ), CLIP_TOP           );
     //textureUploads[3].Init(&wxImg, Vector2D(width0, height0), Vector2D(width , height ), CLIP_TOP|CLIP_LEFT );
@@ -638,8 +638,10 @@ bool TextureUpload::UploadNextBlock()
         {
             //cout << "uploadedTexture = true  1" << endl;
             uploadedTexture = true;
+            //glGenerateMipmap(GL_TEXTURE_2D);
+            //glGenerateTextureMipmap(ID);
         }
-
+        //GL_INVALID_ENUM
         if (uploadedTexture)
             break;
     }

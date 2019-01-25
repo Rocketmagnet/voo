@@ -12,7 +12,7 @@ class wxPaintDC;
 class ImageViewer;
 class Thumbnail;
 class ThumbnailCanvas;
-class ConfigParser;
+class ImageBrowser;
 
 //-----------------------------------------------------------------------------
 // MyCanvas
@@ -207,6 +207,21 @@ public:
 	{
 		SetRange(selectionStart, selectionEnd);
 	}
+
+    int DistanceTo(int i)
+    {
+        if (i <= v.front())
+        {
+            return v.front() - i;
+        }
+
+        if (i >= v.back())
+        {
+            return i - v.back();
+        }
+
+        return 0;
+    }
 
     int size() { return v.size(); }
     int operator [](int i) { return v[i];}
@@ -428,7 +443,7 @@ class ThumbnailCanvas : public wxScrolledWindow
     };
 
 public:
-	ThumbnailCanvas(ConfigParser *cp, wxWindow *parent, wxWindowID, const wxPoint &pos, const wxSize &size);
+	ThumbnailCanvas(ImageBrowser *imgBrs, wxWindow *parent, wxWindowID, const wxPoint &pos, const wxSize &size);
 	~ThumbnailCanvas();
 
 	void OnPaint(wxPaintEvent &event);
@@ -437,6 +452,8 @@ public:
 	void LoadThumbnails(wxString directory);
     void UnLoadThumbnails(wxString directory);
     void ReLoadThumbnails();
+    void StopLoadingThumbnails(wxString directory);
+
     //void KillAllThreads();
     void DirectoryWasDeleted(wxString path);
 
@@ -463,6 +480,7 @@ public:
 
     void HideImageViewer();
 
+    void SetImageViewer(ImageViewer *iv);
     void SetAcceleratorTable(const wxAcceleratorTable &accel);
     void UpdateStatusBar_File();
     void ClearStatusBar();
@@ -471,12 +489,13 @@ public:
     void DeleteImage(int i);
     void DeleteSelection();
 
-    Thumbnail* GetThumbnail(int i)      {return &thumbnails[i];}
-    int        GetNumThumbnails()       {return  thumbnails.size();}
+    Thumbnail* GetThumbnail(int i)      { return &thumbnails[i];      }
+    int        GetNumThumbnails()       { return  thumbnails.size();  }
+    int        GetNumColumns()          { return  tnColumns;          }
+    int        GetNumRows()             { return  int(GetSize().GetHeight() / (tnSize.GetHeight() + tnSpacingY)); }
+    int        GetNumImagesPerPage()    { return  tnColumns * GetNumRows(); }
 
     void ReadHeadersCompleted() { readHeadersCompleted = true; }
-
-    ConfigParser* GetConfigParser() const {return configParser;}
 
 private:
     void HandleCursorScrolling();
@@ -514,9 +533,10 @@ private:
     int                     draggedThumb;
     int                     tnSpacingX, tnSpacingY;
     wxULongLong             totalDirectorySizeBytes;
-    ImageViewer            *imageViewer;
 
-    ConfigParser           *configParser;
+    ImageBrowser           *imageBrowser;
+    ImageViewer            *imageViewer;
+    //ConfigParser           *configParser;
     wxString                videoFileExtensions;
     bool                    readHeadersCompleted;
 	wxDECLARE_EVENT_TABLE();

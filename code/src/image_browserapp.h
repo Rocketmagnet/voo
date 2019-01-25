@@ -20,6 +20,8 @@
 ////@begin includes
 #include "wx/image.h"
 #include "imagebrowser.h"
+
+
 ////@end includes
 
 /*!
@@ -40,6 +42,7 @@
  * Image_BrowserApp class declaration
  */
 
+
 class Image_BrowserApp: public wxApp
 {    
     DECLARE_CLASS( Image_BrowserApp )
@@ -57,9 +60,10 @@ public:
     /// Called on exit
     virtual int OnExit();
 
-
+    ConfigParser* GetConfigParser() {return &configParser;}
     ImageBrowser *imageBrowser;
-////@begin Image_BrowserApp event handler declarations
+    ConfigParser  configParser;
+    ////@begin Image_BrowserApp event handler declarations
 
 ////@end Image_BrowserApp event handler declarations
 

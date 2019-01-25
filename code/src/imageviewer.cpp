@@ -68,29 +68,33 @@ ImageViewer::ImageViewer()
     displayNumber(-1),
     disappearState(DISAPPEAR_STATE_NONE)
 {
+    //cout << "ImageViewer::ImageViewer() " << this << endl;
     Init();
 }
 
-ImageViewer::ImageViewer(ThumbnailCanvas* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style)
+ImageViewer::ImageViewer(ImageBrowser* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style)
 : glPanel(),
   fileNameList(0),
   currentImage(0),
   displayNumber(-1),
-  myParent(parent),
+  imageBrowser(parent),
+  thumbnailCanvas(0),
   disappearState(DISAPPEAR_STATE_NONE)
 {
+    //cout << "ImageViewer::ImageViewer(" << parent << ") " << this << endl;
     Init();
+    //cout << "ImageViewer::ImageViewer(" << parent << ") " << this << endl;
 
     wxSize sz(wxSystemSettings::GetMetric(wxSYS_SCREEN_X)+16, wxSystemSettings::GetMetric(wxSYS_SCREEN_Y));
     //wxSize sz(400,400);
-    Create(parent, id, caption, wxPoint(-8, -8), sz, style);
+    //Create(parent, id, caption, wxPoint(-8, -8), sz, style);
+    Create(parent, id, caption, wxPoint(-2, -2), sz, style);
 
     wxTextCtrl* dropTarget = new wxTextCtrl(this, wxID_ANY, _("Drop files onto me!"), wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
     dropTarget->DragAcceptFiles(true);
 
     //wxSize sz(400,400);
     //Create(parent, id, caption, wxPoint(0, 0), sz, style);
-
 }
 
 
@@ -108,10 +112,12 @@ static int32_t emptyMask[] = { 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
                                0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
                                0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
 
-bool ImageViewer::Create(ThumbnailCanvas* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style )
+bool ImageViewer::Create(ImageBrowser* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style )
 {
 ////@begin ImageViewer creation
+    //cout << "ImageViewer::Create(" << parent << ")" << endl;
     wxFrame::Create( parent, id, caption, pos, size, style );
+    //cout << "ImageViewer::Create() Done Create Frame" << endl;
 
     CreateControls();
     Layout();
@@ -148,10 +154,14 @@ ImageViewer::~ImageViewer()
 
 void ImageViewer::Init()
 {
-////@begin ImageViewer member initialisation
+    //cout << "ImageViewer::Init()" << endl;
+    //cout << "  imageBrowser = " << imageBrowser << endl;
+    ////@begin ImageViewer member initialisation
     keys.resize(512, 0);
-    videoFileExtensions = myParent->GetConfigParser()->GetString("videoExtensions");
-    videoPlayerPath     = myParent->GetConfigParser()->GetString("videoPlayer");
+    ConfigParser *configParser = imageBrowser->GetConfigParser();
+    //cout << "  configParser = " << configParser << endl;
+    videoFileExtensions = configParser->GetString("videoExtensions");
+    videoPlayerPath     = configParser->GetString("videoPlayer");
 ////@end ImageViewer member initialisation
 }
 
@@ -281,7 +291,7 @@ void ImageViewer::DisplayImage(int imageNumber)
     }
 
 
-    TEXT_MSG("ImageViewer::DisplayImage(%d)\n", imageNumber);
+    //TEXT_MSG("ImageViewer::DisplayImage(%d)\n", imageNumber);
 
     if (imageNumber < 0)
         return;
@@ -293,7 +303,7 @@ void ImageViewer::DisplayImage(int imageNumber)
 
     if (glPanel)
     {
-        TEXT_MSG("  Display\n");
+        //TEXT_MSG("  Display\n");
         Show(true);
         ////ShowFullScreen(true);
         displayNumber = imageNumber;
@@ -310,11 +320,11 @@ void ImageViewer::Disappear()
     glPanel->Clear();
     currentImage = -1;
     ClearKeys();
-    myParent->SetCursor(glPanel->GetImageNumber());
+    thumbnailCanvas->SetCursor(glPanel->GetImageNumber());
     Show(false);
-    myParent->SetFocus();
+    thumbnailCanvas->SetFocus();
     disappearState = DISAPPEAR_STATE_NONE;
-    myParent->SetFocus();
+    thumbnailCanvas->SetFocus();
     //ShowFullScreen(false);
 }
 
@@ -342,7 +352,7 @@ void ImageViewer::OnKeyDown(wxKeyEvent &event)
                 Disappear();
             }
         }
-        myParent->DeleteImage(currentImage);
+        thumbnailCanvas->DeleteImage(currentImage);
         break;
 
     case WXK_ESCAPE:
@@ -361,6 +371,20 @@ void ImageViewer::OnKeyDown(wxKeyEvent &event)
 void ImageViewer::OnKeyUp(wxKeyEvent &event)
 {
     //cout << "Frame Key Up" << event.GetKeyCode() << endl;
+    int pageJump = 5;
+    int lineJump = 1;
+    int imageJump = 1;
+
+    if (thumbnailCanvas)
+    {
+        lineJump = thumbnailCanvas->GetNumColumns();
+        pageJump = thumbnailCanvas->GetNumImagesPerPage();
+    }
+    if (event.ShiftDown())
+    {
+        imageJump = lineJump;
+    }
+
     switch (event.GetKeyCode())
     {
     case WXK_ESCAPE:
@@ -380,12 +404,20 @@ void ImageViewer::OnKeyUp(wxKeyEvent &event)
 
     case 'R':
     case WXK_PAGEUP:
-        PrevImage();
+        PrevImage(imageJump);
         break;
 
     case 'F':
     case WXK_PAGEDOWN:
-        NextImage();
+        NextImage(imageJump);
+        break;
+
+    case 'V':
+        NextImage(pageJump);
+        break;
+
+    case '4':
+        PrevImage(pageJump);
         break;
 
     default:
@@ -398,22 +430,6 @@ void ImageViewer::OnKeyUp(wxKeyEvent &event)
 void ImageViewer::OnClose(wxCloseEvent &event)
 {
     wxGetApp().ExitMainLoop();
-    /*
-    cout << "ImageViewer::OnClose()" << endl;
-
-    if (closeEnabled)
-    {
-        cout << "  closing me" << endl;
-        Destroy();
-    }
-    else
-    {
-        cout << "  closing parent" << endl;
-        GetParent()->Close();
-    }
-    */
-    //event.veto();
-    //event.Skip();
 }
 
 void ImageViewer::OnMouseWheel(wxMouseEvent &event)
@@ -461,10 +477,10 @@ void ImageViewer::EndImage()
     }
 }
 
-bool ImageViewer::NextImage()
+bool ImageViewer::NextImage(int jump)
 {
     int newImage = currentImage;
-    newImage++;
+    newImage += jump;
 
     if (newImage > fileNameList->MaxFileNumber())
         newImage = fileNameList->MaxFileNumber();
@@ -482,11 +498,11 @@ bool ImageViewer::NextImage()
 }
 
 
-bool ImageViewer::PrevImage()
+bool ImageViewer::PrevImage(int jump)
 {
     int newImage = currentImage;
 
-    newImage--;
+    newImage -= jump;
     if (newImage < 0)
         newImage = 0;
 

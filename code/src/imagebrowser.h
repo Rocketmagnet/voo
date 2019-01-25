@@ -58,6 +58,8 @@ class wxMenu;
 class wxSplitterWindow;
 class wxGenericDirCtrl;
 class ThumbnailCanvas;
+class ImageViewer;
+class Image_BrowserApp;
 
 #define ID_DIRECTORY_CTRL	100
 
@@ -92,9 +94,9 @@ class ImageBrowser: public wxFrame
 public:
     /// Constructors
     ImageBrowser();
-    ImageBrowser( wxWindow* parent, wxWindowID id = SYMBOL_IMAGEBROWSER_IDNAME, const wxString& caption = SYMBOL_IMAGEBROWSER_TITLE, const wxPoint& pos = SYMBOL_IMAGEBROWSER_POSITION, const wxSize& size = SYMBOL_IMAGEBROWSER_SIZE, long style = SYMBOL_IMAGEBROWSER_STYLE );
+    ImageBrowser(Image_BrowserApp* parent, wxWindowID id = SYMBOL_IMAGEBROWSER_IDNAME, const wxString& caption = SYMBOL_IMAGEBROWSER_TITLE, const wxPoint& pos = SYMBOL_IMAGEBROWSER_POSITION, const wxSize& size = SYMBOL_IMAGEBROWSER_SIZE, long style = SYMBOL_IMAGEBROWSER_STYLE );
 
-    bool Create( wxWindow* parent, wxWindowID id = SYMBOL_IMAGEBROWSER_IDNAME, const wxString& caption = SYMBOL_IMAGEBROWSER_TITLE, const wxPoint& pos = SYMBOL_IMAGEBROWSER_POSITION, const wxSize& size = SYMBOL_IMAGEBROWSER_SIZE, long style = SYMBOL_IMAGEBROWSER_STYLE );
+    bool Create(Image_BrowserApp* parent, wxWindowID id = SYMBOL_IMAGEBROWSER_IDNAME, const wxString& caption = SYMBOL_IMAGEBROWSER_TITLE, const wxPoint& pos = SYMBOL_IMAGEBROWSER_POSITION, const wxSize& size = SYMBOL_IMAGEBROWSER_SIZE, long style = SYMBOL_IMAGEBROWSER_STYLE );
 
     /// Destructor
     ~ImageBrowser();
@@ -106,18 +108,13 @@ public:
     void CreateControls();
 	void LoadPrivateDirs();
 
-////@begin ImageBrowser event handler declarations
-
-////@end ImageBrowser event handler declarations
-
-////@begin ImageBrowser member function declarations
+    ConfigParser* GetConfigParser();
 
     /// Retrieves bitmap resources
     wxBitmap GetBitmapResource( const wxString& name );
 
     /// Retrieves icon resources
     wxIcon GetIconResource( const wxString& name );
-////@end ImageBrowser member function declarations
 
     /// Should we show tooltips?
     static bool ShowToolTips();
@@ -133,6 +130,7 @@ public:
     void SetAcceleratorTable(const wxAcceleratorTable &accel);
     void RefreshDirTree(wxString path);
 
+    void MenuRescaleImages(wxCommandEvent &event);
     void MenuOpenDirectory(wxCommandEvent &event);
     void MenuDeleteDirectory(wxCommandEvent &evt);
     bool DeleteDirectory(wxString path);
@@ -149,12 +147,14 @@ public:
     void testFunc2(int i);
 ////@begin ImageBrowser member variables
 
+    Image_BrowserApp    *image_BrowserApp;
 	wxMenuBar			*menuBar;
 	wxMenu				*menu;
 	wxSplitterWindow	*splitter1;
 	wxGenericDirCtrl	*dirTreeCtrl;
     wxTreeCtrl          *treeCtrl;
 	ThumbnailCanvas		*thumbnailCanvas;
+    ImageViewer         *imageViewer;
     wxTextCtrl          *directoryNameCtrl;
     RightHandWindow     *rightHandWindow;
 
@@ -164,9 +164,42 @@ public:
     wxTimer              decorationTimer;
     bool                 allowTreeDecoration;
 
-    ConfigParser         configParser;
 ////@end ImageBrowser member variables
 };
+
+
+// Loads a single thumbnail, then quits.
+class ImageResizer : public wxThread
+{
+public:
+    ImageResizer(wxString dir, int maxW, int maxH)
+    : wxThread(wxTHREAD_DETACHED),
+      maxWidth(maxW),
+      maxHeight(maxH),
+      directory(dir)
+    {
+    }
+
+    friend class ChooseRescaleSize;
+
+protected:
+    ExitCode Entry();
+
+    wxString        directory;
+    int             maxWidth;
+    int             maxHeight;
+};
+
+
+class ChooseRescaleSize : public wxDialog
+{
+public:
+    ChooseRescaleSize(ImageResizer &ir);
+
+    wxStaticText   *st;
+    ImageResizer  &imageResizer;
+};
+
 
 #endif
     // _IMAGEBROWSER_H_

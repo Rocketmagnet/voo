@@ -158,31 +158,78 @@ jpeg_load_state* ReadJpegHeaderOnly(const char* filename)
 
 int JpegRead(unsigned char* imageBuffer, jpeg_load_state* load_state)
 {
-    //printf("JpegRead\n");
-    //row_stride = cinfo.output_width * cinfo.output_components;
-	//buffer     = (*cinfo.mem->alloc_sarray)((j_common_ptr)&cinfo, JPOOL_IMAGE, row_stride, 1);
-	//outputFile = fopen("output2.raw", "wb");
-
     char *dest = imageBuffer;
-	//JSAMPARRAY scanLine = &dest;
 
     while (load_state->cinfo.output_scanline < load_state->cinfo.output_height)
     {
-        //(void)jpeg_read_scanlines(&cinfo, scanLine, 1);
 		(void)jpeg_read_scanlines(&load_state->cinfo, load_state->buffer, 1);
 
-		//printf("  Copy %p to %p   bytes:%d\n", buffer[0], dest, row_stride);
 		memcpy(dest, load_state->buffer[0], load_state->row_stride);
-		//put_scanline_someplace(buffer[0], row_stride);
 		dest += load_state->row_stride;
     }
 
     (void)jpeg_finish_decompress(&load_state->cinfo);
     jpeg_destroy_decompress(&load_state->cinfo);
-    //printf("CLOSE: %s\n", load_state->file_name);
     fclose(load_state->infile);
-    //fclose(outputFile);
 
     free(load_state);
 	return 1;
+}
+
+
+int JpegWrite(const char* filename, int width, int height, unsigned char *data)
+{
+    struct jpeg_compress_struct cinfo;
+    struct jpeg_error_mgr jerr;
+    //struct cdjpeg_progress_mgr progress;
+    int file_index;
+    //cjpeg_source_ptr src_mgr;
+    FILE *input_file;
+    FILE *icc_file;
+    JOCTET *icc_profile = NULL;
+    long icc_len = 0;
+    FILE *output_file = NULL;
+    unsigned char *outbuffer = NULL;
+    unsigned long outsize = 0;
+    //JDIMENSION num_scanlines = height;
+    JSAMPROW output_data[1];
+
+    //printf("*A*\n");
+
+    output_file = fopen(filename, "wb");     // Specify the destination for the compressed data (eg, a file)
+
+    if (!output_file)
+    {
+        printf("File Error\n");
+        return -1;
+    }
+    cinfo.err = jpeg_std_error(&jerr);      // Allocate and initialize a JPEG compression object
+    jpeg_create_compress(&cinfo);
+    jpeg_stdio_dest(&cinfo, output_file);
+    cinfo.image_width      = width;         // Set parameters for compression, including image size & colorspace
+    cinfo.image_height     = height;
+    cinfo.input_components = 3;
+    cinfo.in_color_space   = JCS_RGB;         // Arbitrary guess
+    jpeg_set_defaults(&cinfo);
+
+
+    jpeg_set_quality(&cinfo, 95, TRUE);
+    jpeg_start_compress(&cinfo, TRUE);
+
+    JSAMPROW row_pointer;          /* pointer to a single row */
+
+    while (cinfo.next_scanline < cinfo.image_height)
+    {
+        row_pointer = (JSAMPROW)&data[cinfo.next_scanline*3*width];
+        jpeg_write_scanlines(&cinfo, &row_pointer, 1);
+    }
+
+
+    // jpeg_finish_compress(...);
+    jpeg_finish_compress(&cinfo);
+    // Release the JPEG compression object
+    jpeg_destroy_compress(&cinfo);
+    fclose(output_file);
+    
+    return 0;
 }
