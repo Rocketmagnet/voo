@@ -13,10 +13,10 @@ using namespace std;
 #include "wx/time.h"
 #include "wx/filename.h"
 
-extern "C"
-{
-    #include "jpeg_turbo.h"
-};
+//extern "C"
+//{
+//    #include "jpeg_turbo.h"
+//};
 
 extern void NoteTime(wxString s);
 void SetDebuggingText(wxString text);
@@ -684,20 +684,14 @@ void GL_Image::Load(wxString path)
 
 		wxLongLong startTime = wxGetLocalTimeMillis();
 		//int exitCode = LoadJPEGTest("IMG_2287.jpg"); // fileName.char_str());
-		jpeg_load_state *load_state = ReadJpegHeader((const  char*)path.c_str());
-
-
-        if (load_state)
+		ReadJpegHeader(&load_state, (const  char*)path.c_str());
+		
+        //if (load_state)
         {
-            int w = load_state->width, h = load_state->height;
-
+            int w = load_state.width, h = load_state.height;
+		
             wxImg.Create(w, h);
-            JpegRead(wxImg.GetData(), load_state);
-        }
-        else
-        {
-            cout << "JPEG Load Error" << endl;
-            return;
+            JpegRead(wxImg.GetData(), &load_state);
         }
 	}
 	else
@@ -816,6 +810,7 @@ wxString GL_Image::GetZoomInfo() const
 
     return s;
 }
+
 
 double GL_Image::GetScaleDifference(const GL_Image& glImage) const
 {
@@ -1035,4 +1030,9 @@ void GL_ImageServer::UpdateDebuggingText()
     }
 
     //SetDebuggingText(lines);
+}
+
+size_t GL_ImageServer::GetNumImages()
+{
+	return fileNameList->NumFiles();
 }

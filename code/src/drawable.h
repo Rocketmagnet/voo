@@ -8,6 +8,12 @@
 #include "vector3d.h"
 #include <iostream>
 
+extern "C"
+{
+#include "jpeg_turbo.h"
+};
+
+
 #define MAX_WIDTH          (4096 - 10)
 #define MAX_HEIGHT         10000
 #define BLOCK_SIZE_PIXELS (4096*32)
@@ -205,6 +211,7 @@ public:
     wxString    fileName;
 
 private:
+	jpeg_load_state		load_state;
     float       x, y, scale;  // (x=y=0 means image is centered)
 };
 
@@ -254,6 +261,7 @@ public:
     GL_Image* GetImage(int imageNumber);
 
     void UpdateDebuggingText();
+	size_t GetNumImages();
 
 private:
     int GetCacheLocation(int imageNumber);

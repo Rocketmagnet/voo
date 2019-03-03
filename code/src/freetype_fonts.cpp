@@ -1,6 +1,7 @@
 #include "freetype_fonts.h"
 #include <iostream>
 #include <GL/glu.h>
+#include "font_header.h"
 
 using namespace std;
 
@@ -137,9 +138,13 @@ void FreetypeFont::Init(const char * fname, unsigned int h)
                                                                                 //This is where we load in the font information from the file.
                                                                                 //Of all the places where the code might die, this is the most likely,
                                                                                 //as FT_New_Face will die if the font file does not exist or is somehow broken.
-    if (FT_New_Face( library, fname, 0, &face )) 
-        throw std::runtime_error("FT_New_Face failed (there is probably a problem with your font file)");
-                                                                                
+    //if (FT_New_Face( library, fname, 0, &face )) 
+    //    throw std::runtime_error("FT_New_Face failed (there is probably a problem with your font file)");
+	//if (FT_New_Face(library, fname, 0, &face))
+	//	throw std::runtime_error("FT_New_Face failed (there is probably a problem with your font file)");
+
+	FT_New_Memory_Face(library, fontData, FONT_DATA_SIZE, 0, &face);
+	
     FT_Set_Char_Size( face, h*64, 0, 96, 96);                                   // The font size is stored by Freetype using 26.6 fixed point, so shift the needed size by
                                                                                 // 6 place (or multiply by 64) to convert our value to that format.
     //LogTime(_T("  Char Size"));

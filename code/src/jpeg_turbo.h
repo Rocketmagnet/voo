@@ -26,9 +26,10 @@ typedef struct
 }jpeg_load_state;
 
 
-jpeg_load_state* ReadJpegHeader(const char* filename);
-jpeg_load_state* ReadJpegHeaderOnly(const char* filename);
+void ReadJpegHeader(    jpeg_load_state* load_state, const char* filename);
+void ReadJpegHeaderOnly(jpeg_load_state* load_state, const char* filename);
 int JpegRead(unsigned char* buffer, jpeg_load_state* load_state);
 int JpegWrite(const char* filename, int width, int height, unsigned char *data);
+int* test_malloc();
 
 #endif

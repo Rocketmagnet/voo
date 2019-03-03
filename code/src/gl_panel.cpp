@@ -311,10 +311,15 @@ void BasicGLPanel::Render(bool blankScreen)
         {
             fontTimeRemaining--;
             glLoadIdentity();
+			wxString s = currentImage->GetInfoString();
+			s.Append("\n");
+			s.Append(GetImageNumberInfo());
+
             screenFont.SetColour(0.0f, 0.0f, 0.0f, 0.5f);
-            screenFont.Print(2.0, 2.0, 24.0, currentImage->GetInfoString());
+            screenFont.Print(2.0, 2.0, 24.0, s);
+
             screenFont.SetColour(1, 1, 1, 1);
-            screenFont.Print(0.0, 0.0, 24.0, currentImage->GetInfoString());
+            screenFont.Print(0.0, 0.0, 24.0, s);
         }
 
         if (zoomTimeRemaining)
@@ -322,9 +327,9 @@ void BasicGLPanel::Render(bool blankScreen)
             zoomTimeRemaining--;
             glLoadIdentity();
             screenFont.SetColour(0.0f, 0.0f, 0.0f, 0.5f);
-            screenFont.Print(2.0, 32.0, 24.0, currentImage->GetZoomInfo());
+            screenFont.Print(2.0, 62.0, 24.0, currentImage->GetZoomInfo());
             screenFont.SetColour(1, 1, 1, 1);
-            screenFont.Print(0.0, 30.0, 24.0, currentImage->GetZoomInfo());
+            screenFont.Print(0.0, 60.0, 24.0, currentImage->GetZoomInfo());
         }
     }
 
@@ -335,6 +340,14 @@ void BasicGLPanel::Render(bool blankScreen)
     //cout << "BasicGLPanel::Render Done" << endl;
 }
 
+wxString BasicGLPanel::GetImageNumberInfo()
+{
+	int numImages = imageServer.GetNumImages();
+	wxString s;
+
+	s.Printf("%d of %d", currentImageNumber, numImages);
+	return s;
+}
 
 void BasicGLPanel::MoveRel(float x, float y)
 {

@@ -22,11 +22,18 @@ METHODDEF(void) my_error_exit(j_common_ptr cinfo)
 }
 
 
-jpeg_load_state* ReadJpegHeader(const char* filename)
+//jpeg_load_state* ReadJpegHeader(const char* filename)
+void ReadJpegHeader(jpeg_load_state* load_state, const char* filename)
 {
-	//printf("ReadJpegHeader(%s)\n", filename);
+	int i;
+
+	printf("ReadJpegHeader(%s)\n", filename);
 
     FILE *infile;
+	//volatile int *testPtr = test_malloc();
+	//printf("tp = %p\n", testPtr);
+
+
     if ((infile = fopen(filename, "rb")) == NULL)
     {
         printf("can't open %s\n", filename);
@@ -34,11 +41,12 @@ jpeg_load_state* ReadJpegHeader(const char* filename)
     }
     else
     {
-        //printf("OPENED %s\n", filename);
+        printf("OPENED %s\n", filename);
     }
 
+
     // If the file was successfully opened, then allocate memory.
-    jpeg_load_state* load_state = malloc(sizeof(jpeg_load_state));
+    //jpeg_load_state* load_state = malloc(sizeof(jpeg_load_state));
 
     load_state->infile = infile;
     strncpy(load_state->file_name, filename, 1024);
@@ -91,12 +99,27 @@ jpeg_load_state* ReadJpegHeader(const char* filename)
     // Allocate a buffer which will be destroyed automatically when the jpeg has finished being read.
     load_state->buffer     = (*load_state->cinfo.mem->alloc_sarray)((j_common_ptr)&load_state->cinfo, JPOOL_IMAGE, load_state->row_stride, samples_per_row);
 
-    return load_state;
+	//return load_state;
 }
 
-jpeg_load_state* ReadJpegHeaderOnly(const char* filename)
+int* test_malloc()
 {
-    //printf("ReadJpegHeader(%s)\n", filename);
+	int i,e,r;
+	int *testPtr = malloc(sizeof(int) * 32);
+	r = _get_errno(&e);
+
+	printf("testPtr = %p\n", testPtr);
+
+	printf("errno = %d %d\n", e,r);
+		
+	//for (i = 0; i < 20; i++)
+ 	//	printf("Hello %d\n", testPtr[i & 15]);
+	return testPtr;
+}
+
+void ReadJpegHeaderOnly(jpeg_load_state *load_state, const char* filename)
+{
+    printf("ReadJpegHeaderOnly(%s)\n", filename);
 
     FILE *infile;
     if ((infile = fopen(filename, "rb")) == NULL)
@@ -106,11 +129,11 @@ jpeg_load_state* ReadJpegHeaderOnly(const char* filename)
     }
     else
     {
-        //printf("OPENED %s\n", filename);
+        printf("OPENED %s\n", filename);
     }
 
     // If the file was successfully opened, then allocate memory.
-    jpeg_load_state* load_state = malloc(sizeof(jpeg_load_state));
+    //jpeg_load_state* load_state = malloc(sizeof(jpeg_load_state));
 
     load_state->infile = infile;
     /* Step 1: allocate and initialize JPEG decompression object */
@@ -152,10 +175,11 @@ jpeg_load_state* ReadJpegHeaderOnly(const char* filename)
     jpeg_destroy_decompress(&load_state->cinfo);
     //printf("CLOSE: %s\n", filename);
     fclose(load_state->infile);
-    free(load_state);
-    return load_state;
+    //free(load_state);
+    //return load_state;
 }
 
+//int JpegRead(unsigned char* imageBuffer, jpeg_load_state* load_state)
 int JpegRead(unsigned char* imageBuffer, jpeg_load_state* load_state)
 {
     char *dest = imageBuffer;
@@ -172,7 +196,7 @@ int JpegRead(unsigned char* imageBuffer, jpeg_load_state* load_state)
     jpeg_destroy_decompress(&load_state->cinfo);
     fclose(load_state->infile);
 
-    free(load_state);
+    //free(load_state);
 	return 1;
 }
 

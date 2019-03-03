@@ -20,10 +20,6 @@
 #include <iostream>
 using namespace std;
 
-extern "C"
-{
-    #include "jpeg_turbo.h"
-};
 
 
 wxBEGIN_EVENT_TABLE(  ThumbnailCanvas, wxScrolledWindow)
@@ -83,6 +79,7 @@ wxThread::ExitCode ThumbnailLoader::Entry()
     wxLogNull logNo;													// ... instead logging is suspended while this object is in scope
     wxImage   image;
 
+
     thumbnail.isLoading = true;
     image.SetOption(wxIMAGE_OPTION_GIF_TRANSPARENCY, wxIMAGE_OPTION_GIF_TRANSPARENCY_UNCHANGED);
     wxFileName fn(fileName);
@@ -91,11 +88,14 @@ wxThread::ExitCode ThumbnailLoader::Entry()
     if ((extension == "JPG") ||
         (extension == "JPEG"))
     {
-        //cout << "Using JpegTurbo to load thumbnail " << fileName << endl;
+        cout << "Using JpegTurbo to load thumbnail " << fileName << endl;
 
-        jpeg_load_state *load_state = ReadJpegHeader((const  char*)fileName.c_str());
+		cout << "test_malloc = " << test_malloc() << endl;
+		//jpeg_load_state *load_state = ReadJpegHeader((const  char*)fileName.c_str());
+		ReadJpegHeader(&jpegLoadState, (const  char*)fileName.c_str());
+		jpeg_load_state *load_state = &jpegLoadState;
 
-        if (load_state)
+        //if (load_state)
         {
             int w = load_state->width, h = load_state->height;
 
@@ -193,11 +193,12 @@ void Thumbnail::FetchHeader()
     if ((fullPath.GetExt().Upper() == "JPG") ||
         (fullPath.GetExt().Upper() == "JPEG"))
     {
-        jpeg_load_state *load_state = ReadJpegHeaderOnly((const  char*)fullPath.GetFullPath().c_str());
-
-        if (load_state)
+		jpeg_load_state load_state;
+		ReadJpegHeaderOnly(&load_state, (const  char*)fullPath.GetFullPath().c_str());
+		
+        //if (load_state)
         {
-            int w = load_state->width, h = load_state->height;
+            int w = load_state.width, h = load_state.height;
             imageSizeTemp = GetTnImageSize(wxSize(w, h), tnSize);
         }
     }
@@ -356,8 +357,8 @@ void Thumbnail::Draw(wxPaintDC &dc, bool selected, bool cursor, bool inFocus)
                              tnSize.GetHeight() - 6);
         }
     }
-
-    DrawLabelClipped(dc, fullPath.GetFullName(), textRectangle);
+	wxString s = fullPath.GetFullName();
+    DrawLabelClipped(dc, s, textRectangle);
 }
 
 
@@ -1217,11 +1218,11 @@ void ThumbnailCanvas::OnMouseEvent(wxMouseEvent &event)
         }
     }
 
-    lines += wxT("selectionSetP = ");                   lines += selectionSetP.SPrint();
-    lines += wxT("draggingSet   = ");                   lines += draggingSet.SPrint();
-    s.Printf(wxT("dragState     = %d\n"), dragState);   lines += s;
+    //lines += wxT("selectionSetP = ");                   lines += selectionSetP.SPrint();
+    //lines += wxT("draggingSet   = ");                   lines += draggingSet.SPrint();
+    //s.Printf(wxT("dragState     = %d\n"), dragState);   lines += s;
 
-    SetDebuggingText(lines);
+    //SetDebuggingText(lines);
     //cout << "Done" << endl;
     //Update();
 }

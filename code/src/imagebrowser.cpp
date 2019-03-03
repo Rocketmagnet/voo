@@ -35,7 +35,6 @@
 #include "wx/arrstr.h"
 #include "wx/filefn.h"
 #include "directory_functions.h"
-#include "message.h"
 #include "imageviewer.h"
 #include "image_browserapp.h"
 #include "file_name_list.h"
@@ -64,7 +63,6 @@ wxStatusBar  *sBarGlobal;
 
 IMPLEMENT_CLASS(ImageBrowser, wxFrame)
 
-LiquidMessageDispatcher liquidMessageDispatcher(0);
 
 /*
  * ImageBrowser event table definition
@@ -143,7 +141,6 @@ void ImageBrowser::Init()
     //cout << "ImageBrowser::Init()" << endl;
 }
 
-LiquidMessage someMessage(wxT("SomeMessage"));
 
 void ImageBrowser::OnDecorationTimer(wxTimerEvent& event)
 {
@@ -879,16 +876,16 @@ void LoadImage2(wxImage &image, wxString fileName)
     {
         //cout << "Using JpegTurbo to load thumbnail " << fileName << endl;
 
-        jpeg_load_state *load_state = ReadJpegHeader((const  char*)fileName.c_str());
-
-        if (load_state)
-        {
-            int w = load_state->width, h = load_state->height;
-
-            image.Create(w, h);
-            image.SetRGB(wxRect(0, 0, w, h), 128, 64, 0);
-            JpegRead(image.GetData(), load_state);
-        }
+        //jpeg_load_state *load_state = ReadJpegHeader((const  char*)fileName.c_str());
+		//
+        //if (load_state)
+        //{
+        //    int w = load_state->width, h = load_state->height;
+		//
+        //    image.Create(w, h);
+        //    image.SetRGB(wxRect(0, 0, w, h), 128, 64, 0);
+        //    JpegRead(image.GetData(), load_state);
+        //}
     }
     else if (extension == "PNG")
     {

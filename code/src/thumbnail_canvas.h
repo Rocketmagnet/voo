@@ -6,7 +6,13 @@
 #include "wx/filename.h"
 #include "file_name_list.h"
 #include "wx/thread.h"
-#include "message.h"
+//#include "message.h"
+
+extern "C"
+{
+#include "jpeg_turbo.h"
+};
+
 
 class wxPaintDC;
 class ImageViewer;
@@ -329,10 +335,11 @@ public:
 protected:
     ExitCode Entry();
 
-    wxString      fileName;
-    Thumbnail    &thumbnail;
+    wxString            fileName;
+    Thumbnail          &thumbnail;
+	jpeg_load_state		jpegLoadState;
 };
-
+ 
 
 // Reads the headers of all of the images, to get the image sizes.
 class ThumbnailHeaderReader : public wxThread
