@@ -684,15 +684,27 @@ void GL_Image::Load(wxString path)
 
 		wxLongLong startTime = wxGetLocalTimeMillis();
 		//int exitCode = LoadJPEGTest("IMG_2287.jpg"); // fileName.char_str());
-		ReadJpegHeader(&load_state, (const  char*)path.c_str());
+		int success = ReadJpegHeader(&load_state, (const  char*)path.c_str());
 		
-        //if (load_state)
-        {
-            int w = load_state.width, h = load_state.height;
-		
+		int w = load_state.width, h = load_state.height;
+		cout << "Success = " << success << ", " << w << ", " << h << endl;
+		if (success)
+        {		
             wxImg.Create(w, h);
             JpegRead(wxImg.GetData(), &load_state);
         }
+		else
+		{
+			wxImg.Create(32, 32);
+			unsigned char *data = wxImg.GetData();
+			for (int y = 0; y < 32; y++)
+			    for (int x = 0; x < 32; x++)
+				{
+					*data++ =  x    ^  y   ;
+					*data++ = (x*2) ^ (y*2);
+					*data++ = (x*3) ^ (y*3);
+				}
+		}
 	}
 	else
 	{

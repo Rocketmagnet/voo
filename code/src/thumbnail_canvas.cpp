@@ -90,27 +90,37 @@ wxThread::ExitCode ThumbnailLoader::Entry()
     {
         cout << "Using JpegTurbo to load thumbnail " << fileName << endl;
 
-		cout << "test_malloc = " << test_malloc() << endl;
 		//jpeg_load_state *load_state = ReadJpegHeader((const  char*)fileName.c_str());
-		ReadJpegHeader(&jpegLoadState, (const  char*)fileName.c_str());
+		int success = ReadJpegHeader(&jpegLoadState, (const  char*)fileName.c_str());
 		jpeg_load_state *load_state = &jpegLoadState;
 
-        //if (load_state)
+		int w = load_state->width, h = load_state->height;
+	
+		if (success)
         {
-            int w = load_state->width, h = load_state->height;
-
             image.Create(w, h);
             image.SetRGB(wxRect(0, 0, w, h), 128, 64, 0);
             JpegRead(image.GetData(), load_state);
-
-            thumbnail.imageSize = image.GetSize();
-            wxSize newSize = thumbnail.GetTnImageSize(image.GetSize(), thumbnail.tnSize);
-            image.Rescale(newSize.GetWidth(), newSize.GetHeight(), wxIMAGE_QUALITY_BILINEAR);
-            thumbnail.bitmap = wxBitmap(image);
-            image.Destroy();
-            thumbnail.imageLoaded = true;
         }
-    }
+		else
+		{
+			image.Create(32, 32);
+			unsigned char *data = image.GetData();
+			for (int y = 0; y < 32; y++)
+				for (int x = 0; x < 32; x++)
+				{
+					*data++ = x ^ y;
+					*data++ = (x * 2) ^ (y * 2);
+					*data++ = (x * 3) ^ (y * 3);
+				}
+		}
+		thumbnail.imageSize = image.GetSize();
+		wxSize newSize = thumbnail.GetTnImageSize(image.GetSize(), thumbnail.tnSize);
+		image.Rescale(newSize.GetWidth(), newSize.GetHeight(), wxIMAGE_QUALITY_BILINEAR);
+		thumbnail.bitmap = wxBitmap(image);
+		image.Destroy();
+		thumbnail.imageLoaded = true;
+	}
     else if (extension == "PNG")
     {
         if (image.LoadFile(fileName))
@@ -194,11 +204,11 @@ void Thumbnail::FetchHeader()
         (fullPath.GetExt().Upper() == "JPEG"))
     {
 		jpeg_load_state load_state;
-		ReadJpegHeaderOnly(&load_state, (const  char*)fullPath.GetFullPath().c_str());
+		int success = ReadJpegHeaderOnly(&load_state, (const  char*)fullPath.GetFullPath().c_str());
 		
-        //if (load_state)
+		int w = load_state.width, h = load_state.height;
+		if (success)
         {
-            int w = load_state.width, h = load_state.height;
             imageSizeTemp = GetTnImageSize(wxSize(w, h), tnSize);
         }
     }

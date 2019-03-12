@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "jpeg_turbo.h"
-
+#include <string.h>
 
 
 
@@ -23,7 +23,7 @@ METHODDEF(void) my_error_exit(j_common_ptr cinfo)
 
 
 //jpeg_load_state* ReadJpegHeader(const char* filename)
-void ReadJpegHeader(jpeg_load_state* load_state, const char* filename)
+int ReadJpegHeader(jpeg_load_state* load_state, const char* filename)
 {
 	int i;
 
@@ -67,7 +67,7 @@ void ReadJpegHeader(jpeg_load_state* load_state, const char* filename)
         //printf("CLOSE: %s\n", filename);
         fclose(load_state->infile);
 
-        free(load_state);
+        //free(load_state);
         return 0;
     }
 
@@ -99,25 +99,12 @@ void ReadJpegHeader(jpeg_load_state* load_state, const char* filename)
     // Allocate a buffer which will be destroyed automatically when the jpeg has finished being read.
     load_state->buffer     = (*load_state->cinfo.mem->alloc_sarray)((j_common_ptr)&load_state->cinfo, JPOOL_IMAGE, load_state->row_stride, samples_per_row);
 
-	//return load_state;
+	return 1;
 }
 
-int* test_malloc()
-{
-	int i,e,r;
-	int *testPtr = malloc(sizeof(int) * 32);
-	r = _get_errno(&e);
 
-	printf("testPtr = %p\n", testPtr);
 
-	printf("errno = %d %d\n", e,r);
-		
-	//for (i = 0; i < 20; i++)
- 	//	printf("Hello %d\n", testPtr[i & 15]);
-	return testPtr;
-}
-
-void ReadJpegHeaderOnly(jpeg_load_state *load_state, const char* filename)
+int ReadJpegHeaderOnly(jpeg_load_state *load_state, const char* filename)
 {
     printf("ReadJpegHeaderOnly(%s)\n", filename);
 
@@ -154,7 +141,7 @@ void ReadJpegHeaderOnly(jpeg_load_state *load_state, const char* filename)
         //printf("CLOSE: %s\n", filename);
         fclose(load_state->infile);
 
-        free(load_state);
+        //free(load_state);
         return 0;
     }
 
@@ -176,7 +163,7 @@ void ReadJpegHeaderOnly(jpeg_load_state *load_state, const char* filename)
     //printf("CLOSE: %s\n", filename);
     fclose(load_state->infile);
     //free(load_state);
-    //return load_state;
+    return 1;
 }
 
 //int JpegRead(unsigned char* imageBuffer, jpeg_load_state* load_state)
