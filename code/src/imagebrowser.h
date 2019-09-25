@@ -45,6 +45,7 @@
 #define ID_STATUSBAR            10004
 #define ID_DELETE_DIRECTORY     10005
 #define ID_ARCHIVE_DIRECTORY    10006
+#define ID_RANDOM_DIRECTORY     10007
 
 #define SYMBOL_IMAGEBROWSER_STYLE wxDEFAULT_FRAME_STYLE|wxCAPTION|wxRESIZE_BORDER|wxSYSTEM_MENU|wxMAXIMIZE|wxMINIMIZE_BOX|wxMAXIMIZE_BOX|wxCLOSE_BOX|wxSIMPLE_BORDER|wxTAB_TRAVERSAL
 #define SYMBOL_IMAGEBROWSER_TITLE _("Image Browser")
@@ -138,6 +139,8 @@ public:
     void OnDeleteDirectory(wxCommandEvent &event);
     void OnArchiveDirectory(wxCommandEvent &event);
 
+    void JumpToRandomDirectory(wxCommandEvent &event);
+
     wxString GetCurrentDir();
 
     void ReportDirectoryInfo(wxString path, wxTreeItemId id, int flags);
@@ -159,6 +162,7 @@ public:
     RightHandWindow     *rightHandWindow;
 
 	wxArrayString		 privateDirs;
+    wxArrayString        knownDirList;
     wxString             currentDirectory;
 
     wxTimer              decorationTimer;

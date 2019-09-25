@@ -17,16 +17,18 @@ VectorRendererInterpreter::VectorRendererInterpreter(wxString program)
     while (tokenizer.HasMoreTokens())
     {
         wxString token = tokenizer.GetNextToken();
-        //cout << token << endl;
+        //cout << "Token: " << token << endl;
         arrayStr.Add(token);
     }
 
+	arrayStr.Add("X");
     i = 0;
 }
 
 int      VectorRendererInterpreter::GetInt()
 {
     long l;
+	//cout << "i = " << i << endl;
     arrayStr[i++].ToLong(&l);
 
     return l;
@@ -35,18 +37,21 @@ int      VectorRendererInterpreter::GetInt()
 double   VectorRendererInterpreter::GetReal()
 {
     double d;
-    arrayStr[i++].ToDouble(&d);
+	//cout << "i = " << i << endl;
+	arrayStr[i++].ToDouble(&d);
 
     return d;
 }
 
 wxString VectorRendererInterpreter::GetString()
 {
-    return arrayStr[i++];
+	//cout << "i = " << i << endl;
+	return arrayStr[i++];
 }
 
 void VectorRenderer::Render(wxString &program, wxBitmap &bitmap)
 {
+    //cout << "Rendering:" << program << endl;
     VectorRendererInterpreter interpreter(program);
     bool ending = false;
     char command;
@@ -132,7 +137,6 @@ void VectorRenderer::Render(wxString &program, wxBitmap &bitmap)
             break;
         }
     }
-
 }
 
 

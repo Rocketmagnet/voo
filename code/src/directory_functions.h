@@ -31,6 +31,6 @@ protected:
     wxTreeItemId    &treeItemId;
 };
 
-void GreyEmptyDirectories(wxTreeCtrl &treeCtrl, wxTreeItemId treeItemId);
+void GreyEmptyDirectories(wxTreeCtrl &treeCtrl, wxTreeItemId treeItemId, wxArrayString &knownDirList);
 
 #endif

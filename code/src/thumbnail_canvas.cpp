@@ -6,6 +6,7 @@
 #include "wx/imaggif.h"
 #include "wx/dcmemory.h"
 #include "wx/dcclient.h"
+#include "wx/dataobj.h"
 #include "wx/dir.h"
 #include "wx/log.h"
 #include "wx/tokenzr.h"
@@ -15,6 +16,9 @@
 #include "imagebrowser.h"
 #include "wx/generic/dragimgg.h"
 #include <wx/dnd.h>
+#include "image_file_handler_registry.h"
+#include "image_file_handler.h"
+#include <wx/dataobj.h>
 #define wxDragImage wxGenericDragImage
 
 #include <iostream>
@@ -39,7 +43,6 @@ wxArrayInt  Thumbnail::arrayIntStatic;
 int         Thumbnail::selectBorderSize;
 int         Thumbnail::labelHeight;
 wxColor     Thumbnail::backgroundColor;
-wxString    Thumbnail::videoThumb;
 
 
 bool SortedVectorInts::Test()
@@ -73,7 +76,25 @@ bool SortedVectorInts::Test()
     return true;
 }
 
+wxThread::ExitCode ThumbnailLoader::Entry()
+{
+    thumbnail.isLoading = true;
+    //image.SetOption(wxIMAGE_OPTION_GIF_TRANSPARENCY, wxIMAGE_OPTION_GIF_TRANSPARENCY_UNCHANGED);
+    wxFileName fn(fileName);
+    wxString   extension = fn.GetExt().Upper();
 
+    ImageFileHandler *imageFileHandler = ImageFileHandlerRegistry::instance().GetImageFileHandlerFromExtension(extension);
+    if (imageFileHandler)
+        imageFileHandler->LoadThumbnail(fn.GetFullPath(), thumbnail);
+    else
+        thumbnail.imageLoaded = true;
+
+    delete imageFileHandler;
+
+    return (wxThread::ExitCode)0;
+}
+
+/*
 wxThread::ExitCode ThumbnailLoader::Entry()
 {
     wxLogNull logNo;													// ... instead logging is suspended while this object is in scope
@@ -114,6 +135,7 @@ wxThread::ExitCode ThumbnailLoader::Entry()
 					*data++ = (x * 3) ^ (y * 3);
 				}
 		}
+
 		thumbnail.imageSize = image.GetSize();
 		wxSize newSize = thumbnail.GetTnImageSize(image.GetSize(), thumbnail.tnSize);
 		image.Rescale(newSize.GetWidth(), newSize.GetHeight(), wxIMAGE_QUALITY_BILINEAR);
@@ -137,10 +159,19 @@ wxThread::ExitCode ThumbnailLoader::Entry()
             //cout << "Failed to load " << fileName << endl;
         }
     }
+    else if (extension == "WMV")
+    {
+        LONGLONG pos = 30 * 10000000;
+        VideoThumbnailReader videoThumbnailReader;
+        videoThumbnailReader.OpenFile(fileName.wchar_str());
+        videoThumbnailReader.CreateBitmap((char*)image.GetData(), pos);
+    }
 
     thumbnail.isLoading = false;
     return 0;
 }
+*/
+
 
 
 
@@ -173,26 +204,7 @@ Thumbnail::Thumbnail(const wxPoint &pos, wxFileName path, bool fetchHeader)
   imageSize(0, 0),
   thumbnailLoader(0)
 {
-    wxString extension = path.GetExt();
-    extension.MakeUpper();
-    wxString exts("JPG JPEG PNG GIF");
-
-    if (exts.Contains(extension))
-    {
-        thumbnailLoader = new ThumbnailLoader(path.GetFullPath(), *this);
-    }
-    else
-    {
-
-        VectorRenderer vr;
-        bitmap.Create(tnSize);
-        wxString program = videoThumb;
-        program.Replace(wxT("$$EXT$$"), extension);
-        //program.Replace(wxT("$$EXT$$"), extension);
-        vr.Render(program, bitmap);
-        imageLoaded = true;
-    }
-
+    thumbnailLoader = new ThumbnailLoader(path.GetFullPath(), *this);
 
     if (fetchHeader)
         FetchHeader();
@@ -209,7 +221,7 @@ void Thumbnail::FetchHeader()
 		int w = load_state.width, h = load_state.height;
 		if (success)
         {
-            imageSizeTemp = GetTnImageSize(wxSize(w, h), tnSize);
+            imageSizeTemp = GetTnImageSize(wxSize(w, h));
         }
     }
 }
@@ -217,18 +229,18 @@ void Thumbnail::FetchHeader()
 
 Thumbnail::~Thumbnail()
 {
-    //cout << "~Thumbnail() " << fullPath.GetFullName() << endl;
+    //cout << "~Thumbnail(" << this << ")  " << endl;
     if (!imageLoaded)
     {
-        //cout << "image loaded" << endl;
+        //cout << "  image loaded" << endl;
         if (isLoading)
         {
-            //cout << "loader running" << endl;
+            //cout << "  loader running" << endl;
             thumbnailLoader->Delete();
-            //cout << "killed" << endl;
+            //cout << "  killed" << endl;
         }
     }
-    //cout << "Destructing done" << endl;
+    //cout << "  Destructing done" << endl << endl;
 }
 
 
@@ -282,6 +294,7 @@ void Thumbnail::Erase(wxPaintDC &dc)
 
 void Thumbnail::Draw(wxPaintDC &dc, bool selected, bool cursor, bool inFocus)
 {
+    //cout << "Thumbnail::Draw(" << this << ")" << endl;
     wxRect textRectangle(position.x, position.y + tnSize.GetHeight()+5, tnSize.GetWidth(), 20);
 	wxPen pen;
 
@@ -334,6 +347,8 @@ void Thumbnail::Draw(wxPaintDC &dc, bool selected, bool cursor, bool inFocus)
         dc.SetTextForeground(wxColor(128, 128, 128));
     }
     
+    //cout << "imageLoaded   = " << imageLoaded << endl;
+    //cout << "bitmap.IsOk() = " << bitmap.IsOk() << endl;
 
     if (imageLoaded && bitmap.IsOk())
     {
@@ -385,6 +400,17 @@ void Thumbnail::CreateGenericIcon()
 
 }
 
+void Thumbnail::SetImage(wxImage &image)
+{
+    imageSize = image.GetSize();
+    wxSize newSize = GetTnImageSize(image.GetSize());
+    image.Rescale(newSize.GetWidth(), newSize.GetHeight(), wxIMAGE_QUALITY_BILINEAR);
+    bitmap = wxBitmap(image);
+}
+
+
+
+
 
 ThumbnailCanvas::ThumbnailCanvas(ImageBrowser *imgBrs, wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size)
 : wxScrolledWindow(parent, id, pos, size, wxSUNKEN_BORDER | wxVSCROLL | wxEXPAND | wxWANTS_CHARS),
@@ -408,24 +434,16 @@ ThumbnailCanvas::ThumbnailCanvas(ImageBrowser *imgBrs, wxWindow *parent, wxWindo
   imageBrowser(imgBrs)
 {
     SetBackgroundColour(backgroundColor);
-    cout << "ThumbnailCanvas::imageBrowser = " << imageBrowser << endl;
-    videoFileExtensions   = imageBrowser->GetConfigParser()->GetString("videoExtensions");
+    ImageFileHandlerRegistry& imageFileHandlerRegistry = ImageFileHandlerRegistry::instance();
+    wxArrayString &filtersList = imageFileHandlerRegistry.GetFiltersList();
 
-    fileNameList.AddFilter(_T("*.png"));
-    fileNameList.AddFilter(_T("*.gif"));
-    fileNameList.AddFilter(_T("*.jpg"));
-    fileNameList.AddFilter(_T("*.jpeg"));
+    int i, n = filtersList.size();
 
-    wxStringTokenizer tokenizer(videoFileExtensions, " ");
-    while (tokenizer.HasMoreTokens())
+    for (i = 0; i < n; i++)
     {
-        wxString token = tokenizer.GetNextToken();
-        wxString filter = _T("*.") + token;
-        //cout << "Adding filter: " << filter << endl;
-        fileNameList.AddFilter(filter);
+        fileNameList.AddFilter(filtersList[i].Lower());
     }
 
-    Thumbnail::SetVideoThumb(imageBrowser->GetConfigParser()->GetString("videoThumb"));
     Thumbnail::SetSize(tnSize);
     Thumbnail::SetSelectBorder(3);
     Thumbnail::SetLabelHeight(26);
@@ -702,7 +720,33 @@ void ThumbnailCanvas::OnKeyEvent(wxKeyEvent &event)
         case WXK_PAGEUP:    cursorP.Move( 0,  -pageJump); skipping = false;         break;
         case WXK_PAGEDOWN:  cursorP.Move( 0,   pageJump); skipping = false;         break;
 
-        case WXK_RETURN: imageViewer->DisplayImage(cursorP.GetNumber());    break;
+        case WXK_RETURN:
+            {
+                wxFileName path = fileNameList[cursorP.GetNumber()];
+                wxString extension = path.GetExt();
+                ImageFileHandler *imageFileHandler = ImageFileHandlerRegistry::instance().GetImageFileHandlerFromExtension(extension);
+
+                int actions = imageFileHandler->LoadImage(path.GetFullPath());
+
+                if (actions & LOAD_IMAGE)
+                {
+                    imageViewer->DisplayImage(cursorP.GetNumber());
+                }
+
+                if (actions & DELETE_FILE)
+                {
+                    DeleteSelection();
+                }
+
+                if (actions & REFRESH_TREE)
+                {
+                    imageBrowser->RefreshDirTree(path.GetPath());
+                }
+
+
+                delete imageFileHandler;
+            }
+            break;
 
         case WXK_DELETE: DeleteSelection();                                 return;
 
@@ -1173,11 +1217,19 @@ void ThumbnailCanvas::OnMouseEvent(wxMouseEvent &event)
         }
     }
 
+    if (event.Dragging())
+    {
+        cout << "Dragging! " << dragState << endl;
+    }
+
+
     if (event.Dragging() && dragState != TNC_DRAG_STATE_NONE)
     {
+        cout << "Drag 1" << endl;
         lines.Printf(wxT("event.Dragging() && dragState != TNC_DRAG_STATE_NONE    %d\n"), th);
         if (dragState == TNC_DRAG_STATE_CLICKED)
         {
+            cout << "TNC_DRAG_STATE_CLICKED" << endl;
             // We will start dragging if we've moved beyond a couple of pixels
 
             int tolerance = 2;
@@ -1200,31 +1252,47 @@ void ThumbnailCanvas::OnMouseEvent(wxMouseEvent &event)
                 draggingSet.AddSingle(th);
                 lines += wxT("set to single\n");
             }
-            //cout << "Dragging set:";
-            //draggingSet.Print();
+            cout << "Dragging set:";
+            draggingSet.Print();
+            cout << "Adding files:" << endl;
 
+            int i, n = draggingSet.size();
+            for (i = 0; i < n; i++)
+            {
+            }
             wxWindow::SetCursor(wxCursor(wxCURSOR_HAND));
 
             //wxPoint beginDragHotSpot =clickPoint - m_draggedShape->GetPosition();
         }
         else if (dragState == TNC_DRAG_STATE_DRAGGING)
         {
-            wxString fileList;
+            cout << "TNC_DRAG_STATE_DRAGGING" << endl;
+            //wxString fileList;
             //wxFileDataObject my_data;
+            dragingFilesDataObject = new wxFileDataObject();
 
             for (int i = 0; i < draggingSet.size(); i++)
             {
-                int draggedThumbP = draggingSet[i];
-                int draggedThumb = thumbnailIndex[draggedThumbP];
-                fileList.Append(thumbnails[draggedThumb].GetFullPath().GetFullPath());
-                fileList.Append("\n");
+                int fNum = draggingSet[i];
+                cout << "  " << fileNameList[fNum] << endl;
+                dragingFilesDataObject->AddFile(fileNameList[fNum]);
+
+                //int draggedThumbP = draggingSet[i];
+                //int draggedThumb = thumbnailIndex[draggedThumbP];
+                //fileList.Append(thumbnails[draggedThumb].GetFullPath().GetFullPath());
+                //fileList.Append("\n");
                 //my_data.AddFile(thumbnails[draggedThumb].GetFullPath().GetFullPath());
             }
-            wxTextDataObject my_data(fileList);
+            //wxTextDataObject my_data(fileList);
             wxDropSource dragSource(this);
-            dragSource.SetData(my_data);
+            dragSource.SetData(*dragingFilesDataObject);
             wxDragResult result = dragSource.DoDragDrop(true);
-            //cout << "wxDragResult = " << result << endl;
+            cout << "wxDragResult = " << result << endl;
+            if (result == wxDragNone)   cout << "wxDragNone" << endl;
+            if (result == wxDragCopy)   cout << "wxDragCopy" << endl;
+            if (result == wxDragMove)   cout << "wxDragMove" << endl;
+            if (result == wxDragLink)   cout << "wxDragLink" << endl;
+            if (result == wxDragCancel)   cout << "wxDragCancel" << endl;
         }
     }
 

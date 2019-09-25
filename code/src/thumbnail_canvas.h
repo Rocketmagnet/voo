@@ -6,14 +6,14 @@
 #include "wx/filename.h"
 #include "file_name_list.h"
 #include "wx/thread.h"
-//#include "message.h"
+
 
 extern "C"
 {
 #include "jpeg_turbo.h"
 };
 
-
+class wxFileDataObject;
 class wxPaintDC;
 class ImageViewer;
 class Thumbnail;
@@ -27,7 +27,6 @@ class ImageBrowser;
 #define IS_BETWEEN(x, min, max)     ((x>=min) && (x<=max))
 #define ERASE_BACKGROUND            true
 #define DONT_ERASE_BACKGROUND       false
-
 
 
 class SortedVectorInts
@@ -359,6 +358,8 @@ protected:
 };
 
 
+
+
 class Thumbnail : public wxObject
 {
 public:
@@ -369,11 +370,11 @@ public:
 
 	void Draw(wxPaintDC &dc, bool selected = false, bool cursor = false, bool inFocus = true);
 
-    static void SetSize(wxSize size)                     { tnSize           = size;   }
-    static void SetSelectBorder(int border)              { selectBorderSize = border; }
-    static void SetLabelHeight(int height)               { labelHeight      = height; }
-    static void SetBackgroundColor(const wxColor &color) { backgroundColor  = color;  }
-    static void SetVideoThumb(wxString vThumb)           { videoThumb       = vThumb; }
+    static void   SetSize(wxSize size)                     { tnSize           = size;   }
+    static wxSize GetSize()                                 { return tnSize; }
+    static void   SetSelectBorder(int border)              { selectBorderSize = border; }
+    static void   SetLabelHeight(int height)               { labelHeight      = height; }
+    static void   SetBackgroundColor(const wxColor &color) { backgroundColor  = color;  }
 
     void CreateGenericIcon();
 
@@ -382,7 +383,7 @@ public:
     void Erase(wxPaintDC &dc);
     bool IsMouseInside(const wxPoint &mousePos);
 
-	wxSize GetTnImageSize(wxSize imageSize, wxSize tnSize)
+	wxSize GetTnImageSize(wxSize imageSize)
 	{
 		float toWidth = (float)tnSize.GetWidth() / (float)imageSize.GetWidth();
 		float toHeight = (float)tnSize.GetHeight() / (float)imageSize.GetHeight();
@@ -407,6 +408,12 @@ public:
 
     wxPoint GetPosition() { return position; }
 
+    void SetImage(wxImage &image);
+    void SetImage(wxBitmap &bm) { bitmap = bm; }
+    wxBitmap& GetBitmapReference() { return bitmap; }
+
+    //void SetImageSize(wxSize size);
+    void FinishedLoading()  { imageLoaded = true; }
     friend class ThumbnailLoader;
     //friend class ThumbnailCanvas;
 protected:
@@ -428,7 +435,6 @@ protected:
     static int          labelHeight;
     static wxColor      backgroundColor;
     static wxArrayInt   arrayIntStatic;             // This is used when rendering labels. Two thumbnails never use at the same time.
-    static wxString     videoThumb;
 };
 
 
@@ -544,7 +550,8 @@ private:
     ImageBrowser           *imageBrowser;
     ImageViewer            *imageViewer;
     //ConfigParser           *configParser;
-    wxString                videoFileExtensions;
     bool                    readHeadersCompleted;
+    wxFileDataObject       *dragingFilesDataObject;
+
 	wxDECLARE_EVENT_TABLE();
 };

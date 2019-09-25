@@ -29,7 +29,6 @@ public:
 
     }
 
-
     void Render(wxString &program, wxBitmap &bitmap);
 };
 

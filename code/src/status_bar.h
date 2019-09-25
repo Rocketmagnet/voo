@@ -9,7 +9,7 @@ extern wxStatusBar *sBarGlobal;
 #define STATUS_BAR_FILE_FORMAT          2
 #define STATUS_BAR_INFORMATION          3
 
-#define STATUS_TEXT(pos, fmt, ...) { wxString s; s.Printf(fmt, __VA_ARGS__); sBarGlobal->SetStatusText(s, pos);  std::cout << "* " << s << std::endl; }
+#define STATUS_TEXT(pos, fmt, ...) { wxString s; s.Printf(fmt, __VA_ARGS__); sBarGlobal->SetStatusText(s, pos); }
 
 
 #endif

@@ -28,11 +28,11 @@ bool FileSortNatural(const DirSortingItem &fn1, const DirSortingItem &fn2)
 
 void FileNameList::LoadFileList(wxString dir)
 {
-    cout << "LoadFileList(" << dir << ")" << endl;
+    //cout << "LoadFileList(" << dir << ")" << endl;
     files.clear();
     directory.Open(dir);
 
-    cout << directory.GetName() << directory.IsOpened() << endl;
+    //cout << directory.GetName() << directory.IsOpened() << endl;
 
     if (!directory.IsOpened())
         return;

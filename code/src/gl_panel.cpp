@@ -317,19 +317,24 @@ void BasicGLPanel::Render(bool blankScreen)
 
             screenFont.SetColour(0.0f, 0.0f, 0.0f, 0.5f);
             screenFont.Print(2.0, 2.0, 24.0, s);
-
             screenFont.SetColour(1, 1, 1, 1);
             screenFont.Print(0.0, 0.0, 24.0, s);
-        }
+
+			//s.Printf("%d/%d", currentImageNumber, 0);
+			//screenFont.SetColour(0.0f, 0.0f, 0.0f, 0.5f);
+			//screenFont.Print(2.0, 62.0, 24.0, s);
+			//screenFont.SetColour(1, 1, 1, 1);
+			//screenFont.Print(0.0, 60.0, 24.0, s);
+		}
 
         if (zoomTimeRemaining)
         {
             zoomTimeRemaining--;
             glLoadIdentity();
             screenFont.SetColour(0.0f, 0.0f, 0.0f, 0.5f);
-            screenFont.Print(2.0, 62.0, 24.0, currentImage->GetZoomInfo());
+            screenFont.Print(2.0, 122.0, 24.0, currentImage->GetZoomInfo());
             screenFont.SetColour(1, 1, 1, 1);
-            screenFont.Print(0.0, 60.0, 24.0, currentImage->GetZoomInfo());
+            screenFont.Print(0.0, 120.0, 24.0, currentImage->GetZoomInfo());
         }
     }
 

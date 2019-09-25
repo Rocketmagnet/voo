@@ -150,7 +150,6 @@ public:
     ImageBrowser            *imageBrowser;
     wxString                 videoFileExtensions;
     wxString                 videoPlayerPath;
-    wxString                 videoThumb;
 };
 
 #endif

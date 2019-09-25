@@ -53,8 +53,6 @@ ConfigParser::ConfigParser(const string &fn)
 {    
     ifstream source;                    // build a read-Stream
     source.open(fileName, ios::in);     // open data
-
-    cout << "Opening " << fileName << endl;
     
     if (source.is_open())
     {
@@ -182,8 +180,6 @@ void ConfigParser::Write()
 {
     ofstream source;                    // build a read-Stream
     source.open(fileName, ios::out);     // open data
-
-    cout << "Writing: " << fileName << endl;
     
     if (source.is_open())
     {
@@ -191,7 +187,7 @@ void ConfigParser::Write()
 
         for (i=0; i<n; i++)
         {
-            cout   << "  " << configData[i].name << " = " << configData[i].value << endl;
+            //cout   << "  " << configData[i].name << " = " << configData[i].value << endl;
             source <<         configData[i].name << " = " << configData[i].value << endl;
         }
     

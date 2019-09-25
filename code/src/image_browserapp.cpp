@@ -27,6 +27,7 @@
 #include "imagebrowser.h"
 #include "imageviewer.h"
 #include "wx/dir.h"
+#include "wx/stdpaths.h"
 #include <iostream>
 
 using namespace std;
@@ -66,8 +67,9 @@ IMPLEMENT_CLASS( Image_BrowserApp, wxApp )
  * Constructor for Image_BrowserApp
  */
 Image_BrowserApp::Image_BrowserApp()
- : configParser(CONFIG_FILE_NAME)
+ : configParser((wxStandardPaths::Get().GetExecutablePath()+CONFIG_FILE_NAME).ToStdString())
 {
+    cout << "Num Args = " << wxApp::argc << endl;
     //cout << "Image_BrowserApp::Image_BrowserApp() " << this << endl;
     //cout << "  configParser = " << &configParser << endl;
     Init();
@@ -97,6 +99,41 @@ bool Image_BrowserApp::OnInit()
 	// to make permanent changes to the code.
     //cout << "Image_BrowserApp::OnInit()" << endl;
 
+    int n = argc;
+
+    wxString passedArgument;
+
+    for (int i = 1; i < n; i++)
+        passedArgument += argv[i];
+    cout << "passedArgument = " << passedArgument << endl;
+
+
+
+    if (n >= 2)
+    {
+        wxFileName filename(passedArgument);
+
+        cout << filename.IsDir() << filename.DirExists() << filename.FileExists() << endl;
+
+        if (filename.IsOk())
+        {
+            if (filename.DirExists())
+            {
+                cout << "Passed Directory " << passedArgument << endl;
+                configParser.SetString("currentDirectory", std::string(passedArgument));
+            }
+            if (filename.FileExists())
+            {
+                cout << "Passed file " << passedArgument << endl;
+                configParser.SetString("currentDirectory", std::string(filename.GetPath()));
+            }
+            else
+            {
+                cout << "Unknown parameter " << passedArgument << endl;
+            }
+        }
+    }
+
     //wxApp::OnInit();
 #if wxUSE_XPM
 	wxImage::AddHandler(new wxXPMHandler);
@@ -113,28 +150,6 @@ bool Image_BrowserApp::OnInit()
 	imageBrowser = new ImageBrowser( this, -1, _T("Image Browser"), wxPoint(700,0), wxSize(1200, 640));
     imageBrowser->Show(true);
 
-    int n = argc;
-
-    if (n >= 2)
-    {
-        wxFileName filename(argv[1]);
-
-        if (filename.IsOk())
-        {
-            if (filename.IsDir() && filename.DirExists())
-            {
-                cout << "Passed Directory " << argv[1] << endl;
-            }
-            else if (filename.FileExists())
-            {
-                cout << "Passed file " << argv[1] << endl;
-            }
-            else
-            {
-                cout << "Unknown parameter " << argv[1] << endl;
-            }
-        }
-    }
 
 ////@end Image_BrowserApp initialisation
 

@@ -27,12 +27,7 @@ int ReadJpegHeader(jpeg_load_state* load_state, const char* filename)
 {
 	int i;
 
-	printf("ReadJpegHeader(%s)\n", filename);
-
     FILE *infile;
-	//volatile int *testPtr = test_malloc();
-	//printf("tp = %p\n", testPtr);
-
 
     if ((infile = fopen(filename, "rb")) == NULL)
     {
@@ -41,7 +36,7 @@ int ReadJpegHeader(jpeg_load_state* load_state, const char* filename)
     }
     else
     {
-        printf("OPENED %s\n", filename);
+        //printf("OPENED %s\n", filename);
     }
 
 
@@ -106,8 +101,6 @@ int ReadJpegHeader(jpeg_load_state* load_state, const char* filename)
 
 int ReadJpegHeaderOnly(jpeg_load_state *load_state, const char* filename)
 {
-    printf("ReadJpegHeaderOnly(%s)\n", filename);
-
     FILE *infile;
     if ((infile = fopen(filename, "rb")) == NULL)
     {
@@ -116,7 +109,7 @@ int ReadJpegHeaderOnly(jpeg_load_state *load_state, const char* filename)
     }
     else
     {
-        printf("OPENED %s\n", filename);
+        //printf("OPENED %s\n", filename);
     }
 
     // If the file was successfully opened, then allocate memory.
