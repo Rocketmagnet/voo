@@ -124,6 +124,20 @@ int ConfigParser::GetInt(const string &name)
     }
 }
 
+int ConfigParser::GetIntWithDefault(const string& name, int def)
+{
+    int i = GetIndexFromName(name);
+
+    if (i >= 0)
+    {
+        return ConvertToInt(configData[i].value);
+    }
+    else
+    {
+        return def;
+    }
+}
+
 string ConfigParser::GetString(const string &name)
 {
     int i = GetIndexFromName(name);
@@ -179,6 +193,9 @@ void     ConfigParser::SetString(const string &name, const string &value)
 void ConfigParser::Write()
 {
     ofstream source;                    // build a read-Stream
+
+    cout << "ConfigParser::Write()" << fileName << endl;
+
     source.open(fileName, ios::out);     // open data
     
     if (source.is_open())

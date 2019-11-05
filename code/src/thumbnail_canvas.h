@@ -499,7 +499,8 @@ public:
     void ClearStatusBar();
     void SetCursor(int imageNumber);
 
-    void DeleteImage(int i);
+    void RemoveThumbNailFromCanvas(int tn);
+    void DeleteImage(int tn);
     void DeleteSelection();
 
     Thumbnail* GetThumbnail(int i)      { return &thumbnails[i];      }
@@ -546,7 +547,7 @@ private:
     int                     draggedThumb;
     int                     tnSpacingX, tnSpacingY;
     wxULongLong             totalDirectorySizeBytes;
-
+     
     ImageBrowser           *imageBrowser;
     ImageViewer            *imageViewer;
     //ConfigParser           *configParser;

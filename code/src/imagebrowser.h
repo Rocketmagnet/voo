@@ -184,9 +184,12 @@ public:
     {
     }
 
-    friend class ChooseRescaleSize;
+    void SetMaxSize(int width, int height)
+    {
+        maxWidth  = width;
+        maxHeight = height;
+    }
 
-protected:
     ExitCode Entry();
 
     wxString        directory;
@@ -199,9 +202,13 @@ class ChooseRescaleSize : public wxDialog
 {
 public:
     ChooseRescaleSize(ImageResizer &ir);
+    int GetWidth();
+    int GetHeight();
 
     wxStaticText   *st;
     ImageResizer  &imageResizer;
+    wxTextCtrl  *widthCtrl;
+    wxTextCtrl *heightCtrl;
 };
 
 

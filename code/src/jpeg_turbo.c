@@ -159,7 +159,6 @@ int ReadJpegHeaderOnly(jpeg_load_state *load_state, const char* filename)
     return 1;
 }
 
-//int JpegRead(unsigned char* imageBuffer, jpeg_load_state* load_state)
 int JpegRead(unsigned char* imageBuffer, jpeg_load_state* load_state)
 {
     char *dest = imageBuffer;
@@ -207,19 +206,24 @@ int JpegWrite(const char* filename, int width, int height, unsigned char *data)
         printf("File Error\n");
         return -1;
     }
+    printf("A\n");
     cinfo.err = jpeg_std_error(&jerr);      // Allocate and initialize a JPEG compression object
+    printf("B\n");
     jpeg_create_compress(&cinfo);
+    printf("C\n");
     jpeg_stdio_dest(&cinfo, output_file);
+    printf("D\n");
     cinfo.image_width      = width;         // Set parameters for compression, including image size & colorspace
     cinfo.image_height     = height;
     cinfo.input_components = 3;
     cinfo.in_color_space   = JCS_RGB;         // Arbitrary guess
     jpeg_set_defaults(&cinfo);
 
-
     jpeg_set_quality(&cinfo, 95, TRUE);
+    printf("D2\n");
     jpeg_start_compress(&cinfo, TRUE);
-
+    printf("E\n");
+     
     JSAMPROW row_pointer;          /* pointer to a single row */
 
     while (cinfo.next_scanline < cinfo.image_height)
@@ -231,9 +235,12 @@ int JpegWrite(const char* filename, int width, int height, unsigned char *data)
 
     // jpeg_finish_compress(...);
     jpeg_finish_compress(&cinfo);
+    printf("F\n");
     // Release the JPEG compression object
     jpeg_destroy_compress(&cinfo);
+    printf("G\n");
     fclose(output_file);
-    
+    printf("H\n");
+
     return 0;
 }

@@ -90,3 +90,13 @@ bool FileNameList::DeleteFileNumber(int fileNumber)
     return success;
 }
 
+int FileNameList::GetFileNumber(wxString fileName)
+{
+    for (int i = 0; i < files.size(); i++)
+    {
+        if (fileName == files[i].fileName.GetFullName())
+            return i;
+    }
+
+    return -1;
+}

@@ -55,6 +55,7 @@ public:
     void AddFileToList(wxString name);
     void Resort();
     bool DeleteFileNumber(int fileNumber);
+    int  GetFileNumber(wxString fileName);
 
     size_t   NumFiles()        const { return files.size(); }
     size_t   MaxFileNumber()   { return files.size() - 1;         }

@@ -62,16 +62,20 @@ IMPLEMENT_CLASS( Image_BrowserApp, wxApp )
  */
 
 
+wxString GetConfigFilePath()
+{
+    wxFileName exePath = wxStandardPaths::Get().GetExecutablePath();
+
+    return exePath.GetPath() + wxT("\\");
+}
 
 /*
  * Constructor for Image_BrowserApp
  */
 Image_BrowserApp::Image_BrowserApp()
- : configParser((wxStandardPaths::Get().GetExecutablePath()+CONFIG_FILE_NAME).ToStdString())
+ : configParser((GetConfigFilePath()+CONFIG_FILE_NAME).ToStdString())
 {
     cout << "Num Args = " << wxApp::argc << endl;
-    //cout << "Image_BrowserApp::Image_BrowserApp() " << this << endl;
-    //cout << "  configParser = " << &configParser << endl;
     Init();
 }
 

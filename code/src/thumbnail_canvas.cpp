@@ -722,8 +722,8 @@ void ThumbnailCanvas::OnKeyEvent(wxKeyEvent &event)
 
         case WXK_RETURN:
             {
-                wxFileName path = fileNameList[cursorP.GetNumber()];
-                wxString extension = path.GetExt();
+                wxFileName        path             = fileNameList[cursorP.GetNumber()];
+                wxString          extension        = path.GetExt();
                 ImageFileHandler *imageFileHandler = ImageFileHandlerRegistry::instance().GetImageFileHandlerFromExtension(extension);
 
                 int actions = imageFileHandler->LoadImage(path.GetFullPath());
@@ -1287,12 +1287,31 @@ void ThumbnailCanvas::OnMouseEvent(wxMouseEvent &event)
             wxDropSource dragSource(this);
             dragSource.SetData(*dragingFilesDataObject);
             wxDragResult result = dragSource.DoDragDrop(true);
-            cout << "wxDragResult = " << result << endl;
-            if (result == wxDragNone)   cout << "wxDragNone" << endl;
-            if (result == wxDragCopy)   cout << "wxDragCopy" << endl;
-            if (result == wxDragMove)   cout << "wxDragMove" << endl;
-            if (result == wxDragLink)   cout << "wxDragLink" << endl;
-            if (result == wxDragCancel)   cout << "wxDragCancel" << endl;
+
+            wxFileName fileName;
+            for (int i = 0; i < draggingSet.size(); i++)
+            {
+                int fNum = draggingSet[i];
+                fileName = fileNameList[fNum];
+                cout << fileName.GetFullPath() << " " << fileName.Exists() << endl;
+
+                if (!fileName.Exists())
+                {
+                    cout << "  " << fileName.GetFullPath() << " was moved" << endl;
+                    RemoveThumbNailFromCanvas(fNum);
+                }
+                else
+                {
+                    cout << "  " << fileName.GetFullPath() << " still exists" << endl;
+                }
+            }
+
+            //cout << "wxDragResult = " << result << endl;
+            //if (result == wxDragNone)     cout << "wxDragNone" << endl;
+            //if (result == wxDragCopy)     cout << "wxDragCopy" << endl;
+            //if (result == wxDragMove)     cout << "wxDragMove" << endl;
+            //if (result == wxDragLink)     cout << "wxDragLink" << endl;
+            //if (result == wxDragCancel)   cout << "wxDragCancel" << endl;
         }
     }
 
@@ -1395,20 +1414,17 @@ void ThumbnailCanvas::SetCursor(int imageNumber)
     HandleCursorScrolling();
 }
 
-// Delete the image on disk, and delete the thumbnail pointer, but keep the thumbnail.
-void ThumbnailCanvas::DeleteImage(int tn)
+void ThumbnailCanvas::RemoveThumbNailFromCanvas(int tn)
 {
-    //cout << "ThumbnailCanvas::DeleteImage(" << tn << endl;
+    //int tn = fileNameList.GetFileNumber(fileName);
 
-    fileNameList.DeleteFileNumber(tn);
-    
     std::vector<int>::iterator iter = thumbnailIndex.begin();
-    
+
     waitingSet.RemoveSingle(tn);
     loadingSet.RemoveSingle(tn);
     redrawSetP.Clear();
 
-    for (int i=0; i < tn; i++)
+    for (int i = 0; i < tn; i++)
     {
         iter++;
     }
@@ -1418,6 +1434,15 @@ void ThumbnailCanvas::DeleteImage(int tn)
     RecalculateRowsCols();
     redrawType = REDRAW_ALL;
     Refresh(ERASE_BACKGROUND);
+}
+
+// Delete the image on disk, and delete the thumbnail pointer, but keep the thumbnail.
+void ThumbnailCanvas::DeleteImage(int tn)
+{
+    //int tn = fileNameList.GetFileNumber(fileName);
+
+    fileNameList.DeleteFileNumber(tn);
+    RemoveThumbNailFromCanvas(tn);
 }
 
 

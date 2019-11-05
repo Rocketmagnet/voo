@@ -281,8 +281,11 @@ void ImageViewer::DisplayImage(int imageNumber)
     wxString ext        = fileName.GetExt();
     ext.MakeLower();
 
+    cout << "videoFileExtensions = " << videoFileExtensions << endl;
+
     if (videoFileExtensions.Contains(ext))
     {
+        cout << "It's a video!" << endl;
         wxString command = videoPlayerPath + wxT(" \"") + fileName.GetFullPath() + wxT("\"");
         cout << command << endl;
         wxExecute(command.c_str(), wxEXEC_ASYNC, NULL);

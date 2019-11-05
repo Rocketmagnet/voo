@@ -34,6 +34,7 @@ public:
     int      Exists(const string &name);
     double   GetDouble(  const string &name);
     int      GetInt(     const string &name);
+    int      GetIntWithDefault(const string& name, int def);
     string   GetString(  const string &name);
 
     void     SetDouble(  const string &name,       double    value);

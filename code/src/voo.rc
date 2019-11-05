@@ -1,0 +1,22 @@
+// note that the icon used by the Explorer (i.e. the programs icon) is the
+// first icon in the executable and the icons are sorted both by their order
+// and alphabetically (!), so put this icon first and give it a name
+// starting with "a"
+//aaaaaaaa ICON "Planet_Icon_01.ico"
+aaaaaaaa ICON "Eye_01.ico"
+
+
+// this icon is used with wxFrame::SetIcon()
+planet_icon ICON "Eye_01.ico"
+//eye_icon_01      "Eye_01.ico"
+
+// set this to 1 if you don't want to use manifest resource (manifest resource
+// is needed to enable visual styles on Windows XP - see docs/msw/winxp.txt
+// for more information)
+#define wxUSE_NO_MANIFEST 0
+
+// this is not always needed but doesn't hurt (except making the executable
+// very slightly larger): this file contains the standard icons, cursors, ...
+//#include "wx/msw/wx.rc"
+
+

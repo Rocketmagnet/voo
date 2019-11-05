@@ -359,12 +359,29 @@ void ImageBrowser::MenuRescaleImages(wxCommandEvent &event)
     thumbnailCanvas->StopLoadingThumbnails(data->m_path);
 
 
-    ImageResizer *imageResizer = new ImageResizer(data->m_path, 2000, 2000);
+    int rescaleX = GetConfigParser()->GetIntWithDefault("rescaleX", 3000);
+    int rescaleY = GetConfigParser()->GetIntWithDefault("rescaleY", 3000);
+    ImageResizer* imageResizer = new ImageResizer(data->m_path, rescaleX, rescaleY);
 
-    ChooseRescaleSize *custom = new ChooseRescaleSize(*imageResizer);
-    cout << "custom = " << custom->ShowModal() << endl;
+    //ChooseRescaleSize *custom = new ChooseRescaleSize(*imageResizer);
+    ChooseRescaleSize custom(*imageResizer);
+    
+    if (custom.ShowModal() == wxID_OK)
+    {
+        cout << "Hit OK" << endl;
+        imageResizer->maxWidth  = custom.GetWidth();
+        imageResizer->maxHeight = custom.GetHeight();
 
-    imageResizer->Run();
+        GetConfigParser()->SetInt("rescaleX", imageResizer->maxWidth);
+        GetConfigParser()->SetInt("rescaleY", imageResizer->maxHeight);
+        GetConfigParser()->Write();
+        
+        imageResizer->Run();
+    }
+    else
+    {
+        cout << "Hit Cancel" << endl;
+    }
 }
 
 void ImageBrowser::MenuOpenDirectory(wxCommandEvent &evt)
@@ -983,7 +1000,7 @@ void LoadImage2(wxImage &image, wxString fileName)
 
 wxThread::ExitCode ImageResizer::Entry()
 {
-    //cout << "Rescaling begins" << endl;
+    cout << "Rescaling begins" << endl;
     const int X_OVERSIZE = 1;
     const int Y_OVERSIZE = 2;
     const int RESCALED   = 4;
@@ -999,9 +1016,12 @@ wxThread::ExitCode ImageResizer::Entry()
 
     int n = fileNameList.NumFiles();
 
+    cout << "Resizing " << n << " files" << endl;
+
     for (int i = 0; i < n; i++)
     {
         wxFileName fullPath = fileNameList.files[i].fileName.GetFullPath();
+        cout << "  " << i << ": " << fullPath.GetFullPath() << endl;
 
         STATUS_TEXT(STATUS_BAR_INFORMATION, "Loading %d/%d", i, n);
 
@@ -1014,17 +1034,18 @@ wxThread::ExitCode ImageResizer::Entry()
 
         float imageWidth  = image.GetSize().GetWidth();
         float imageHeight = image.GetSize().GetHeight();
+        int   newWidth    = image.GetSize().GetWidth();
+        int   newHeight   = image.GetSize().GetHeight();
 
         float ratioX = imageWidth  / (float)maxWidth;
         float ratioY = imageHeight / (float)maxHeight;
-        int   newWidth, newHeight;
 
         int   flags = 0;
 
         if (ratioX > 1.0)   flags |= X_OVERSIZE;
         if (ratioY > 1.0)   flags |= Y_OVERSIZE;
 
-        cout << "Ratios " << ratioX << ", " << ratioY << endl;
+        cout << "  Ratios " << ratioX << ", " << ratioY << endl;
 
         switch(flags)
         {
@@ -1061,13 +1082,17 @@ wxThread::ExitCode ImageResizer::Entry()
 
         if (flags & RESCALED)
         {
+            cout << "  Rescale now!" << endl;
             STATUS_TEXT(STATUS_BAR_INFORMATION, "Rescaling %d/%d", i, n);
             image.Rescale(newWidth, newHeight, wxIMAGE_QUALITY_HIGH);
         }
 
         STATUS_TEXT(STATUS_BAR_INFORMATION, "Saving %d/%d", i, n);
 
+        cout << "  Write now! " << newWidth << " " << newHeight << endl;
+
         JpegWrite(fullPath.GetFullPath(), newWidth, newHeight, image.GetData());
+        cout << "  done" << endl;
         image.Destroy();
     }
 
@@ -1076,121 +1101,68 @@ wxThread::ExitCode ImageResizer::Entry()
     return 0;
 }
 
+int ChooseRescaleSize::GetWidth()
+{
+    long width;
+    widthCtrl->GetValue().ToLong(&width);
+    return width;
+}
+
+int ChooseRescaleSize::GetHeight()
+{
+    long height;
+    heightCtrl->GetValue().ToLong(&height);
+    return height;
+}
 
 ChooseRescaleSize::ChooseRescaleSize(ImageResizer &ir)
 : wxDialog(NULL, wxID_ANY, wxT("Select maximum size"), wxDefaultPosition, wxSize(250, 230)),
   imageResizer(ir)
 {
-    /*
-    wxPanel *panel = new wxPanel(this, -1);
+    wxBoxSizer* vbox = new wxBoxSizer(wxVERTICAL);
+    wxBoxSizer* hbox1 = new wxBoxSizer(wxHORIZONTAL);
+    wxBoxSizer* hbox2 = new wxBoxSizer(wxHORIZONTAL);
 
-    wxBoxSizer *vbox = new wxBoxSizer(wxVERTICAL);
-    wxBoxSizer *hbox = new wxBoxSizer(wxHORIZONTAL);
-
-    wxStaticText *rb3  = new wxRadioButton(panel, -1, wxT("Custom"), wxPoint(15, 105));
-    wxStaticText *rb3  = new wxRadioButton(panel, -1, wxT("Custom"   ), wxPoint(15, 105));
-    wxTextCtrl    *tc1 = new    wxTextCtrl(panel, -1, wxT(""         ), wxPoint(95,  80));
-    wxTextCtrl    *tc2 = new    wxTextCtrl(panel, -1, wxT(""         ), wxPoint(95, 105));
-
-    wxButton    *okButton = new wxButton(this, -1, wxT("Ok"   ), wxDefaultPosition, wxSize(70, 30));
-    wxButton *closeButton = new wxButton(this, -1, wxT("Close"), wxDefaultPosition, wxSize(70, 30));
-
-    hbox->Add(okButton, 1);
-    hbox->Add(closeButton, 1, wxLEFT, 5);
-
-    vbox->Add(panel, 1);
-    vbox->Add(hbox, 0, wxALIGN_CENTER | wxTOP | wxBOTTOM, 10);
-
-    SetSizer(vbox);
-
-    Centre();
-    ShowModal();
-
-    Destroy();
-    */
-    
-    wxPanel *panel = new wxPanel(this, -1);
-
-    wxBoxSizer *vbox = new wxBoxSizer(wxVERTICAL);
-    wxBoxSizer *hbox = new wxBoxSizer(wxHORIZONTAL);
 
     wxString widthString;
     wxString heightString;
 
-     widthString.Printf("%d", imageResizer.maxWidth);
-    heightString.Printf("%d", imageResizer.maxHeight);
+     widthString.Printf("%d", 3000);
+    heightString.Printf("%d", 2000);
 
-    wxStaticText *labelWidth  = new wxStaticText(panel, -1, ("Max Width: ") , wxPoint(15, 30));
-    wxStaticText *labelHeight = new wxStaticText(panel, -1, ("Max Height: "), wxPoint(15, 70));
-    wxTextCtrl  *widthCtrl = new wxTextCtrl(panel, -1, widthString,  wxPoint(100, 30), wxSize(100, 24));
-    wxTextCtrl *heightCtrl = new wxTextCtrl(panel, -1, heightString, wxPoint(100, 70), wxSize(100, 24));
+    wxStaticText *labelWidth  = new wxStaticText(this, -1, ("Max Width: "),  wxPoint( 15, 30), wxSize(100, 12));
+    wxStaticText *labelHeight = new wxStaticText(this, -1, ("Max Height: "), wxPoint( 15, 30), wxSize(100, 12));
+    widthCtrl   = new   wxTextCtrl(this, -1, widthString,      wxPoint(100, 30), wxSize(100, 12));
+    heightCtrl  = new   wxTextCtrl(this, -1, heightString,     wxPoint(100, 30), wxSize(100, 12));
 
-    wxButton    *okButton = new wxButton(panel, wxID_OK, wxT("OK")    , wxPoint( 20, 110), wxSize(70, 30));
-    wxButton *closeButton = new wxButton(panel, wxID_CANCEL, wxT("Cancel"), wxPoint(140, 110), wxSize(70, 30));
+    hbox1->Add(labelWidth,  1, wxEXPAND);
+    hbox1->Add(widthCtrl,   1, wxEXPAND);
+    hbox2->Add(labelHeight, 1, wxEXPAND);
+    hbox2->Add(heightCtrl,  1, wxEXPAND);
 
-    SetSizer(CreateButtonSizer(wxOK|wxCANCEL));
+    vbox->Add(hbox1, 1, wxEXPAND);
+    vbox->Add(hbox2, 1, wxEXPAND);
+    vbox->Add(CreateButtonSizer(wxOK | wxCANCEL), 1, wxEXPAND);
 
-    //wxGridSizer *sizer = new wxGridSizer(2, 2, 2);
-    //wxSizer *hs = new wxBoxSizer(wxHORIZONTAL);
-    //hs->Add(widthCtrl,   1, wxEXPAND);
-    //hs->Add(labelWidth,  1, wxEXPAND);
-    //hs->Add(labelHeight, 1, wxEXPAND);
-    //hs->Add(heightCtrl,  1, wxEXPAND);
-    //
-    //SetSizer(hs);
-    //Fit();
-
-    Centre();
-    ShowModal();
-
-
-    Destroy();
-    
-    cout << "Width  = " << widthCtrl->GetValue() << endl;
-    cout << "Height = " << heightCtrl->GetValue() << endl;
-
-    //long w, h;
-    // widthCtrl->GetValue().ToLong(&w);
-    //heightCtrl->GetValue().ToLong(&h);
-    //ir.maxWidth  = w;
-    //ir.maxHeight = h;
-
-    /*
-    wxStaticBox *st = new wxStaticBox(panel, -1, wxT("Colors"),
-        wxPoint(5, 5), wxSize(240, 150));
-    wxRadioButton *rb = new wxRadioButton(panel, -1,
-        wxT("256 Colors"), wxPoint(15, 30), wxDefaultSize, wxRB_GROUP);
-
-    wxRadioButton *rb1 = new wxRadioButton(panel, -1,
-        wxT("16 Colors"), wxPoint(15, 55));
-    wxRadioButton *rb2 = new wxRadioButton(panel, -1,
-        wxT("2 Colors"), wxPoint(15, 80));
-    wxRadioButton *rb3 = new wxRadioButton(panel, -1,
-        wxT("Custom"), wxPoint(15, 105));
-    wxTextCtrl *tc = new wxTextCtrl(panel, -1, wxT(""),
-        wxPoint(95, 105));
-
-    wxButton *okButton = new wxButton(this, -1, wxT("Ok"),
-        wxDefaultPosition, wxSize(70, 30));
-    wxButton *closeButton = new wxButton(this, -1, wxT("Close"),
-        wxDefaultPosition, wxSize(70, 30));
-
-    hbox->Add(okButton, 1);
-    hbox->Add(closeButton, 1, wxLEFT, 5);
-
-    vbox->Add(panel, 1);
-    vbox->Add(hbox, 0, wxALIGN_CENTER | wxTOP | wxBOTTOM, 10);
-    
-
-    vbox->Add( widthCtrl, 1);
-    vbox->Add(heightCtrl, 1);
     SetSizer(vbox);
 
     Centre();
-    ShowModal();
-
-    Destroy();
-    */
-
+    
+    //if (ShowModal() == wxID_OK)
+    //{
+    //    cout << "Clicked OK" << endl;
+    //    long width, height;
+    //     widthCtrl->GetValue().ToLong(&width);
+    //    heightCtrl->GetValue().ToLong(&height);
+    //    cout << "Width  = " << width << endl;
+    //    cout << "Height = " << height << endl;
+    //    imageResizer.SetMaxSize(width, height);
+    //}
+    //else
+    //{
+    //    cout << "Clicked Cancel" << endl;
+    //}
+    
+    //Destroy();
 }
 
