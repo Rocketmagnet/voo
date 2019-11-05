@@ -3,11 +3,11 @@
 // and alphabetically (!), so put this icon first and give it a name
 // starting with "a"
 //aaaaaaaa ICON "Planet_Icon_01.ico"
-aaaaaaaa ICON "Eye_01.ico"
+aaaaaaaa ICON "Iris_01.ico"
 
 
 // this icon is used with wxFrame::SetIcon()
-planet_icon ICON "Eye_01.ico"
+planet_icon ICON "Iris_01.ico"
 //eye_icon_01      "Eye_01.ico"
 
 // set this to 1 if you don't want to use manifest resource (manifest resource

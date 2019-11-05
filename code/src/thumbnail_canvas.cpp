@@ -900,18 +900,19 @@ void ThumbnailCanvas::DirectoryWasDeleted(wxString path)
 // Clear the canvas and delete all thumbnails if we are in this directory
 void ThumbnailCanvas::UnLoadThumbnails(wxString directory)
 {
-    //cout << "ThumbnailCanvas::UnLoadThumbnails(" << directory << ")" << endl;
-    //cout << "  " << fileNameList.directory.GetName() << endl;
+    cout << "ThumbnailCanvas::UnLoadThumbnails(" << directory << ")" << endl;
+    cout << "  " << fileNameList.directory.GetName() << endl;
 
     if ( (                        directory.StartsWith(fileNameList.directory.GetNameWithSep()) ) ||
          ( fileNameList.directory.GetName().StartsWith(directory)        )
        )
     {
-        //cout << "  Unloading" << endl;
+        cout << "  Unloading" << endl;
         ClearThumbnails();
         imageViewer->ClearCache();
         Scroll(0, 0);
     }
+    cout << "  Done" << endl;
 }
 
 void ThumbnailCanvas::LoadThumbnails(wxString directory)

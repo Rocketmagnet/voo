@@ -17,6 +17,7 @@ bool reg_VideoHandler5 = ImageFileHandlerRegistry::instance().RegisterImageFileH
 bool reg_VideoHandler6 = ImageFileHandlerRegistry::instance().RegisterImageFileHandler(CreateVideoHandler, _T("MPEG Layer 4"),        _T("flv"),  _T("Video file."));
 bool reg_VideoHandler7 = ImageFileHandlerRegistry::instance().RegisterImageFileHandler(CreateVideoHandler, _T("MPEG Layer 4"),        _T("rmvb"), _T("Video file."));
 bool reg_VideoHandler8 = ImageFileHandlerRegistry::instance().RegisterImageFileHandler(CreateVideoHandler, _T("RealMedia"),           _T("rm"),   _T("Video file."));
+bool reg_VideoHandler9 = ImageFileHandlerRegistry::instance().RegisterImageFileHandler(CreateVideoHandler, _T("Apple QuickTime"),     _T("mov"), _T("Video file."));
 
 void VideoHandler::LoadThumbnail(wxString fileName, Thumbnail &thumbnail)
 {

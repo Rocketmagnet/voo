@@ -39,6 +39,8 @@
 #include "image_browserapp.h"
 #include "file_name_list.h"
 #include "status_bar.h"
+#include <chrono>
+#include <thread>
 
 #include <functional>
 #include <iostream>
@@ -459,13 +461,15 @@ void SetDebuggingText(wxString text)
 }
 
 //#include "Planet_Icon_01.xpm"
-#include "Eye_01.xpm"
+//#include "Eye_01.xpm"
+#include "Iris_01.xpm"
 
 void ImageBrowser::CreateControls()
 {    
     ImageBrowser* itemFrame1 = this;
      
-    itemFrame1->SetIcon(wxIcon(eye_icon_01));
+    //itemFrame1->SetIcon(wxIcon(eye_icon_01));
+    itemFrame1->SetIcon(wxIcon(voo_icon));
     //menuBar = new wxMenuBar;
     //SetMenuBar(menuBar);
 	//
@@ -642,10 +646,13 @@ void ImageBrowser::DirectoryWasDeleted(wxString path, wxTreeItemId removedId)
 
 void ImageBrowser::OnDirClicked(wxTreeEvent& event)
 {
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    cout << "ImageBrowser::OnDirClicked()" << endl;
 	if (dirTreeCtrl)
 	{
         wxTreeItemId id = event.GetItem();
         currentDirectory = dirTreeCtrl->GetPath(id);
+        cout << "  Switching to " << currentDirectory << endl;
         //dirTreeCtrl->GetTreeCtrl()->EnsureVisible(id);
         dirTreeCtrl->GetTreeCtrl()->SetScrollPos(wxHORIZONTAL, 0, true);
         //dirTreeCtrl->SetScrollPos(wxHORIZONTAL, 0, true);
@@ -659,6 +666,7 @@ void ImageBrowser::OnDirClicked(wxTreeEvent& event)
 	}
 
 	event.Skip();
+    cout << "  OnDirClicked done" << endl;
 }
 
 
@@ -856,12 +864,12 @@ bool RemoveDirectory(wxString pathName)
 
 void ImageBrowser::OnDeleteDirectory(wxCommandEvent &event)
 {
-    cout << "ImageBrowser::OnDeleteDirectory(" << currentDirectory << ")" << endl;
+    //cout << "ImageBrowser::OnDeleteDirectory(" << currentDirectory << ")" << endl;
 
     wxFileName parentPath = currentDirectory;
     parentPath.RemoveLastDir();
     wxString firstFile = wxFindFirstFile(parentPath.GetFullPath());
-    cout << "firstFile = " << firstFile << endl;
+    //cout << "firstFile = " << firstFile << endl;
     bool parentIsEmpty = firstFile.empty();
 
     wxString pathToDelete;
@@ -875,14 +883,20 @@ void ImageBrowser::OnDeleteDirectory(wxCommandEvent &event)
         pathToDelete = currentDirectory;
     }
 
-    cout << "pathToDelete = " << pathToDelete << endl;
+    //cout << "pathToDelete = " << pathToDelete << endl;
     thumbnailCanvas->UnLoadThumbnails(pathToDelete);
     bool success = DeleteDirectory(pathToDelete);
 
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
     if (success)
     {
+        //cout << "Success!" << endl;
         dirTreeCtrl->SelectPath(pathToDelete);
         wxTreeItemId id = dirTreeCtrl->GetTreeCtrl()->GetSelection();
+        //cout << "  pathToDelete  = " << pathToDelete << endl;
+        //cout << "  Selected path = " << dirTreeCtrl->GetPath(id) << endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
         DirectoryWasDeleted(pathToDelete, id);
     }
 }
