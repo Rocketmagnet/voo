@@ -73,7 +73,7 @@ IMPLEMENT_CLASS(ImageBrowser, wxFrame)
 BEGIN_EVENT_TABLE(ImageBrowser, wxFrame)
 	EVT_DIRCTRL_SELECTIONCHANGED(ID_DIRECTORY_CTRL, ImageBrowser::OnDirClicked)
 	//EVT_DIRCTRL_MENU_POPPED_UP(wxID_MENU_DIR,       ImageBrowser::DirMenuPopped)
-    EVT_DIRCTRL_SHOWING_POPUP_MENU(0,   ImageBrowser::MenuPopped)
+    EVT_DIRCTRL_SHOWING_POPUP_MENU(0,               ImageBrowser::MenuPopped)
     EVT_KEY_DOWN(                                   ImageBrowser::OnKeyDown)
     EVT_MENU(ID_DELETE_DIRECTORY,                   ImageBrowser::OnDeleteDirectory)
     EVT_MENU(ID_ARCHIVE_DIRECTORY,                  ImageBrowser::OnArchiveDirectory)
@@ -81,6 +81,16 @@ BEGIN_EVENT_TABLE(ImageBrowser, wxFrame)
     EVT_TIMER(555, ImageBrowser::OnDecorationTimer)
 END_EVENT_TABLE()
 
+//BEGIN_EVENT_TABLE(wxGenericTreeCtrl, wxFrame)
+//    EVT_DIRCTRL_SELECTIONCHANGED(ID_DIRECTORY_CTRL, ImageBrowser::OnDirClicked)
+//    //EVT_DIRCTRL_MENU_POPPED_UP(wxID_MENU_DIR,       ImageBrowser::DirMenuPopped)
+//    EVT_DIRCTRL_SHOWING_POPUP_MENU(0, ImageBrowser::MenuPopped)
+//    EVT_KEY_DOWN(ImageBrowser::OnKeyDown)
+//    EVT_MENU(ID_DELETE_DIRECTORY, ImageBrowser::OnDeleteDirectory)
+//    EVT_MENU(ID_ARCHIVE_DIRECTORY, ImageBrowser::OnArchiveDirectory)
+//    EVT_MENU(ID_RANDOM_DIRECTORY, ImageBrowser::JumpToRandomDirectory)
+//    EVT_TIMER(555, ImageBrowser::OnDecorationTimer)
+//END_EVENT_TABLE()
 
 /*
  * ImageBrowser constructors
@@ -414,10 +424,12 @@ void ImageBrowser::MenuPopped(wxCommandEvent &event)
 	menu->AppendSeparator();
 
 
+    //wxWindowID id = wxNewId();
+
     wxWindowID id = wxNewId();
     menu->Append(id, "Renumber Images");
     cout << "ID: " << id << endl;
-    dirTreeCtrl->Bind(wxEVT_MENU, &ImageBrowser::ReNumberImages, this, id);
+    dirTreeCtrl->Bind(wxEVT_MENU,       &ImageBrowser::ReNumberImages, this, id);
 
     id = wxNewId();
     menu->Append(id, "Delete Directory");
@@ -464,20 +476,44 @@ void SetDebuggingText(wxString text)
 //#include "Eye_01.xpm"
 #include "Iris_01.xpm"
 
+void ImageBrowser::OnDropDirFiles(wxDropFilesEvent& event)
+{
+    int n = event.GetNumberOfFiles();
+    wxString* s = event.GetFiles();
+    cout << "ImageBrowser::OnDropDirFiles(" << ")" << endl;
+
+    wxTreeCtrl *treeCtrl = dirTreeCtrl->GetTreeCtrl();
+
+    wxPoint point = event.GetPosition();
+    wxTreeItemId treeItemId = treeCtrl->HitTest(point);
+    //cout << "treeItemId = " << treeItemId << endl;
+
+    if (treeItemId)
+    {
+        wxDirItemData* data = (wxDirItemData*)(treeCtrl->GetItemData(treeItemId));
+
+        for (int i = 0; i < n; i++)
+        {
+            cout << "  " << s[i] << endl;
+
+            wxFileName fileName = s[i];
+
+            wxString destination = data->m_path + fileName.GetFullName();
+            cout << "  copy " << fileName.GetFullPath() << " to " << destination << endl;
+            //wxCopyFile(name, destination);
+        }
+
+        //cout << "data = " << data << endl;
+        //cout << "  Target = " << data->m_path << endl;
+    }
+}
+
+
 void ImageBrowser::CreateControls()
 {    
     ImageBrowser* itemFrame1 = this;
      
-    //itemFrame1->SetIcon(wxIcon(eye_icon_01));
     itemFrame1->SetIcon(wxIcon(voo_icon));
-    //menuBar = new wxMenuBar;
-    //SetMenuBar(menuBar);
-	//
-	//menu = new wxMenu;
-	//menu->Append(wxID_SAVEAS);
-	//menu->AppendSeparator();
-    //
-	//menuBar->Append(menu, wxT("&Image"));
     
 	splitter1 = new wxSplitterWindow(this, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
 	splitter1->SetSize(GetClientSize());
@@ -487,16 +523,6 @@ void ImageBrowser::CreateControls()
     sBarGlobal->SetFieldsCount(4);
     this->SetStatusBar(sBarGlobal);
 
-    //wxStaticBitmap *m_statbmp = new wxStaticBitmap(this, wxID_ANY, wxIcon(green_xpm));
-    //wxRect rect;
-    //sBarGlobal->GetFieldRect(3, rect);
-    //wxSize size = m_statbmp->GetSize();
-    //wxPoint sbPos = sBarGlobal->GetPosition();
-    //rect.x += sbPos.x;
-    //rect.y += sbPos.y;
-    //m_statbmp->Move(rect.x + (rect.width - size.x) / 2, rect.y + (rect.height - size.y) / 2);
-    
-    //dirTreeCtrl = new PowerDirCtrl(splitter1, ID_DIRECTORY_CTRL, _T("C:\\"), wxDefaultPosition, wxSize(320, 200), wxDIRCTRL_DIR_ONLY);
 	dirTreeCtrl = new wxGenericDirCtrl(splitter1, ID_DIRECTORY_CTRL, _T("C:\\"), wxDefaultPosition, wxSize(640, 200), wxDIRCTRL_DIR_ONLY              |
 																													  wxDIRCTRL_EDIT_LABELS           |
 																													  wxDIRCTRL_POPUP_MENU           |
@@ -504,8 +530,10 @@ void ImageBrowser::CreateControls()
                                                                                                                       wxDIRCTRL_POPUP_MENU_SORT_DATE);
 
     treeCtrl = dirTreeCtrl->GetTreeCtrl();
-
     treeCtrl->Bind(wxEVT_TREE_ITEM_EXPANDED, &ImageBrowser::TreeExpanded, this, -1);
+
+    treeCtrl->DragAcceptFiles(true);
+    treeCtrl->Bind(wxEVT_DROP_FILES, &ImageBrowser::OnDropDirFiles, this, -1);
 
     if (0)
     {
@@ -516,19 +544,6 @@ void ImageBrowser::CreateControls()
         debugSizer->Add(debuggingWindow, 1, wxEXPAND);
         debuggingFrame->Show(true);
     }
-    //dirTreeCtrl->AddRightClickMenuItem("testFunc", this, (wxFrame::(*func)(wxCommandEvent &))ImageBrowser::testFunc);
-    //int id = dirTreeCtrl->NewMenuItem("testFunc");
-    //dirTreeCtrl->Bind(wxEVT_MENU, &ImageBrowser::MenuPopped, this, id);
-	
-    //int id = dirTreeCtrl->NewMenuItem("testFunc");
-    //dirTreeCtrl->Bind(wxEVT_MENU, std::bind(&ImageBrowser::testFunc, this), id);
-	
-    //dirTreeCtrl = new BetterDirCtrl(splitter1, ID_DIRECTORY_CTRL, _T("C:\\"), wxDefaultPosition, wxSize(320, 200), wxDIRCTRL_DIR_ONLY);
-    //wxTreeCtrl* itemTreeCtrl4 = new wxTreeCtrl(splitter1, ID_DIRCTRL, wxDefaultPosition, wxSize(100, 100), wxTR_SINGLE|wxSIMPLE_BORDER);
-
-    //rightHandWindow = new RightHandWindow(splitter1);
-    //directoryNameCtrl = rightHandWindow->GetDirectoryNameCtrl();
-    //thumbnailCanvas   = rightHandWindow->GetThumbnailCanvas();
 
     imageViewer     = new ImageViewer(this, -1, wxT("Image Viewer"), wxDefaultPosition, wxDefaultSize, 0);
     thumbnailCanvas = new ThumbnailCanvas(this, splitter1, ID_SCROLLEDWINDOW, wxDefaultPosition, wxDefaultSize);
@@ -537,14 +552,12 @@ void ImageBrowser::CreateControls()
 	thumbnailCanvas->SetScrollbars(10, 10, 50, 275);
 	thumbnailCanvas->LoadThumbnails(".");
 
-    //splitter1->SplitVertically(dirTreeCtrl, rightHandWindow, 100);
     splitter1->SplitVertically(dirTreeCtrl, thumbnailCanvas, 300);
 	splitter1->SetSashGravity(0.0);
 
 	LoadPrivateDirs();
 
     currentDirectory = image_BrowserApp->GetConfigParser()->GetString("currentDirectory");
-    cout << "currentDirectory = " << currentDirectory << endl;
     if (currentDirectory.IsEmpty())
     {
         currentDirectory = wxGetCwd();
@@ -559,8 +572,6 @@ void ImageBrowser::CreateControls()
     entries[2].Set(wxACCEL_CTRL, (int) 'R', ID_RANDOM_DIRECTORY);
     wxAcceleratorTable accel(3, entries);
     SetAcceleratorTable(accel);
-
-    ////@end ImageBrowser content construction
 }
 
 
@@ -639,24 +650,19 @@ void ImageBrowser::DirectoryWasDeleted(wxString path, wxTreeItemId removedId)
     thumbnailCanvas->DirectoryWasDeleted(path);
     thumbnailCanvas->HideImageViewer();
     treeCtrl->SetFocus();
-    //thumbnailCanvas->LoadThumbnails(currentDirectory);
-    //thumbnailCanvas->Refresh();
 }
 
 
 void ImageBrowser::OnDirClicked(wxTreeEvent& event)
 {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    cout << "ImageBrowser::OnDirClicked()" << endl;
-	if (dirTreeCtrl)
+
+    if (dirTreeCtrl)
 	{
         wxTreeItemId id = event.GetItem();
         currentDirectory = dirTreeCtrl->GetPath(id);
-        cout << "  Switching to " << currentDirectory << endl;
-        //dirTreeCtrl->GetTreeCtrl()->EnsureVisible(id);
+    
         dirTreeCtrl->GetTreeCtrl()->SetScrollPos(wxHORIZONTAL, 0, true);
-        //dirTreeCtrl->SetScrollPos(wxHORIZONTAL, 0, true);
-		//cout << "Chose " << currentDirectory << endl;
 
 		thumbnailCanvas->LoadThumbnails(currentDirectory);
 		thumbnailCanvas->Refresh();
@@ -666,7 +672,6 @@ void ImageBrowser::OnDirClicked(wxTreeEvent& event)
 	}
 
 	event.Skip();
-    cout << "  OnDirClicked done" << endl;
 }
 
 
@@ -675,20 +680,10 @@ void ImageBrowser::TreeExpanded(wxTreeEvent &event)
     wxTreeItemId id = event.GetItem();
     wxDirItemData *data = (wxDirItemData*)(treeCtrl->GetItemData(id));
     
-    //cout << "ImageBrowser::TreeExpanded(" << data->m_path << ")" << endl;
     if (allowTreeDecoration)
     {
         GreyEmptyDirectories(*treeCtrl, id, knownDirList);
-        //DirectorySearcher *directorySearcher = new DirectorySearcher(*this, *treeCtrl, id);
-        //directorySearcher->Run();
     }
-
-    //int i, n = knownDirList.size();
-    //
-    //for (i = 0; i < n; i++)
-    //{
-    //    cout << "> " << knownDirList[i] << endl;
-    //}
 }
 
 void ImageBrowser::JumpToRandomDirectory(wxCommandEvent &event)
@@ -709,14 +704,12 @@ void ImageBrowser::JumpToRandomDirectory(wxCommandEvent &event)
     for (int i = 0; i < 10; i++)
     {
         wxDir path(fn.GetFullPath());
-        cout << "PATH: " << path.GetName() << endl;
 
         int contents = (path.HasFiles()*HAS_FILES) | (path.HasSubDirs()*HAS_DIRS);
         
         switch (contents)
         {
         case HAS_FILES:
-            cout << "Switching to: " << fn.GetFullPath() << endl;
             dirTreeCtrl->ExpandPath(fn.GetFullPath());
             return;
 
@@ -725,27 +718,21 @@ void ImageBrowser::JumpToRandomDirectory(wxCommandEvent &event)
             if (success)
             {
                 fn.AppendDir(sub);
-                cout << "SUB: " << fn.GetFullPath() << endl;
             }
             break;
 
         case HAS_FILES + HAS_DIRS:
-            cout << "Switching to: " << fn.GetFullPath() << endl;
             dirTreeCtrl->ExpandPath(fn.GetFullPath());
             return;
 
         default:
             r = rand() % n;
             fn = knownDirList[r];
-            cout << "Trying again = " << fn.GetFullPath() << endl;
-            //dirTreeCtrl->ExpandPath(fn.GetFullPath());
             break;
         }
     }
 
-    cout << "Switching to " << fn.GetFullPath() << endl;
-    dirTreeCtrl->ExpandPath(fn.GetFullPath());
-    
+    dirTreeCtrl->ExpandPath(fn.GetFullPath());    
 }
 
 void ImageBrowser::OnKeyDown(wxKeyEvent &event)
@@ -771,9 +758,7 @@ void Pause(int timeMs)
     sw.Start();
     while (sw.Time() < timeMs)
     {
-        cout << ".";
     }
-    cout << endl;
 }
 
 wxString tabs = "";
@@ -788,14 +773,10 @@ bool RemoveDirectory(wxString pathName)
 
     if (!dir.IsOpened())
     {
-        cout << tabs << "Failed to open " << pathName << endl;
         return false;
     }
 
     bool cont = dir.GetFirst(&fn);
-
-    cout << endl;
-    cout << tabs << "RemoveDirectory(" << pathName << ")" << endl;
 
     // if there are files to process
     if (cont)
@@ -818,14 +799,11 @@ bool RemoveDirectory(wxString pathName)
                 i = paths.size() - 1;
             }
 
-            cout << tabs << "attemptsRemaining = " << attemptsRemaining << "  i = " << i << "  size = " << paths.size() << endl;
             wxString subPath = paths[i--];
-            cout << tabs << "Checking for existence of " << subPath << " " << wxDirExists(subPath) << endl;
 
             // if the next filename is actually a directory
             if (wxDirExists(subPath + wxFILE_SEP_PATH))
             {
-                cout << tabs << "deleting directory" << subPath + wxFILE_SEP_PATH << endl;
                 // delete this directory
                 tabs += "    ";
                 bool success = RemoveDirectory(subPath + wxFILE_SEP_PATH);
@@ -833,13 +811,11 @@ bool RemoveDirectory(wxString pathName)
                 if (success)
                 {
                     paths.Remove(subPath);
-                    cout << tabs << "successfully deleted sub path: " << subPath << endl;
                 }
             }
             else
             {
                 // otherwise attempt to delete this file
-                cout << tabs << "Attempt to remove file " << subPath << endl;
                 if (!wxRemoveFile(subPath))
                 { // failed
                     cout << tabs << "failed to delete file: " << subPath << endl;
@@ -847,15 +823,12 @@ bool RemoveDirectory(wxString pathName)
                 else
                 { // success
                     paths.Remove(subPath);
-                    cout << tabs << "successfully deleted file: " << subPath << endl;
                 }
             }
         } while ((attemptsRemaining--) && (paths.size()>0));
     }
 
-    cout << tabs << "Now remove directory " << pathName << endl;
     bool success = wxRmDir(pathName);
-    cout << tabs << "success = " << success << endl;
 
     tabs = tabs.Left(tabs.Length() - 4);
     return true;
@@ -864,15 +837,12 @@ bool RemoveDirectory(wxString pathName)
 
 void ImageBrowser::OnDeleteDirectory(wxCommandEvent &event)
 {
-    //cout << "ImageBrowser::OnDeleteDirectory(" << currentDirectory << ")" << endl;
-
-    wxFileName parentPath = currentDirectory;
+    wxFileName parentPath  = currentDirectory;
     parentPath.RemoveLastDir();
-    wxString firstFile = wxFindFirstFile(parentPath.GetFullPath());
-    //cout << "firstFile = " << firstFile << endl;
-    bool parentIsEmpty = firstFile.empty();
 
     wxString pathToDelete;
+    wxString firstFile     = wxFindFirstFile(parentPath.GetFullPath());
+    bool     parentIsEmpty = firstFile.empty();
 
     if (parentIsEmpty)
     {
@@ -883,7 +853,6 @@ void ImageBrowser::OnDeleteDirectory(wxCommandEvent &event)
         pathToDelete = currentDirectory;
     }
 
-    //cout << "pathToDelete = " << pathToDelete << endl;
     thumbnailCanvas->UnLoadThumbnails(pathToDelete);
     bool success = DeleteDirectory(pathToDelete);
 
@@ -891,11 +860,8 @@ void ImageBrowser::OnDeleteDirectory(wxCommandEvent &event)
 
     if (success)
     {
-        //cout << "Success!" << endl;
         dirTreeCtrl->SelectPath(pathToDelete);
         wxTreeItemId id = dirTreeCtrl->GetTreeCtrl()->GetSelection();
-        //cout << "  pathToDelete  = " << pathToDelete << endl;
-        //cout << "  Selected path = " << dirTreeCtrl->GetPath(id) << endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
         DirectoryWasDeleted(pathToDelete, id);
     }
@@ -932,12 +898,8 @@ void ImageBrowser::OnArchiveDirectory(wxCommandEvent &event)
 // 
 bool ImageBrowser::DeleteDirectory(wxString path)
 {
-    cout << "ImageBrowser::DeleteDirectory(" << path << ")" << endl;
-
     wxMessageDialog *test = new wxMessageDialog(nullptr, wxT("Delete ") + path, wxT("Warning"), wxYES_NO | wxNO_DEFAULT);
     int ret = test->ShowModal();
-
-    cout << "Returned " << ret << endl;
 
     if (ret == wxID_YES)
     {
@@ -952,22 +914,11 @@ bool ImageBrowser::DeleteDirectory(wxString path)
 
 ConfigParser* ImageBrowser::GetConfigParser()
 {
-    //cout << "ImageBrowser::GetConfigParser()" << this << endl;
-    //cout << "  image_BrowserApp = " << image_BrowserApp << endl;
-
     return image_BrowserApp->GetConfigParser();
 }
 
 void ImageBrowser::ReportDirectoryInfo(wxString path, wxTreeItemId id, int flags)
 {
-    //if (flags | DIRFLAGS_CONTAINS_FILES)
-    //{
-    //    treeCtrl->SetItemTextColour(id, wxColour(0, 0, 0));
-    //}
-    //else
-    //{
-    //    treeCtrl->SetItemTextColour(id, wxColour(128, 128, 128));
-    //}
 }
 
 void LoadImage2(wxImage &image, wxString fileName)
@@ -991,20 +942,6 @@ void LoadImage2(wxImage &image, wxString fileName)
             image.SetRGB(wxRect(0, 0, w, h), 128, 64, 0);
             JpegRead(image.GetData(), load_state);
         }
-
-
-        //cout << "Using JpegTurbo to load thumbnail " << fileName << endl;
-
-        //jpeg_load_state *load_state = ReadJpegHeader((const  char*)fileName.c_str());
-		//
-        //if (load_state)
-        //{
-        //    int w = load_state->width, h = load_state->height;
-		//
-        //    image.Create(w, h);
-        //    image.SetRGB(wxRect(0, 0, w, h), 128, 64, 0);
-        //    JpegRead(image.GetData(), load_state);
-        //}
     }
     else if (extension == "PNG")
     {
@@ -1014,7 +951,6 @@ void LoadImage2(wxImage &image, wxString fileName)
 
 wxThread::ExitCode ImageResizer::Entry()
 {
-    cout << "Rescaling begins" << endl;
     const int X_OVERSIZE = 1;
     const int Y_OVERSIZE = 2;
     const int RESCALED   = 4;
@@ -1030,7 +966,6 @@ wxThread::ExitCode ImageResizer::Entry()
 
     int n = fileNameList.NumFiles();
 
-    cout << "Resizing " << n << " files" << endl;
 
     for (int i = 0; i < n; i++)
     {
@@ -1059,7 +994,6 @@ wxThread::ExitCode ImageResizer::Entry()
         if (ratioX > 1.0)   flags |= X_OVERSIZE;
         if (ratioY > 1.0)   flags |= Y_OVERSIZE;
 
-        cout << "  Ratios " << ratioX << ", " << ratioY << endl;
 
         switch(flags)
         {
@@ -1096,17 +1030,13 @@ wxThread::ExitCode ImageResizer::Entry()
 
         if (flags & RESCALED)
         {
-            cout << "  Rescale now!" << endl;
             STATUS_TEXT(STATUS_BAR_INFORMATION, "Rescaling %d/%d", i, n);
             image.Rescale(newWidth, newHeight, wxIMAGE_QUALITY_HIGH);
         }
 
         STATUS_TEXT(STATUS_BAR_INFORMATION, "Saving %d/%d", i, n);
 
-        cout << "  Write now! " << newWidth << " " << newHeight << endl;
-
         JpegWrite(fullPath.GetFullPath(), newWidth, newHeight, image.GetData());
-        cout << "  done" << endl;
         image.Destroy();
     }
 
@@ -1141,8 +1071,8 @@ ChooseRescaleSize::ChooseRescaleSize(ImageResizer &ir)
     wxString widthString;
     wxString heightString;
 
-     widthString.Printf("%d", 3000);
-    heightString.Printf("%d", 2000);
+     widthString.Printf("%d", ir.maxWidth);
+    heightString.Printf("%d", ir.maxHeight);
 
     wxStaticText *labelWidth  = new wxStaticText(this, -1, ("Max Width: "),  wxPoint( 15, 30), wxSize(100, 12));
     wxStaticText *labelHeight = new wxStaticText(this, -1, ("Max Height: "), wxPoint( 15, 30), wxSize(100, 12));
@@ -1161,22 +1091,5 @@ ChooseRescaleSize::ChooseRescaleSize(ImageResizer &ir)
     SetSizer(vbox);
 
     Centre();
-    
-    //if (ShowModal() == wxID_OK)
-    //{
-    //    cout << "Clicked OK" << endl;
-    //    long width, height;
-    //     widthCtrl->GetValue().ToLong(&width);
-    //    heightCtrl->GetValue().ToLong(&height);
-    //    cout << "Width  = " << width << endl;
-    //    cout << "Height = " << height << endl;
-    //    imageResizer.SetMaxSize(width, height);
-    //}
-    //else
-    //{
-    //    cout << "Clicked Cancel" << endl;
-    //}
-    
-    //Destroy();
 }
 

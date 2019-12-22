@@ -62,8 +62,6 @@ int RarHandler::LoadImage(wxString fileName)
 {
     wxFileName fn(fileName);
 
-    cout << "Calling RAR handler" << endl;
-
     wxString command("\"C:\\Program Files\\WinRAR\\unrar.exe\" x \"");
 
     command += fileName;
@@ -71,11 +69,8 @@ int RarHandler::LoadImage(wxString fileName)
     command += fn.GetPath();
     command += "\"";
 
-    cout << "command: " << command << endl;
+    wxExecute(command, wxEXEC_SYNC | wxEXEC_HIDE_CONSOLE, NULL, NULL);
 
-    wxExecute(command, wxEXEC_ASYNC, NULL, NULL);
-
-    //return REFRESH_TREE | DELETE_FILE;
     return REFRESH_TREE;
 }
 

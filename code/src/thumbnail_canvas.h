@@ -503,6 +503,8 @@ public:
     void DeleteImage(int tn);
     void DeleteSelection();
 
+    void ActivateThumbnail(int n);
+
     Thumbnail* GetThumbnail(int i)      { return &thumbnails[i];      }
     int        GetNumThumbnails()       { return  thumbnails.size();  }
     int        GetNumColumns()          { return  tnColumns;          }

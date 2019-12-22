@@ -139,6 +139,7 @@ public:
     void OnDeleteDirectory(wxCommandEvent &event);
     void OnArchiveDirectory(wxCommandEvent &event);
 
+    void OnDropDirFiles(wxDropFilesEvent& event);
     void JumpToRandomDirectory(wxCommandEvent &event);
 
     wxString GetCurrentDir();
