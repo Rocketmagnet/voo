@@ -62,6 +62,7 @@ public:
 	FreetypeFont();
     ~FreetypeFont();
 
+    void     Initialise(int fontResolution = FREETYPE_FONT_RESOLUTION);
 	void     LoadFont(const wxFileName & fontFile, int fontResolution = FREETYPE_FONT_RESOLUTION);
 	void     Print(float x, float y, float textHeight, const wxString & text, bool flipOver=false);
     Vector2D CalcSize(float textHeight, const wxString & text);
@@ -73,7 +74,7 @@ public:
 private:
 	//The init function will create a font of
 	//of the height h from the file fname.
-	void Init(const char * fname, unsigned int h);
+    void Init(const char* fname, unsigned int h);
 
 	int  NextP2(int a);
 	void MakeDlist(FT_Face face, char ch);

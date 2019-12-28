@@ -69,7 +69,8 @@ int RarHandler::LoadImage(wxString fileName)
     command += fn.GetPath();
     command += "\"";
 
-    wxExecute(command, wxEXEC_SYNC | wxEXEC_HIDE_CONSOLE, NULL, NULL);
+    //wxExecute(command, wxEXEC_SYNC | wxEXEC_HIDE_CONSOLE, NULL, NULL);
+    wxExecute(command, wxEXEC_SYNC, NULL, NULL);
 
     return REFRESH_TREE;
 }

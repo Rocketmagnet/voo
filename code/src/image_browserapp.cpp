@@ -29,7 +29,7 @@
 #include "wx/dir.h"
 #include "wx/stdpaths.h"
 #include <iostream>
-
+#include <wx/dynlib.h>
 using namespace std;
 
 #define PRIVATE_DIRS_FILE_NAME     "prvdirs.txt"
@@ -65,7 +65,6 @@ IMPLEMENT_CLASS( Image_BrowserApp, wxApp )
 wxString GetConfigFilePath()
 {
     wxFileName exePath = wxStandardPaths::Get().GetExecutablePath();
-
     return exePath.GetPath() + wxT("\\");
 }
 
@@ -95,6 +94,9 @@ void Image_BrowserApp::Init()
 /*
  * Initialisation for Image_BrowserApp
  */
+
+
+wxDynamicLibrary library_glew32_dll;
 
 bool Image_BrowserApp::OnInit()
 {    
@@ -154,6 +156,39 @@ bool Image_BrowserApp::OnInit()
 	imageBrowser = new ImageBrowser( this, -1, _T("Image Browser"), wxPoint(700,0), wxSize(1200, 640));
     imageBrowser->Show(true);
 
+    /*
+    wxDynamicLibraryDetailsArray loadedDLLs = wxDynamicLibrary::ListLoaded();
+
+    cout << "Libraries:" << endl;
+    bool found_glew32_dll = false;
+
+    for (int i = 0; i < loadedDLLs.size(); i++)
+    {
+        wxFileName libraryPath = loadedDLLs[i].GetName();
+        SetDebuggingText(libraryPath.GetName());
+
+        if (libraryPath.GetName() == "glew32")
+        {
+            found_glew32_dll = true;
+            SetDebuggingText("Found glew32.dll");
+        }
+    }
+
+    if (found_glew32_dll == false)
+    {
+        SetDebuggingText("Loading glew32.dll");
+        //wxDynamicLibrary library_glew32_dll((GetConfigFilePath() + "glew32.dll").ToStdString());
+        library_glew32_dll.Load((GetConfigFilePath() + "glew32.dll").ToStdString());
+        if (library_glew32_dll.IsLoaded())
+        {
+            SetDebuggingText("Loaded OK");
+        }
+        else
+        {
+            SetDebuggingText("failed to load");
+        }
+    }
+    */
 
 ////@end Image_BrowserApp initialisation
 

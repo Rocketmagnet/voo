@@ -468,12 +468,13 @@ wxTextCtrl          *debuggingWindow = 0;
 
 void SetDebuggingText(wxString text)
 {
+    static wxString debuggingText = "Debugging Text";
+    debuggingText.Append(text + "\n");
+
     if (debuggingWindow)
-        debuggingWindow->SetValue(text);
+        debuggingWindow->SetValue(debuggingText);
 }
 
-//#include "Planet_Icon_01.xpm"
-//#include "Eye_01.xpm"
 #include "Iris_01.xpm"
 
 void ImageBrowser::OnDropDirFiles(wxDropFilesEvent& event)
@@ -535,7 +536,7 @@ void ImageBrowser::CreateControls()
     treeCtrl->DragAcceptFiles(true);
     treeCtrl->Bind(wxEVT_DROP_FILES, &ImageBrowser::OnDropDirFiles, this, -1);
 
-    if (0)
+    if (1)
     {
         wxFrame *debuggingFrame = new wxFrame(this, -1, wxT("Debugging"), wxPoint(200, 600), wxSize(400, 400));
         debuggingWindow = new wxTextCtrl(debuggingFrame, -1, wxT("Test"), wxPoint(0, 0), wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
@@ -1061,7 +1062,7 @@ int ChooseRescaleSize::GetHeight()
 
 ChooseRescaleSize::ChooseRescaleSize(ImageResizer &ir)
 : wxDialog(NULL, wxID_ANY, wxT("Select maximum size"), wxDefaultPosition, wxSize(250, 230)),
-  imageResizer(ir)
+      imageResizer(ir)
 {
     wxBoxSizer* vbox = new wxBoxSizer(wxVERTICAL);
     wxBoxSizer* hbox1 = new wxBoxSizer(wxHORIZONTAL);

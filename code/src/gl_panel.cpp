@@ -49,16 +49,12 @@ BasicGLPanel::BasicGLPanel(wxFrame* parent, int* args)
 
 }
 
-void BasicGLPanel::LoadFont(const wxFileName & fileName, FreetypeFont & font, int fontResolution)
+void BasicGLPanel::InitFont(FreetypeFont & font, int fontResolution)
 {
-    //currentWidgetContext = &widgetContext;
-    if (fileName.FileExists())
-    {
-        if (!fontResolution)
-            font.LoadFont(fileName);
-        else
-            font.LoadFont(fileName, fontResolution);
-    }
+    if (!fontResolution)
+        font.Initialise();
+    else
+        font.Initialise(fontResolution);
 }
 
 void BasicGLPanel::Resized(wxSizeEvent& evt)
@@ -216,7 +212,7 @@ void BasicGLPanel::OnPaint(wxPaintEvent& evt)
             cout << "Error: " << glewGetErrorString(err) << endl;
             exit(1);
         }
-        LoadFont(wxFileName("Kyooshi Gothic.ttf"), screenFont, 24);
+        InitFont(screenFont, 24);
         glewInitialised = true;
     }
 }

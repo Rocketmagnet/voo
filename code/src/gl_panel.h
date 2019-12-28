@@ -48,7 +48,7 @@ public:
     void ZoomOut();
     void MoveRel(float x, float y);
     
-    void LoadFont(const wxFileName & fileName, FreetypeFont & font, int fontResolution = 0);
+    void InitFont(FreetypeFont & font, int fontResolution = 0);
 
     int GetImageNumber() { return currentImageNumber; }
 	wxString GetImageNumberInfo();
