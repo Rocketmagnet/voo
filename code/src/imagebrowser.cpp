@@ -78,6 +78,7 @@ BEGIN_EVENT_TABLE(ImageBrowser, wxFrame)
     EVT_MENU(ID_DELETE_DIRECTORY,                   ImageBrowser::OnDeleteDirectory)
     EVT_MENU(ID_ARCHIVE_DIRECTORY,                  ImageBrowser::OnArchiveDirectory)
     EVT_MENU(ID_RANDOM_DIRECTORY,                   ImageBrowser::JumpToRandomDirectory)
+    EVT_MENU(ID_TOUCH_DIRECTORY,                    ImageBrowser::TouchDirectory)
     EVT_TIMER(555, ImageBrowser::OnDecorationTimer)
 END_EVENT_TABLE()
 
@@ -571,6 +572,7 @@ void ImageBrowser::CreateControls()
     entries[0].Set(wxACCEL_CTRL, (int) 'D', ID_DELETE_DIRECTORY);
     entries[1].Set(wxACCEL_CTRL, (int) 'K', ID_ARCHIVE_DIRECTORY);
     entries[2].Set(wxACCEL_CTRL, (int) 'R', ID_RANDOM_DIRECTORY);
+    entries[1].Set(wxACCEL_CTRL, (int) 'T', ID_TOUCH_DIRECTORY);
     wxAcceleratorTable accel(3, entries);
     SetAcceleratorTable(accel);
 }
@@ -687,6 +689,7 @@ void ImageBrowser::TreeExpanded(wxTreeEvent &event)
     }
 }
 
+
 void ImageBrowser::JumpToRandomDirectory(wxCommandEvent &event)
 {
     static const int HAS_FILES = 1;
@@ -733,12 +736,19 @@ void ImageBrowser::JumpToRandomDirectory(wxCommandEvent &event)
         }
     }
 
-    dirTreeCtrl->ExpandPath(fn.GetFullPath());    
+    dirTreeCtrl->ExpandPath(fn.GetFullPath());
 }
+
+void ImageBrowser::TouchDirectory(wxCommandEvent& event)
+{
+    wxFileName currentDirectory = GetCurrentDir();
+    currentDirectory.Touch();
+}
+
 
 void ImageBrowser::OnKeyDown(wxKeyEvent &event)
 {
-    //cout << "ImageBrowser::OnKeyDown(" << event.GetKeyCode() << ")" << endl;
+    cout << "ImageBrowser::OnKeyDown(" << event.GetKeyCode() << ")" << endl;
 }
 
 

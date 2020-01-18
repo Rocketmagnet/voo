@@ -46,6 +46,7 @@
 #define ID_DELETE_DIRECTORY     10005
 #define ID_ARCHIVE_DIRECTORY    10006
 #define ID_RANDOM_DIRECTORY     10007
+#define ID_TOUCH_DIRECTORY      10008
 
 #define SYMBOL_IMAGEBROWSER_STYLE wxDEFAULT_FRAME_STYLE|wxCAPTION|wxRESIZE_BORDER|wxSYSTEM_MENU|wxMAXIMIZE|wxMINIMIZE_BOX|wxMAXIMIZE_BOX|wxCLOSE_BOX|wxSIMPLE_BORDER|wxTAB_TRAVERSAL
 #define SYMBOL_IMAGEBROWSER_TITLE _("Image Browser")
@@ -141,6 +142,7 @@ public:
 
     void OnDropDirFiles(wxDropFilesEvent& event);
     void JumpToRandomDirectory(wxCommandEvent &event);
+    void        TouchDirectory(wxCommandEvent& event);
 
     wxString GetCurrentDir();
 

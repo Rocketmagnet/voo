@@ -965,6 +965,9 @@ bool ThumbnailCanvas::HandleThumbnailLoading()
             redrawSetP.AddSingle(th);
             i--;
             n--;
+
+            if (th == cursorP.GetNumber())          // Did the 
+                UpdateStatusBar_File();
         }
     }
 
