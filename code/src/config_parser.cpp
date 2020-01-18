@@ -48,15 +48,15 @@ static inline std::string &rtrim(std::string &s)
     return s;
 }
 
-ConfigParser::ConfigParser(const string &fn)
-: fileName(fn)
-{    
+void ConfigParser::LoadConfigFile(const string& fn)
+{
     ifstream source;                    // build a read-Stream
-    source.open(fileName, ios::in);     // open data
-    
+    source.open(fn, ios::in);     // open data
+    fileName = fn;
+
     if (source.is_open())
     {
-        while(!source.eof())
+        while (!source.eof())
         {
             ConfigDatum configDatum;
             string line;
@@ -67,18 +67,27 @@ ConfigParser::ConfigParser(const string &fn)
 
             if (eqPos > 0)
             {
-                configDatum.name  = line.substr(0, eqPos-1);
-                configDatum.value = line.substr(eqPos+1);
-                
-                ltrim(rtrim(configDatum.name ));
+                configDatum.name  = line.substr(0, eqPos - 1);
+                configDatum.value = line.substr(eqPos + 1);
+
+                ltrim(rtrim(configDatum.name));
                 ltrim(rtrim(configDatum.value));
                 configData.push_back(configDatum);
             }
 
         }
+        initialised = true;
     }
-    
+
     source.close();
+}
+
+
+ConfigParser::ConfigParser(const string &fn)
+: fileName(fn),
+  initialised(false)
+{    
+    LoadConfigFile(fn);
 }
 
 int ConfigParser::GetIndexFromName(const string &name) const

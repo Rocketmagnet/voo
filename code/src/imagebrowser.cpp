@@ -565,7 +565,7 @@ void ImageBrowser::CreateControls()
         image_BrowserApp->GetConfigParser()->SetString("currentDirectory", currentDirectory.ToStdString());
         image_BrowserApp->GetConfigParser()->Write();
     }
-	dirTreeCtrl->ExpandPath(currentDirectory);
+    dirTreeCtrl->ExpandPath(currentDirectory);
 
     wxAcceleratorEntry entries[3];
     entries[0].Set(wxACCEL_CTRL, (int) 'D', ID_DELETE_DIRECTORY);
@@ -841,29 +841,34 @@ void ImageBrowser::OnDeleteDirectory(wxCommandEvent &event)
     wxFileName parentPath  = currentDirectory;
     parentPath.RemoveLastDir();
 
-    wxString pathToDelete;
-    wxString firstFile     = wxFindFirstFile(parentPath.GetFullPath());
-    bool     parentIsEmpty = firstFile.empty();
+    wxString pathToDelete = currentDirectory;
 
-    if (parentIsEmpty)
-    {
-        pathToDelete = parentPath.GetFullPath();
-    }
-    else
-    {
-        pathToDelete = currentDirectory;
-    }
+    //wxString pathToDelete;
+    //wxString firstFile     = wxFindFirstFile(parentPath.GetFullPath());
+    //bool     parentIsEmpty = firstFile.empty();
+    //
+    //if (parentIsEmpty)
+    //{
+    //    pathToDelete = parentPath.GetFullPath();
+    //}
+    //else
+    //{
+    //    pathToDelete = currentDirectory;
+    //}
 
+    thumbnailCanvas->StopLoadingThumbnails(pathToDelete);
     thumbnailCanvas->UnLoadThumbnails(pathToDelete);
+
+    //return;
     bool success = DeleteDirectory(pathToDelete);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    //std::this_thread::sleep_for(std::chrono::milliseconds(50));       // Doesn't seem to help
 
     if (success)
     {
         dirTreeCtrl->SelectPath(pathToDelete);
         wxTreeItemId id = dirTreeCtrl->GetTreeCtrl()->GetSelection();
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        //std::this_thread::sleep_for(std::chrono::milliseconds(50));         // Doesn't seem to help
         DirectoryWasDeleted(pathToDelete, id);
     }
 }

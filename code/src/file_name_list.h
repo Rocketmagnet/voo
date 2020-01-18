@@ -57,9 +57,9 @@ public:
     bool DeleteFileNumber(int fileNumber);
     int  GetFileNumber(wxString fileName);
 
-    size_t   NumFiles()        const { return files.size(); }
-    size_t   MaxFileNumber()   { return files.size() - 1;         }
-    wxString operator[](int i) { return files[i].fileName.GetFullPath();   }
+    size_t   NumFiles()        const { return files.size();     }
+    size_t   MaxFileNumber()   const { return files.size() - 1; }
+    wxString operator[](int i) const { return files[i].fileName.GetFullPath();   }
 
 //private:
     std::vector<DirSortingItem>	 files;

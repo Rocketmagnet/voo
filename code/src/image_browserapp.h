@@ -20,7 +20,7 @@
 ////@begin includes
 #include "wx/image.h"
 #include "imagebrowser.h"
-
+#include <wx/filename.h>
 
 ////@end includes
 
@@ -42,11 +42,23 @@
  * Image_BrowserApp class declaration
  */
 
+class CommandLineArguments
+{
+public:
+    CommandLineArguments(int argc, wxCmdLineArgsArray& argv);
+
+    wxString GetParameter(const wxString parameterName) const;
+    bool     GetPath(wxString &pathReturn);
+
+private:
+    wxFileName              path;
+    std::vector<wxString>   parameters;
+};
 
 class Image_BrowserApp: public wxApp
 {    
     DECLARE_CLASS( Image_BrowserApp )
-    //DECLARE_EVENT_TABLE()
+    ///DECLARE_EVENT_TABLE()
 
 public:
     /// Constructor

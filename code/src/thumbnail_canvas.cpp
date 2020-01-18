@@ -651,7 +651,7 @@ void ThumbnailCanvas::HandleCursorScrolling()
 {
     int cursorNumber = cursorP.GetNumber();
 
-    if ((cursorNumber == -1) || (thumbnailIndex.size() == 0))
+    if ( (cursorNumber == -1) || (thumbnailIndex.size() == 0) || (cursorNumber >= thumbnails.size()) )
     {
         Scroll(0, 0);
         return;
@@ -880,7 +880,7 @@ void ThumbnailCanvas::UnLoadThumbnails(wxString directory)
 
 void ThumbnailCanvas::LoadThumbnails(wxString directory)
 {
-	//cout << "LoadThumbnails(" << directory << ")" << endl;
+	cout << "LoadThumbnails(" << directory << ")" << endl;
     inFocus = false;
     ClearThumbnails();
     imageViewer->ClearCache();
@@ -904,13 +904,9 @@ void ThumbnailCanvas::LoadThumbnails(wxString directory)
         wxFileName fn(fullPath);
         totalDirectorySizeBytes += fn.GetSize();
 
-        //Thumbnail *thumbnail = new Thumbnail(wxPoint(0, 0), fullPath);
-
-
-
         thumbnailIndex.push_back(thumbnails.size());
         thumbnails.emplace_back(wxPoint(0,0), fullPath);
-        //cout << thumbnailIndex.back() << " at " << &thumbnails.back() << endl;
+        //cout << "  " << thumbnailIndex.back() << " at " << &thumbnails.back() << endl;
     }
 
     readHeadersCompleted = true;
@@ -939,7 +935,7 @@ void ThumbnailCanvas::LoadThumbnails(wxString directory)
     redrawSetP.Clear();
 
     RecalculateRowsCols();
-	//cout << "LoadThumbnails(" << directory << ")  done" << endl;
+	cout << "LoadThumbnails(" << directory << ")  done" << endl;
 }
 
 void ThumbnailCanvas::StopLoadingThumbnails(wxString directory)
@@ -1256,6 +1252,12 @@ void ThumbnailCanvas::OnMouseEvent(wxMouseEvent &event)
 
 void ThumbnailCanvas::ActivateThumbnail(int n)
 {
+    cout << "ThumbnailCanvas::ActivateThumbnail(" << n << ")" << endl;
+    cout << "  " << fileNameList.directory.GetName() << endl << endl;
+
+    if ( (n < 0) || (n > fileNameList.MaxFileNumber()) )
+        return;
+
     wxFileName        path = fileNameList[n];
     wxString          extension = path.GetExt();
     ImageFileHandler* imageFileHandler = ImageFileHandlerRegistry::instance().GetImageFileHandlerFromExtension(extension);
@@ -1264,7 +1266,8 @@ void ThumbnailCanvas::ActivateThumbnail(int n)
 
     if (actions & LOAD_IMAGE)
     {
-        imageViewer->DisplayImage(cursorP.GetNumber());
+        //imageViewer->DisplayImage(cursorP.GetNumber());
+        imageViewer->DisplayImage(n);
     }
 
     if (actions & DELETE_FILE)
@@ -1274,12 +1277,11 @@ void ThumbnailCanvas::ActivateThumbnail(int n)
 
     if (actions & REFRESH_TREE)
     {
-        imageBrowser->RefreshDirTree(path.GetPath());
+        cout << "  refreshing tree: " << path.GetPathWithSep() << endl;
+        imageBrowser->RefreshDirTree(path.GetPathWithSep());
     }
 
-
     delete imageFileHandler;
-
 }
 
 

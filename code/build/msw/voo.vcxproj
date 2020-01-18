@@ -134,7 +134,6 @@
     <ClInclude Include="..\..\src\archive_handler_zip.h" />
     <ClInclude Include="..\..\src\config_parser.h" />
     <ClInclude Include="..\..\src\directory_functions.h" />
-    <ClInclude Include="..\..\src\dir_ctrl_dnd.h" />
     <ClInclude Include="..\..\src\drawable.h" />
     <ClInclude Include="..\..\src\file_name_list.h" />
     <ClInclude Include="..\..\src\freetype_fonts.h" />
@@ -163,7 +162,6 @@
     <ClCompile Include="..\..\src\archive_handler_zip.cpp" />
     <ClCompile Include="..\..\src\config_parser.cpp" />
     <ClCompile Include="..\..\src\directory_functions.cpp" />
-    <ClCompile Include="..\..\src\dir_ctrl_dnd.cpp" />
     <ClCompile Include="..\..\src\drawable.cpp" />
     <ClCompile Include="..\..\src\file_name_list.cpp" />
     <ClCompile Include="..\..\src\freetype_fonts.cpp" />

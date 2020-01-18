@@ -68,11 +68,11 @@ wxString GetConfigFilePath()
     return exePath.GetPath() + wxT("\\");
 }
 
+
 /*
  * Constructor for Image_BrowserApp
  */
 Image_BrowserApp::Image_BrowserApp()
- : configParser((GetConfigFilePath()+CONFIG_FILE_NAME).ToStdString())
 {
     cout << "Num Args = " << wxApp::argc << endl;
     Init();
@@ -100,47 +100,37 @@ wxDynamicLibrary library_glew32_dll;
 
 bool Image_BrowserApp::OnInit()
 {    
-////@begin Image_BrowserApp initialisation
-	// Remove the comment markers above and below this block
-	// to make permanent changes to the code.
-    //cout << "Image_BrowserApp::OnInit()" << endl;
+    CommandLineArguments commandLineArguments(argc, argv);                                          // Parse command line arguments
+                                                                                                    // ----------------------------
 
-    int n = argc;
-
-    wxString passedArgument;
-
-    for (int i = 1; i < n; i++)
-        passedArgument += argv[i];
-    cout << "passedArgument = " << passedArgument << endl;
-
-
-
-    if (n >= 2)
+    wxString configDirectoryParameter = commandLineArguments.GetParameter("-CD");
+    wxString configDirectory = (GetConfigFilePath() + CONFIG_FILE_NAME).ToStdString();              // Assume config.txt directory is local
+    if (configDirectoryParameter.Length() > 0)                                                      // If a directory was specified on the command line, 
     {
-        wxFileName filename(passedArgument);
-
-        cout << filename.IsDir() << filename.DirExists() << filename.FileExists() << endl;
-
-        if (filename.IsOk())
-        {
-            if (filename.DirExists())
-            {
-                cout << "Passed Directory " << passedArgument << endl;
-                configParser.SetString("currentDirectory", std::string(passedArgument));
-            }
-            if (filename.FileExists())
-            {
-                cout << "Passed file " << passedArgument << endl;
-                configParser.SetString("currentDirectory", std::string(filename.GetPath()));
-            }
-            else
-            {
-                cout << "Unknown parameter " << passedArgument << endl;
-            }
-        }
+        //cout << "config Directory = " << configDirectoryParameter << endl;
+        configDirectory = configDirectoryParameter;                                                 // ... then use that instead.
+    }
+    else
+    {
+        //cout << "No config directory specified" << endl;
     }
 
-    //wxApp::OnInit();
+    //cout << "using: " << configDirectory << endl;
+    configParser.LoadConfigFile(configDirectory.ToStdString());
+
+
+    //cout << "currentDirectory = " << configParser.GetString("currentDirectory") << endl;
+
+    wxString currentDirectory;                                                                      // Image directory    
+    bool success = commandLineArguments.GetPath(currentDirectory);
+    //cout << "currentDirectory = " << currentDirectory  << " success=" << success << endl;
+    if (success)
+    {
+        //cout << "Setting currentDirectory to " << currentDirectory << endl;
+        configParser.SetString("currentDirectory", currentDirectory.ToStdString());
+    }
+
+
 #if wxUSE_XPM
 	wxImage::AddHandler(new wxXPMHandler);
 #endif
@@ -156,41 +146,6 @@ bool Image_BrowserApp::OnInit()
 	imageBrowser = new ImageBrowser( this, -1, _T("Image Browser"), wxPoint(700,0), wxSize(1200, 640));
     imageBrowser->Show(true);
 
-    /*
-    wxDynamicLibraryDetailsArray loadedDLLs = wxDynamicLibrary::ListLoaded();
-
-    cout << "Libraries:" << endl;
-    bool found_glew32_dll = false;
-
-    for (int i = 0; i < loadedDLLs.size(); i++)
-    {
-        wxFileName libraryPath = loadedDLLs[i].GetName();
-        SetDebuggingText(libraryPath.GetName());
-
-        if (libraryPath.GetName() == "glew32")
-        {
-            found_glew32_dll = true;
-            SetDebuggingText("Found glew32.dll");
-        }
-    }
-
-    if (found_glew32_dll == false)
-    {
-        SetDebuggingText("Loading glew32.dll");
-        //wxDynamicLibrary library_glew32_dll((GetConfigFilePath() + "glew32.dll").ToStdString());
-        library_glew32_dll.Load((GetConfigFilePath() + "glew32.dll").ToStdString());
-        if (library_glew32_dll.IsLoaded())
-        {
-            SetDebuggingText("Loaded OK");
-        }
-        else
-        {
-            SetDebuggingText("failed to load");
-        }
-    }
-    */
-
-////@end Image_BrowserApp initialisation
 
     return true;
 }
@@ -208,3 +163,73 @@ int Image_BrowserApp::OnExit()
 }
 
 
+CommandLineArguments::CommandLineArguments(int argc, wxCmdLineArgsArray& argv)
+{
+    bool     makingPath         = true;
+    bool     parameterNameFound = false;
+    wxString parameterName;
+    wxString parameterValue;
+    wxString pathAccumulator;
+
+    for (int i = 1; i < argc; i++)
+    {
+        wxString parameter = argv[i];
+
+        if (parameter.StartsWith("-"))
+        {
+            parameterName      = argv[i];
+            parameterNameFound = true;
+            makingPath         = false;
+        }
+        else
+        {
+            if (parameterNameFound)
+            {
+                parameterValue = argv[i];
+                parameters.push_back(parameterName);
+                parameters.push_back(parameterValue);
+                cout << "Parameter: " << parameterName << " = " << parameterValue << endl;
+            }
+        }
+
+        if (makingPath)
+        {
+            pathAccumulator += parameter;
+        }
+        else
+        {
+            //cout << "parameter: " << parameter << endl;
+        }
+    }
+
+    path = pathAccumulator;
+    cout << "Path = " << pathAccumulator << endl;
+
+}
+
+wxString CommandLineArguments::GetParameter(const wxString parameterName) const
+{
+    int n = parameters.size();
+
+    for (int i = 0; i < n; i+=2)
+    {
+        cout << "Checking " << parameters[i] << endl;
+        if (parameters[i] == parameterName)
+        {
+            cout << "Found " << parameters[i + 1] << endl;
+            return (parameters[i + 1]);
+        }
+    }
+    return "";
+}
+
+bool CommandLineArguments::GetPath(wxString& pathReturn)
+{
+    if (path.DirExists())
+    {
+        pathReturn = path.GetPath();
+        return true;
+    }
+
+    return false;
+}

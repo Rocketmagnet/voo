@@ -27,8 +27,11 @@ class ConfigParser
 {
 public:
     ConfigParser(const string &fn);
-    ConfigParser() {}
-            
+    ConfigParser()
+    : initialised(false)
+    {}
+         
+    void LoadConfigFile(const string& fn);
     void Write();
     
     int      Exists(const string &name);
@@ -48,6 +51,7 @@ private:
     
     vector<ConfigDatum>     configData;
     string                  fileName;
+    bool                    initialised;
 };
 
 
