@@ -44,6 +44,7 @@
 
 #include <functional>
 #include <iostream>
+#include <fstream>
 using namespace std;
 
 
@@ -99,7 +100,8 @@ END_EVENT_TABLE()
 
 ImageBrowser::ImageBrowser()
 : allowTreeDecoration(false),
-  decorationTimer(this, 555)
+  decorationTimer(this, 555),
+  imageResizerPermanent(resizerEntries)
 {
     //cout << "ImageBrowser::ImageBrowser() " << this << endl;
     Init();
@@ -108,7 +110,8 @@ ImageBrowser::ImageBrowser()
 ImageBrowser::ImageBrowser(Image_BrowserApp* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style )
 : allowTreeDecoration(false),
   decorationTimer(this, 555),
-  image_BrowserApp(parent)
+  image_BrowserApp(parent),
+  imageResizerPermanent(resizerEntries)
 {
     //cout << "ImageBrowser::ImageBrowser(" << parent << ") " << this << endl;
     Init();
@@ -134,6 +137,19 @@ bool ImageBrowser::Create(Image_BrowserApp* parent, wxWindowID id, const wxStrin
 ////@end ImageBrowser creation
 
     decorationTimer.StartOnce(1000);
+    imageResizerPermanent.Run();
+
+    //ResizerEntry re;
+    //re.fileName = wxFileName("C:\data\Test1.txt");
+    //re.xSize = 666;
+    //re.ySize = 999;
+    //resizerEntries.emplace_back(re);
+    //
+    //re.fileName = wxFileName("C:\data\Test2.txt");
+    //re.xSize = 222;
+    //re.ySize = 111;
+    //resizerEntries.emplace_back(re);
+
     return true;
 }
 
@@ -364,6 +380,59 @@ void ImageBrowser::MakeTopDirectory(wxCommandEvent &evt)
     //cout << "Make Top " << data->m_path << endl;
 }
 
+
+void ImageBrowser::MenuRescaleImages(wxCommandEvent &event)
+{
+    FileNameList fileNameList;
+    wxImage      image;
+    wxString     s;
+
+    wxTreeItemId id = dirTreeCtrl->GetPopupMenuItem();
+    wxDirItemData *data = (wxDirItemData*)(dirTreeCtrl->GetTreeCtrl()->GetItemData(id));
+
+    thumbnailCanvas->StopLoadingThumbnails(data->m_path);
+
+
+    int rescaleX = GetConfigParser()->GetIntWithDefault("rescaleX", 3000);
+    int rescaleY = GetConfigParser()->GetIntWithDefault("rescaleY", 3000);
+    wxString directory = data->m_path;
+
+    //ChooseRescaleSize *custom = new ChooseRescaleSize(*imageResizer);
+    ChooseRescaleSize custom(rescaleX, rescaleY);
+
+    if (custom.ShowModal() == wxID_OK)
+    {
+        int maxWidth  = custom.GetWidth();
+        int maxHeight = custom.GetHeight();
+
+        GetConfigParser()->SetInt("rescaleX", maxWidth);            // Save the settings
+        GetConfigParser()->SetInt("rescaleY", maxHeight);
+        GetConfigParser()->Write();
+
+
+        fileNameList.AddFilter(wxT("*.jpg"));           // We ony rescale JPEGs
+        fileNameList.AddFilter(wxT("*.jpeg"));
+        fileNameList.LoadFileList(directory);
+
+        int n = fileNameList.NumFiles();
+
+        for (int i = 0; i < n; i++)
+        {
+            wxFileName fullPath = fileNameList.files[i].fileName.GetFullPath();
+            //cout << "  " << i << ": " << fullPath.GetFullPath() << endl;
+
+            resizerEntries.emplace_back(fullPath, maxWidth, maxHeight);
+        }
+    }
+    else
+    {
+        //cout << "Hit Cancel" << endl;
+    }
+
+
+}
+
+/*
 void ImageBrowser::MenuRescaleImages(wxCommandEvent &event)
 {
     wxTreeItemId id = dirTreeCtrl->GetPopupMenuItem();
@@ -381,7 +450,7 @@ void ImageBrowser::MenuRescaleImages(wxCommandEvent &event)
     
     if (custom.ShowModal() == wxID_OK)
     {
-        cout << "Hit OK" << endl;
+        //cout << "Hit OK" << endl;
         imageResizer->maxWidth  = custom.GetWidth();
         imageResizer->maxHeight = custom.GetHeight();
 
@@ -393,10 +462,10 @@ void ImageBrowser::MenuRescaleImages(wxCommandEvent &event)
     }
     else
     {
-        cout << "Hit Cancel" << endl;
+        //cout << "Hit Cancel" << endl;
     }
 }
-
+*/
 void ImageBrowser::MenuOpenDirectory(wxCommandEvent &evt)
 {
     wxTreeItemId id = dirTreeCtrl->GetPopupMenuItem();
@@ -965,6 +1034,156 @@ void LoadImage2(wxImage &image, wxString fileName)
     }
 }
 
+void ImageResizerPermanent::SaveState()
+{
+    wxTextFile out("rescaling.txt");
+
+    out.Open();
+    out.Clear();
+
+    int i, n = resizerEntries.size();
+
+    for (i=0; i<n; i++)
+    {
+        wxString record;
+        record.Printf("%s\n%d\n%d", resizerEntries[i].fileName.GetFullPath(),
+                                    resizerEntries[i].xSize,
+                                    resizerEntries[i].ySize);
+
+        out.AddLine(record);
+    }
+    out.Write();
+    out.Close();
+}
+
+void ImageResizerPermanent::LoadState()
+{
+    wxTextFile in("rescaling.txt");
+
+    if (!in.Exists())
+        return;
+
+    in.Open();
+
+    int i, n = in.GetLineCount();
+
+    for (i = 0; i < n; i+=3)
+    {
+        wxString fileName, xSizeString, ySizeString;
+        long     xSize, ySize;
+
+        fileName    = in.GetLine(i + 0);
+        xSizeString = in.GetLine(i + 1);
+        ySizeString = in.GetLine(i + 2);
+
+        bool xSuccess = xSizeString.ToLong(&xSize);
+        bool ySuccess = ySizeString.ToLong(&ySize);
+
+        if (!xSuccess || !ySuccess)
+            break;
+
+        resizerEntries.emplace_back(fileName, xSize, ySize);
+    }
+    in.Close();
+}
+
+wxThread::ExitCode ImageResizerPermanent::Entry()
+{
+    const int X_OVERSIZE = 1;
+    const int Y_OVERSIZE = 2;
+    const int RESCALED   = 4;
+
+    LoadState();
+
+    while (1)
+    {
+        if (TestDestroy())
+        {
+            break;
+        }
+
+        ResizerEntry resizerEntry     = resizerEntries.pop_front();
+        wxFileName   fullPath         = resizerEntry.fileName.GetFullPath();
+        wxString     fileNameFragment = fullPath.GetName().Left(10) + "..." + fullPath.GetExt();
+        int          maxWidth         = resizerEntry.xSize;
+        int          maxHeight        = resizerEntry.ySize;
+        int          imagesRemaining  = resizerEntries.size();
+        wxImage      image;
+
+        STATUS_TEXT(STATUS_BAR_INFORMATION, "Loading %s %d remain", fileNameFragment, imagesRemaining);
+
+        LoadImage2(image, fullPath.GetFullPath());
+
+        if (!image.IsOk())
+        {
+            continue;
+        }
+
+        float imageWidth  = image.GetSize().GetWidth();
+        float imageHeight = image.GetSize().GetHeight();
+        int   newWidth    = image.GetSize().GetWidth();
+        int   newHeight   = image.GetSize().GetHeight();
+
+        float ratioX = imageWidth  / (float)maxWidth;
+        float ratioY = imageHeight / (float)maxHeight;
+
+        int   flags = 0;
+
+        if (ratioX > 1.0)   flags |= X_OVERSIZE;
+        if (ratioY > 1.0)   flags |= Y_OVERSIZE;
+
+
+        switch (flags)
+        {
+        default:
+        case 0:
+            break;
+
+        case X_OVERSIZE:
+            flags |= RESCALED;
+            newWidth  = int(imageWidth / ratioX + 0.5);
+            newHeight = int(imageHeight / ratioX + 0.5);
+            break;
+
+        case Y_OVERSIZE:
+            flags |= RESCALED;
+            newWidth  = int(imageWidth / ratioY + 0.5);
+            newHeight = int(imageHeight / ratioY + 0.5);
+            break;
+
+        case X_OVERSIZE | Y_OVERSIZE:
+            flags |= RESCALED;
+            if (ratioX > ratioY)
+            {
+                newWidth  = int(imageWidth / ratioX + 0.5);
+                newHeight = int(imageHeight / ratioX + 0.5);
+            }
+            else
+            {
+                newWidth  = int(imageWidth / ratioY + 0.5);
+                newHeight = int(imageHeight / ratioY + 0.5);
+            }
+            break;
+        }
+
+        if (flags & RESCALED)
+        {
+            STATUS_TEXT(STATUS_BAR_INFORMATION, "Rescaling %s %d remain", fileNameFragment, imagesRemaining);
+            image.Rescale(newWidth, newHeight, wxIMAGE_QUALITY_HIGH);
+        }
+
+        STATUS_TEXT(STATUS_BAR_INFORMATION, "Saving %s %d remain", fileNameFragment, imagesRemaining);
+
+        JpegWrite(fullPath.GetFullPath(), newWidth, newHeight, image.GetData());
+        image.Destroy();
+        SaveState();
+    }
+
+    STATUS_TEXT(STATUS_BAR_INFORMATION, "  ");
+    return 0;
+}
+
+
 wxThread::ExitCode ImageResizer::Entry()
 {
     const int X_OVERSIZE = 1;
@@ -986,7 +1205,7 @@ wxThread::ExitCode ImageResizer::Entry()
     for (int i = 0; i < n; i++)
     {
         wxFileName fullPath = fileNameList.files[i].fileName.GetFullPath();
-        cout << "  " << i << ": " << fullPath.GetFullPath() << endl;
+        //cout << "  " << i << ": " << fullPath.GetFullPath() << endl;
 
         STATUS_TEXT(STATUS_BAR_INFORMATION, "Loading %d/%d", i, n);
 
@@ -1075,11 +1294,10 @@ int ChooseRescaleSize::GetHeight()
     return height;
 }
 
-ChooseRescaleSize::ChooseRescaleSize(ImageResizer &ir)
-: wxDialog(NULL, wxID_ANY, wxT("Select maximum size"), wxDefaultPosition, wxSize(250, 230)),
-      imageResizer(ir)
+ChooseRescaleSize::ChooseRescaleSize(int xs, int ys)
+: wxDialog(NULL, wxID_ANY, wxT("Select maximum size"), wxDefaultPosition, wxSize(250, 230))
 {
-    wxBoxSizer* vbox = new wxBoxSizer(wxVERTICAL);
+    wxBoxSizer* vbox  = new wxBoxSizer(wxVERTICAL);
     wxBoxSizer* hbox1 = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer* hbox2 = new wxBoxSizer(wxHORIZONTAL);
 
@@ -1087,13 +1305,13 @@ ChooseRescaleSize::ChooseRescaleSize(ImageResizer &ir)
     wxString widthString;
     wxString heightString;
 
-     widthString.Printf("%d", ir.maxWidth);
-    heightString.Printf("%d", ir.maxHeight);
+     widthString.Printf("%d", xs);
+    heightString.Printf("%d", ys);
 
     wxStaticText *labelWidth  = new wxStaticText(this, -1, ("Max Width: "),  wxPoint( 15, 30), wxSize(100, 12));
     wxStaticText *labelHeight = new wxStaticText(this, -1, ("Max Height: "), wxPoint( 15, 30), wxSize(100, 12));
-    widthCtrl   = new   wxTextCtrl(this, -1, widthString,      wxPoint(100, 30), wxSize(100, 12));
-    heightCtrl  = new   wxTextCtrl(this, -1, heightString,     wxPoint(100, 30), wxSize(100, 12));
+    widthCtrl   = new   wxTextCtrl(this, -1, widthString,  wxPoint(100, 30), wxSize(100, 12));
+    heightCtrl  = new   wxTextCtrl(this, -1, heightString, wxPoint(100, 30), wxSize(100, 12));
 
     hbox1->Add(labelWidth,  1, wxEXPAND);
     hbox1->Add(widthCtrl,   1, wxEXPAND);

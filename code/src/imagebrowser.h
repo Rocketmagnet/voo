@@ -20,9 +20,12 @@
  */
 
 ////@begin includes
+#include "wx/filename.h"
 #include "wx/frame.h"
 #include "wx/treectrl.h"
 #include "config_parser.h"
+//#include <deque>
+#include "deque_thread_safe.h"
 
 ////@end includes
 
@@ -82,6 +85,75 @@ private:
     wxBoxSizer       *boxSizer;
 };
 
+// 
+class ImageResizer : public wxThread
+{
+public:
+    ImageResizer(wxString dir, int maxW, int maxH)
+        : wxThread(wxTHREAD_DETACHED),
+        maxWidth(maxW),
+        maxHeight(maxH),
+        directory(dir)
+    {
+    }
+
+    void SetMaxSize(int width, int height)
+    {
+        maxWidth = width;
+        maxHeight = height;
+    }
+
+    ExitCode Entry();
+
+    wxString        directory;
+    int             maxWidth;
+    int             maxHeight;
+};
+
+
+struct ResizerEntry
+{
+    ResizerEntry(wxFileName fn, int xs, int ys)
+    : fileName(fn),
+      xSize(xs),
+      ySize(ys)
+    {}
+
+    int        xSize, ySize;
+    wxFileName fileName;
+};
+
+// 
+class ImageResizerPermanent : public wxThread
+{
+public:
+    ImageResizerPermanent(deque_thread_safe<ResizerEntry> &entries)
+        : wxThread(wxTHREAD_JOINABLE),
+        resizerEntries(entries)
+    {
+    }
+
+
+    ExitCode Entry();
+
+private:
+    void SaveState();
+    void LoadState();
+    deque_thread_safe<ResizerEntry> &resizerEntries;
+};
+
+
+class ChooseRescaleSize : public wxDialog
+{
+public:
+    ChooseRescaleSize(int xs, int ys);
+    int GetWidth();
+    int GetHeight();
+
+    wxStaticText   *st;
+    wxTextCtrl     *widthCtrl;
+    wxTextCtrl     *heightCtrl;
+};
 
 
 /*!
@@ -171,48 +243,13 @@ public:
     wxTimer              decorationTimer;
     bool                 allowTreeDecoration;
 
-////@end ImageBrowser member variables
+    ImageResizerPermanent           imageResizerPermanent;
+    deque_thread_safe<ResizerEntry> resizerEntries;
+
+    ////@end ImageBrowser member variables
 };
 
 
-// Loads a single thumbnail, then quits.
-class ImageResizer : public wxThread
-{
-public:
-    ImageResizer(wxString dir, int maxW, int maxH)
-    : wxThread(wxTHREAD_DETACHED),
-      maxWidth(maxW),
-      maxHeight(maxH),
-      directory(dir)
-    {
-    }
-
-    void SetMaxSize(int width, int height)
-    {
-        maxWidth  = width;
-        maxHeight = height;
-    }
-
-    ExitCode Entry();
-
-    wxString        directory;
-    int             maxWidth;
-    int             maxHeight;
-};
-
-
-class ChooseRescaleSize : public wxDialog
-{
-public:
-    ChooseRescaleSize(ImageResizer &ir);
-    int GetWidth();
-    int GetHeight();
-
-    wxStaticText   *st;
-    ImageResizer  &imageResizer;
-    wxTextCtrl  *widthCtrl;
-    wxTextCtrl *heightCtrl;
-};
 
 
 #endif
