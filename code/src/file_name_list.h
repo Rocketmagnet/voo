@@ -11,6 +11,7 @@
 
 class DirSortingItem;
 
+
 typedef bool(*DirSortingItemCmpFunction)(const DirSortingItem&, const DirSortingItem&);
 
 class DirSortingItem
@@ -48,14 +49,16 @@ class FileNameList
 {
 public:
     FileNameList();
-
     FileNameList(wxString dir);
+
     void LoadFileList(wxString dir);
     void AddFilter(wxString ext);
     void AddFileToList(wxString name);
     void Resort();
     bool DeleteFileNumber(int fileNumber);
     int  GetFileNumber(wxString fileName);
+
+    void FillArrayWithFileNamesFrom(wxString directory, wxArrayString &arrayString);
 
     size_t   NumFiles()        const { return files.size();     }
     size_t   MaxFileNumber()   const { return files.size() - 1; }

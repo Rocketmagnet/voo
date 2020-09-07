@@ -212,7 +212,7 @@ public:
 
 private:
 	jpeg_load_state		load_state;
-    float       x, y, scale;  // (x=y=0 means image is centered)
+    float               x, y, scale;  // (x=y=0 means image is centered)
 };
 
 
@@ -246,7 +246,7 @@ public:
         basicGLPanel = panel;
         glContext    = context;
         
-        for (int i = 0; i < imageSet.size(); i++)
+        for (unsigned int i = 0; i < imageSet.size(); i++)
             imageSet[i].glImage.basicGLPanel = panel;
     }
 
@@ -274,7 +274,6 @@ private:
     BasicGLPanel                   *basicGLPanel;
     wxGLContext                    *glContext;
 
-    GL_Image                        testImage;
     wxString                        currentDirectory;
 };
 

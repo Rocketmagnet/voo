@@ -884,6 +884,7 @@ void ThumbnailCanvas::LoadThumbnails(wxString directory)
     inFocus = false;
     ClearThumbnails();
     imageViewer->ClearCache();
+    imageViewer->ResetZoom();
     fileNameList.LoadFileList(directory);
 
     int n = fileNameList.files.size();
@@ -1068,11 +1069,18 @@ void ThumbnailCanvas::OnMouseEvent(wxMouseEvent &event)
 
     wxString lines, s;
 
+    if (event.GetWheelRotation())
+    {
+        OnMouseWheel(event);
+        return;
+    }
+
     if (event.LeftDClick())
     {
         SetFocus();
         if (th > -1)
         {
+            cursorP.SetTo(th);
             ActivateThumbnail(cursorP.GetNumber());
             redrawType = REDRAW_ALL;
         }

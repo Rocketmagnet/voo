@@ -437,7 +437,6 @@ void ImageViewer::OnClose(wxCloseEvent &event)
 
 void ImageViewer::OnMouseWheel(wxMouseEvent &event)
 {
-    //cout << "Frame Wheel" << endl;
     int newImage = currentImage;
 
     if (event.GetWheelRotation() < 0)
@@ -455,8 +454,7 @@ void ImageViewer::OnMouseWheel(wxMouseEvent &event)
 
 void ImageViewer::HomeImage()
 {
-    //cout << "HomeImage" << endl;
-    int newImage = 0;
+    unsigned int newImage = 0;
     
     if (newImage > fileNameList->MaxFileNumber())
         newImage = fileNameList->MaxFileNumber();
@@ -470,8 +468,7 @@ void ImageViewer::HomeImage()
 
 void ImageViewer::EndImage()
 {
-    //cout << "HomeImage" << endl;
-    int newImage = fileNameList->MaxFileNumber();
+    unsigned int newImage = fileNameList->MaxFileNumber();
 
     if (currentImage != newImage)
     {
@@ -482,7 +479,7 @@ void ImageViewer::EndImage()
 
 bool ImageViewer::NextImage(int jump)
 {
-    int newImage = currentImage;
+    unsigned int newImage = currentImage;
     newImage += jump;
 
     if (newImage > fileNameList->MaxFileNumber())
@@ -532,6 +529,12 @@ void NoteTime(wxString s)
 
     cout << "TIME NOTE: " << s.c_str() << " " << timeNow - timePrev << endl;
     timePrev = timeNow;
+}
+
+
+void ImageViewer::ResetZoom()
+{
+    glPanel->currentImage = 0;
 }
 
 void ImageViewer::OnTimer(wxTimerEvent &event)

@@ -265,8 +265,8 @@ public:
         x += dx;
         y += dy;
 
-        if (y <        0)  y = 0;
-        if (x <        0)  x = 0;
+        if (y <           0)  y = 0;
+        if (x <           0)  x = 0;
         if (x >= numColumns)  x = numColumns  - 1;
 
         number = y*numColumns + x;
@@ -290,7 +290,7 @@ public:
         x = number - y*numColumns;
     }
 
-    void SetTo(int n)
+    void SetTo(unsigned int n)
     {
         previous = number;
         number = n;
@@ -310,11 +310,11 @@ public:
 
  
 private:
-    int     number;
-    int     previous;
-    int     x, y;
+    unsigned int     number;
+    unsigned int     previous;
+             int     x, y;
 
-    int             &numColumns;
+    int    &numColumns;
     FileNameList    &fileNameList;
 };
 

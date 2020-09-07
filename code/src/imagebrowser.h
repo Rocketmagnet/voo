@@ -52,7 +52,7 @@
 #define ID_TOUCH_DIRECTORY      10008
 
 #define SYMBOL_IMAGEBROWSER_STYLE wxDEFAULT_FRAME_STYLE|wxCAPTION|wxRESIZE_BORDER|wxSYSTEM_MENU|wxMAXIMIZE|wxMINIMIZE_BOX|wxMAXIMIZE_BOX|wxCLOSE_BOX|wxSIMPLE_BORDER|wxTAB_TRAVERSAL
-#define SYMBOL_IMAGEBROWSER_TITLE _("Image Browser")
+#define SYMBOL_IMAGEBROWSER_TITLE _("Image Browser 3")
 #define SYMBOL_IMAGEBROWSER_IDNAME ID_IMAGEBROWSER
 #define SYMBOL_IMAGEBROWSER_SIZE wxSize(400, 300)
 #define SYMBOL_IMAGEBROWSER_POSITION wxDefaultPosition
@@ -85,32 +85,8 @@ private:
     wxBoxSizer       *boxSizer;
 };
 
-// 
-class ImageResizer : public wxThread
-{
-public:
-    ImageResizer(wxString dir, int maxW, int maxH)
-        : wxThread(wxTHREAD_DETACHED),
-        maxWidth(maxW),
-        maxHeight(maxH),
-        directory(dir)
-    {
-    }
 
-    void SetMaxSize(int width, int height)
-    {
-        maxWidth = width;
-        maxHeight = height;
-    }
-
-    ExitCode Entry();
-
-    wxString        directory;
-    int             maxWidth;
-    int             maxHeight;
-};
-
-
+//! Used to keep track of each image that needs resizing, what what the maximum size should be for each.
 struct ResizerEntry
 {
     ResizerEntry(wxFileName fn, int xs, int ys)
@@ -123,7 +99,7 @@ struct ResizerEntry
     wxFileName fileName;
 };
 
-// 
+// Thread that resizes all the images in the queue.
 class ImageResizerPermanent : public wxThread
 {
 public:
@@ -132,7 +108,6 @@ public:
         resizerEntries(entries)
     {
     }
-
 
     ExitCode Entry();
 
@@ -156,10 +131,7 @@ public:
 };
 
 
-/*!
- * ImageBrowser class declaration
- */
-
+//! ImageBrowser class declaration
 class ImageBrowser: public wxFrame
 {    
     DECLARE_CLASS( ImageBrowser )
@@ -212,9 +184,9 @@ public:
     void OnDeleteDirectory(wxCommandEvent &event);
     void OnArchiveDirectory(wxCommandEvent &event);
 
-    void OnDropDirFiles(wxDropFilesEvent& event);
-    void JumpToRandomDirectory(wxCommandEvent &event);
-    void        TouchDirectory(wxCommandEvent& event);
+    void        OnDropDirFiles(wxDropFilesEvent &event);
+    void JumpToRandomDirectory(wxCommandEvent   &event);
+    void        TouchDirectory(wxCommandEvent   &event);
 
     wxString GetCurrentDir();
 
@@ -223,6 +195,8 @@ public:
     wxTreeCtrl* GetTreeCtrl() { return treeCtrl; }
 
     void testFunc2(int i);
+    void SelectPathOnly(wxString path);
+        
 ////@begin ImageBrowser member variables
 
     Image_BrowserApp    *image_BrowserApp;

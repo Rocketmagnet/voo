@@ -872,8 +872,6 @@ void GL_ImageServer::ClearCache()
 
 void GL_ImageServer::SetFileNameList(FileNameList *fnl)
 {
-    //cout << "GL_ImageServer::SetFileNameList()" << endl;
-
     fileNameList = fnl;
 }
 
@@ -909,31 +907,19 @@ int GL_ImageServer::Cache(int imageNumber)
     imageSet[cacheLocation].creationTime            = t;
     imageSet[cacheLocation].imageNumber             = imageNumber;
 
-    //wxString fileName = (*fileNameList)[imageNumber];
-    //ImageLoader *imageLoader = new ImageLoader(imageSet[cacheLocation].glImage, fileName, basicGLPanel, glContext);      // Begin loading the image in the background.
-    //imageLoader->Run();
+    wxString fileName = (*fileNameList)[imageNumber];
+    ImageLoader *imageLoader = new ImageLoader(imageSet[cacheLocation].glImage, fileName, basicGLPanel, glContext);      // Begin loading the image in the background.
+    imageLoader->Run();
 
 
     //imageSet[cacheLocation].glImage.Load(path);
     //cout << "  - Loading " << (*fileNameList)[imageNumber] << endl;
-    imageSet[cacheLocation].glImage.Load((*fileNameList)[imageNumber]);
+    //imageSet[cacheLocation].glImage.Load((*fileNameList)[imageNumber]);
     //cout << "  - Loading done" << endl;
 
     return cacheLocation;
 }
 
-/*
-GL_Image* GL_ImageServer::GetImage(int imageNumber)
-{
-    testImage.Load((*fileNameList)[imageNumber]);
-    NoteTime(wxT("testImage.Load()"));
-    wxFileName fn((*fileNameList)[imageNumber]);
-
-    //cout << "SetFileName " << fn.GetFullPath() << ", " << fn.GetFullName() << endl;
-    testImage.SetFileName(fn.GetFullName());
-    return &testImage;
-}
-*/
 
 
 GL_Image* GL_ImageServer::GetImage(int imageNumber)

@@ -28,7 +28,7 @@ bool FileSortNatural(const DirSortingItem &fn1, const DirSortingItem &fn2)
 
 void FileNameList::LoadFileList(wxString dir)
 {
-    //cout << "LoadFileList(" << dir << ")" << endl;
+    cout << "LoadFileList(" << dir << ")" << endl;
     files.clear();
     directory.Open(dir);
 
@@ -39,6 +39,7 @@ void FileNameList::LoadFileList(wxString dir)
 
     wxString filename;
     int i, n = filters.size();
+    cout << n << " filters" << endl;
 
     for (i = 0; i<n; i++)
     {
@@ -55,6 +56,36 @@ void FileNameList::LoadFileList(wxString dir)
     sort(files.begin(), files.end(), FileSortNatural);
 }
 
+void FileNameList::FillArrayWithFileNamesFrom(wxString dir, wxArrayString &arrayString)
+{
+    directory.Open(dir);
+
+    cout << "FillArrayWithFileNamesFrom(" << dir << ")" << endl;
+
+    if (!directory.IsOpened())
+    {
+        cout << "FAIL!" << endl;
+        return;
+    }
+
+    wxString filename;
+    int i, n = filters.size();
+    cout << n << " filters" << endl;
+
+
+    for (i = 0; i<n; i++)
+    {
+        bool cont = directory.GetFirst(&filename, filters[i], wxDIR_FILES);
+        while (cont)
+        {
+            wxFileName fn = directory.GetName() + wxT("\\") + filename;
+            arrayString.push_back(fn.GetFullPath());
+            cont = directory.GetNext(&filename);
+        }
+    }
+
+
+}
 
 void FileNameList::AddFilter(wxString ext)
 {

@@ -112,6 +112,8 @@ public:
     void EnableClose() { closeEnabled = true; }
     void OnTimer(wxTimerEvent &event);
 
+    void ResetZoom();
+
     void ClearCache();
     bool NextImage(int jump = 1);
     bool PrevImage(int jump = 1);

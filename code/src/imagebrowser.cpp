@@ -389,7 +389,22 @@ void ImageBrowser::MenuRescaleImages(wxCommandEvent &event)
 
     wxTreeItemId id = dirTreeCtrl->GetPopupMenuItem();
     wxDirItemData *data = (wxDirItemData*)(dirTreeCtrl->GetTreeCtrl()->GetItemData(id));
+    wxArrayString selectedFileNames;
 
+    //wxArrayString selectedPaths;
+    //
+    //dirTreeCtrl->GetPaths(selectedPaths);
+    fileNameList.AddFilter(wxT("*.jpg"));           // We only rescale JPEGs
+    fileNameList.AddFilter(wxT("*.jpeg"));
+    //
+    //for (int i = 0; i < selectedPaths.size(); i++)
+    //{
+    //    fileNameList.FillArrayWithFileNamesFrom(selectedPaths[i], selectedFileNames);
+    //}
+
+    cout << "R: " << data->m_path << endl;
+    fileNameList.FillArrayWithFileNamesFrom(data->m_path, selectedFileNames);
+    cout << selectedFileNames.size() << " files found" << endl;
     thumbnailCanvas->StopLoadingThumbnails(data->m_path);
 
 
@@ -397,11 +412,10 @@ void ImageBrowser::MenuRescaleImages(wxCommandEvent &event)
     int rescaleY = GetConfigParser()->GetIntWithDefault("rescaleY", 3000);
     wxString directory = data->m_path;
 
-    //ChooseRescaleSize *custom = new ChooseRescaleSize(*imageResizer);
     ChooseRescaleSize custom(rescaleX, rescaleY);
 
     if (custom.ShowModal() == wxID_OK)
-    {
+    { 
         int maxWidth  = custom.GetWidth();
         int maxHeight = custom.GetHeight();
 
@@ -410,18 +424,17 @@ void ImageBrowser::MenuRescaleImages(wxCommandEvent &event)
         GetConfigParser()->Write();
 
 
-        fileNameList.AddFilter(wxT("*.jpg"));           // We ony rescale JPEGs
-        fileNameList.AddFilter(wxT("*.jpeg"));
-        fileNameList.LoadFileList(directory);
+        //fileNameList.AddFilter(wxT("*.jpg"));           // We ony rescale JPEGs
+        //fileNameList.AddFilter(wxT("*.jpeg"));
+        //fileNameList.LoadFileList(directory);
 
-        int n = fileNameList.NumFiles();
+        int n = selectedFileNames.size();
 
         for (int i = 0; i < n; i++)
         {
-            wxFileName fullPath = fileNameList.files[i].fileName.GetFullPath();
-            //cout << "  " << i << ": " << fullPath.GetFullPath() << endl;
-
+            wxFileName fullPath = selectedFileNames[i];
             resizerEntries.emplace_back(fullPath, maxWidth, maxHeight);
+            cout << "RE: " << selectedFileNames[i] << endl;
         }
     }
     else
@@ -498,27 +511,27 @@ void ImageBrowser::MenuPopped(wxCommandEvent &event)
 
     wxWindowID id = wxNewId();
     menu->Append(id, "Renumber Images");
-    cout << "ID: " << id << endl;
+    //cout << "ID: " << id << endl;
     dirTreeCtrl->Bind(wxEVT_MENU,       &ImageBrowser::ReNumberImages, this, id);
 
     id = wxNewId();
     menu->Append(id, "Delete Directory");
-    cout << "ID: " << id << endl;
+    //cout << "ID: " << id << endl;
     dirTreeCtrl->Bind(wxEVT_MENU, &ImageBrowser::MenuDeleteDirectory, this, id);
 
     id = wxNewId();
     menu->Append(id, "Make Top Directory");
-    cout << "ID: " << id << endl;
+    //cout << "ID: " << id << endl;
     dirTreeCtrl->Bind(wxEVT_MENU, &ImageBrowser::MakeTopDirectory, this, id);
 
     id = wxNewId();
     menu->Append(id, "Rescale Images");
-    cout << "ID: " << id << endl;
+    //cout << "ID: " << id << endl;
     dirTreeCtrl->Bind(wxEVT_MENU, &ImageBrowser::MenuRescaleImages, this, id);
 
     id = wxNewId();
     menu->Append(id, "Open Directory");
-    cout << "ID: " << id << endl;
+    //cout << "ID: " << id << endl;
     dirTreeCtrl->Bind(wxEVT_MENU, &ImageBrowser::MenuOpenDirectory, this, id);
 
     menu->UpdateUI();
@@ -570,7 +583,7 @@ void ImageBrowser::OnDropDirFiles(wxDropFilesEvent& event)
             wxFileName fileName = s[i];
 
             wxString destination = data->m_path + fileName.GetFullName();
-            cout << "  copy " << fileName.GetFullPath() << " to " << destination << endl;
+            //cout << "  copy " << fileName.GetFullPath() << " to " << destination << endl;
             //wxCopyFile(name, destination);
         }
 
@@ -594,11 +607,12 @@ void ImageBrowser::CreateControls()
     sBarGlobal->SetFieldsCount(4);
     this->SetStatusBar(sBarGlobal);
 
-	dirTreeCtrl = new wxGenericDirCtrl(splitter1, ID_DIRECTORY_CTRL, _T("C:\\"), wxDefaultPosition, wxSize(640, 200), wxDIRCTRL_DIR_ONLY              |
-																													  wxDIRCTRL_EDIT_LABELS           |
+	dirTreeCtrl = new wxGenericDirCtrl(splitter1, ID_DIRECTORY_CTRL, _T("C:\\"), wxDefaultPosition, wxSize(640, 200), wxDIRCTRL_DIR_ONLY             |
+																													  wxDIRCTRL_EDIT_LABELS          |
 																													  wxDIRCTRL_POPUP_MENU           |
                                                                                                                       wxDIRCTRL_POPUP_MENU_SORT_NAME |
-                                                                                                                      wxDIRCTRL_POPUP_MENU_SORT_DATE);
+                                                                                                                      wxDIRCTRL_POPUP_MENU_SORT_DATE /*|
+                                                                                                                      wxDIRCTRL_MULTIPLE*/);
 
     treeCtrl = dirTreeCtrl->GetTreeCtrl();
     treeCtrl->Bind(wxEVT_TREE_ITEM_EXPANDED, &ImageBrowser::TreeExpanded, this, -1);
@@ -606,7 +620,7 @@ void ImageBrowser::CreateControls()
     treeCtrl->DragAcceptFiles(true);
     treeCtrl->Bind(wxEVT_DROP_FILES, &ImageBrowser::OnDropDirFiles, this, -1);
 
-    if (1)
+    if (0)
     {
         wxFrame *debuggingFrame = new wxFrame(this, -1, wxT("Debugging"), wxPoint(200, 600), wxSize(400, 400));
         debuggingWindow = new wxTextCtrl(debuggingFrame, -1, wxT("Test"), wxPoint(0, 0), wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
@@ -758,6 +772,43 @@ void ImageBrowser::TreeExpanded(wxTreeEvent &event)
     }
 }
 
+void ImageBrowser::SelectPathOnly(wxString path)
+{
+    //cout << "SelectPathOnly(" << path << ")" << endl;
+    //
+    //wxArrayString selectedPaths;
+    //
+    //dirTreeCtrl->GetPaths(selectedPaths);
+    //
+    //int i, n = selectedPaths.size();
+    //bool needToSelectPath = true;
+    //
+    //for (i = 0; i < n; i++)
+    //{
+    //    cout << "  " << selectedPaths[i] << endl;
+    //    if (selectedPaths[i] != path)
+    //    {
+    //        cout << "    deselecting " << endl;
+    //        dirTreeCtrl->SelectPath(selectedPaths[i], false);
+    //    }
+    //    else
+    //    {
+    //        cout << "    nope" << endl;
+    //        needToSelectPath = false;
+    //    }
+    //}
+    //
+    //if (needToSelectPath)
+    //{
+    //    cout << "  selecting " << path << endl;
+    //    dirTreeCtrl->SelectPath(path, true);
+    //}
+
+    dirTreeCtrl->UnselectAll();
+    //dirTreeCtrl->SelectPath(path, true);
+    dirTreeCtrl->ExpandPath(path);
+}
+
 
 void ImageBrowser::JumpToRandomDirectory(wxCommandEvent &event)
 {
@@ -765,6 +816,10 @@ void ImageBrowser::JumpToRandomDirectory(wxCommandEvent &event)
     static const int HAS_DIRS  = 2;
 
     int n = knownDirList.size();
+
+    if (!n)
+        return;
+
     int r = rand() % n;
 
     if (!n)
@@ -784,6 +839,7 @@ void ImageBrowser::JumpToRandomDirectory(wxCommandEvent &event)
         {
         case HAS_FILES:
             dirTreeCtrl->ExpandPath(fn.GetFullPath());
+            //SelectPathOnly(fn.GetFullPath());
             return;
 
         case HAS_DIRS:
@@ -796,6 +852,7 @@ void ImageBrowser::JumpToRandomDirectory(wxCommandEvent &event)
 
         case HAS_FILES + HAS_DIRS:
             dirTreeCtrl->ExpandPath(fn.GetFullPath());
+            //SelectPathOnly(fn.GetFullPath());
             return;
 
         default:
@@ -806,6 +863,7 @@ void ImageBrowser::JumpToRandomDirectory(wxCommandEvent &event)
     }
 
     dirTreeCtrl->ExpandPath(fn.GetFullPath());
+    //SelectPathOnly(fn.GetFullPath());
 }
 
 void ImageBrowser::TouchDirectory(wxCommandEvent& event)
@@ -1097,7 +1155,7 @@ wxThread::ExitCode ImageResizerPermanent::Entry()
 
     while (1)
     {
-        if (TestDestroy())
+        if (TestDestroy())          // Have we been asked to terminate?
         {
             break;
         }
@@ -1176,107 +1234,11 @@ wxThread::ExitCode ImageResizerPermanent::Entry()
 
         JpegWrite(fullPath.GetFullPath(), newWidth, newHeight, image.GetData());
         image.Destroy();
-        SaveState();
+
+        SaveState();                // Save our current state to a file, so that we can resume after a crash.
     }
 
     STATUS_TEXT(STATUS_BAR_INFORMATION, "  ");
-    return 0;
-}
-
-
-wxThread::ExitCode ImageResizer::Entry()
-{
-    const int X_OVERSIZE = 1;
-    const int Y_OVERSIZE = 2;
-    const int RESCALED   = 4;
-
-    FileNameList fileNameList;
-    wxImage      image;
-    wxString     s;
-
-
-    fileNameList.AddFilter(wxT("*.jpg"));           // We ony rescale JPEGs
-    fileNameList.AddFilter(wxT("*.jpeg"));
-    fileNameList.LoadFileList(directory);
-
-    int n = fileNameList.NumFiles();
-
-
-    for (int i = 0; i < n; i++)
-    {
-        wxFileName fullPath = fileNameList.files[i].fileName.GetFullPath();
-        //cout << "  " << i << ": " << fullPath.GetFullPath() << endl;
-
-        STATUS_TEXT(STATUS_BAR_INFORMATION, "Loading %d/%d", i, n);
-
-        LoadImage2(image, fullPath.GetFullPath());
-
-        if (!image.IsOk())
-        {
-            continue;
-        }
-
-        float imageWidth  = image.GetSize().GetWidth();
-        float imageHeight = image.GetSize().GetHeight();
-        int   newWidth    = image.GetSize().GetWidth();
-        int   newHeight   = image.GetSize().GetHeight();
-
-        float ratioX = imageWidth  / (float)maxWidth;
-        float ratioY = imageHeight / (float)maxHeight;
-
-        int   flags = 0;
-
-        if (ratioX > 1.0)   flags |= X_OVERSIZE;
-        if (ratioY > 1.0)   flags |= Y_OVERSIZE;
-
-
-        switch(flags)
-        {
-            default:
-            case 0:
-                break;
-
-            case X_OVERSIZE:
-                flags |= RESCALED;
-                newWidth  = int(imageWidth  / ratioX + 0.5);
-                newHeight = int(imageHeight / ratioX + 0.5);
-                break;
-
-            case Y_OVERSIZE:
-                flags |= RESCALED;
-                newWidth = int(imageWidth / ratioY + 0.5);
-                newHeight = int(imageHeight / ratioY + 0.5);
-                break;
-
-            case X_OVERSIZE | Y_OVERSIZE:
-                flags |= RESCALED;
-                if (ratioX > ratioY)
-                {
-                    newWidth = int(imageWidth / ratioX + 0.5);
-                    newHeight = int(imageHeight / ratioX + 0.5);
-                }
-                else
-                {
-                    newWidth = int(imageWidth / ratioY + 0.5);
-                    newHeight = int(imageHeight / ratioY + 0.5);
-                }
-                break;
-        }
-
-        if (flags & RESCALED)
-        {
-            STATUS_TEXT(STATUS_BAR_INFORMATION, "Rescaling %d/%d", i, n);
-            image.Rescale(newWidth, newHeight, wxIMAGE_QUALITY_HIGH);
-        }
-
-        STATUS_TEXT(STATUS_BAR_INFORMATION, "Saving %d/%d", i, n);
-
-        JpegWrite(fullPath.GetFullPath(), newWidth, newHeight, image.GetData());
-        image.Destroy();
-    }
-
-    STATUS_TEXT(STATUS_BAR_INFORMATION, " ");
-
     return 0;
 }
 

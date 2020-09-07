@@ -255,29 +255,32 @@ void BasicGLPanel::Render(bool blankScreen)
         GL_Image *newImage = imageServer.GetImage(imageNumberToLoad);
         //NoteTime(wxT("Image Loaded"));
 
-        if (currentImage)
+        if (newImage->loadedImage)
         {
-            bool isFullyVisible = currentImage->IsFullyVisible();
-
-            newImage->CopyScaleAndPositionFrom(*currentImage);
-            //cout << "Scale Diff = " << currentImage->GetScaleDifference(*newImage) << endl;
-            if (newImage->width > 400)
+            if (currentImage)
             {
-                if (isFullyVisible)
-                    newImage->SetScaleAndPosition(0, 0, 0.01);
+                bool isFullyVisible = currentImage->IsFullyVisible();
+
+                newImage->CopyScaleAndPositionFrom(*currentImage);
+                //cout << "Scale Diff = " << currentImage->GetScaleDifference(*newImage) << endl;
+                if (newImage->width > 400)
+                {
+                    if (isFullyVisible)
+                        newImage->SetScaleAndPosition(0, 0, 0.01);
+                    newImage->ExpandToSides();
+                }
+            }
+            else
+            {
+                newImage->Scale(0.01);
                 newImage->ExpandToSides();
             }
-        }
-        else
-        {
-            newImage->Scale(0.01);
-            newImage->ExpandToSides();
-        }
 
-        currentImage = newImage;
+            currentImage = newImage;
 
-        currentImageNumber = imageNumberToLoad;
-        imageNumberToLoad = -1;
+            currentImageNumber = imageNumberToLoad;
+            imageNumberToLoad = -1;
+        }
 
         if (currentImage)
         {

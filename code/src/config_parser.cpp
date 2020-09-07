@@ -203,7 +203,7 @@ void ConfigParser::Write()
 {
     ofstream source;                    // build a read-Stream
 
-    cout << "ConfigParser::Write()" << fileName << endl;
+    //cout << "ConfigParser::Write()" << fileName << endl;
 
     source.open(fileName, ios::out);     // open data
     
