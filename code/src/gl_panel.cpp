@@ -349,7 +349,7 @@ wxString BasicGLPanel::GetImageNumberInfo()
 	int numImages = imageServer.GetNumImages();
 	wxString s;
 
-	s.Printf("%d of %d", currentImageNumber, numImages);
+	s.Printf("%d of %d", currentImageNumber+1, numImages);
 	return s;
 }
 

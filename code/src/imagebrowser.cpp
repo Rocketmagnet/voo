@@ -839,7 +839,7 @@ void ImageBrowser::JumpToRandomDirectory(wxCommandEvent &event)
         {
         case HAS_FILES:
             dirTreeCtrl->ExpandPath(fn.GetFullPath());
-            //SelectPathOnly(fn.GetFullPath());
+            thumbnailCanvas->SetFocus();
             return;
 
         case HAS_DIRS:
@@ -852,7 +852,7 @@ void ImageBrowser::JumpToRandomDirectory(wxCommandEvent &event)
 
         case HAS_FILES + HAS_DIRS:
             dirTreeCtrl->ExpandPath(fn.GetFullPath());
-            //SelectPathOnly(fn.GetFullPath());
+            thumbnailCanvas->SetFocus();
             return;
 
         default:
@@ -863,7 +863,7 @@ void ImageBrowser::JumpToRandomDirectory(wxCommandEvent &event)
     }
 
     dirTreeCtrl->ExpandPath(fn.GetFullPath());
-    //SelectPathOnly(fn.GetFullPath());
+    thumbnailCanvas->SetFocus();
 }
 
 void ImageBrowser::TouchDirectory(wxCommandEvent& event)

@@ -764,7 +764,7 @@ void ThumbnailCanvas::OnFocusEvent(wxFocusEvent &event)
     {
 		cursorP.SetTo(0);
     }
-    UpdateStatusBar_File();
+    //UpdateStatusBar_File();
 }
 
 void ThumbnailCanvas::OnFocusKillEvent(wxFocusEvent &event)
@@ -1128,6 +1128,7 @@ void ThumbnailCanvas::OnMouseEvent(wxMouseEvent &event)
     }
     else if (event.LeftDown())
     {
+        cout << "LEFT DOWN" << endl;
         SetFocus();
 
         if (th > -1)
@@ -1306,13 +1307,18 @@ void ThumbnailCanvas::ClearStatusBar()
 
 void ThumbnailCanvas::UpdateStatusBar_File()
 {
-    if (selectionSetP.size() == 0)
-    {
+    cout << "UpdateStatusBar_File()" << endl;
+    //if (selectionSetP.size() == 0)
+    //{
+        cout << "selectionSetP.size() == 0" << endl;
+
         if (thumbnailIndex.size() > 0)
         {
+            cout << "thumbnailIndex.size() > 0" << endl;
             int index = thumbnailIndex[cursorP.GetNumber()];
             Thumbnail *tn = &thumbnails[index];
 
+            cout << "  " << index << endl;
             //cout << "Update Status: " << tn->GetFullPath().GetFullPath() << endl;
 
             wxFileName fn = tn->GetFullPath();
@@ -1323,7 +1329,7 @@ void ThumbnailCanvas::UpdateStatusBar_File()
             STATUS_TEXT(STATUS_BAR_FILE_SIZES, "%s,  %s - (%d x %d)", fn.GetHumanReadableSize().c_str(), dateString, imageSize.GetWidth(), imageSize.GetHeight());
             STATUS_TEXT(STATUS_BAR_FILE_FORMAT, fn.GetFullName().c_str());
         }
-    }
+    //}
 }
 
 wxPoint ThumbnailCanvas::GetThumbnailPosition(size_t n)
