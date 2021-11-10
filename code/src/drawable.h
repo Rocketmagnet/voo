@@ -5,6 +5,7 @@
 #include "wx/thread.h"
 #include <vector>
 
+#include "image_fft.h"
 #include "vector3d.h"
 #include <iostream>
 
@@ -188,8 +189,9 @@ public:
     double GetScaleDifference(const GL_Image& glImage) const;
     void   CalculateTextureSizes();
 
-    wxString    GetInfoString() const;
-    wxString    GetZoomInfo()   const;
+    wxString    GetInfoString()           const;
+    wxString    GetDimensionsString()     const;
+    wxString    GetZoomInfo()             const;
     void        SetFileName(wxString fn);
 
 
@@ -209,10 +211,17 @@ public:
     int         lastBlock;
     bool        loadedImage;
     wxString    fileName;
+    wxString    dimensionsString;
+
+    wxImage     subImage;
+    wxImage     fftImage;
+
+    //float       
 
 private:
 	jpeg_load_state		load_state;
     float               x, y, scale;  // (x=y=0 means image is centered)
+    ImageFFT            imageFFT;
 };
 
 

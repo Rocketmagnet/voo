@@ -49,9 +49,21 @@
 #define ID_DELETE_DIRECTORY     10005
 #define ID_ARCHIVE_DIRECTORY    10006
 #define ID_RANDOM_DIRECTORY     10007
-#define ID_TOUCH_DIRECTORY      10008
+#define ID_MARK_DIRECTORY       10008
+#define ID_BACK_DIRECTORY       10009
+#define ID_TOUCH_DIRECTORY      10010
 
-#define SYMBOL_IMAGEBROWSER_STYLE wxDEFAULT_FRAME_STYLE|wxCAPTION|wxRESIZE_BORDER|wxSYSTEM_MENU|wxMAXIMIZE|wxMINIMIZE_BOX|wxMAXIMIZE_BOX|wxCLOSE_BOX|wxSIMPLE_BORDER|wxTAB_TRAVERSAL
+#define SYMBOL_IMAGEBROWSER_STYLE       wxDEFAULT_FRAME_STYLE   |   \
+                                        wxCAPTION               |   \
+                                        wxRESIZE_BORDER         |   \
+                                        wxSYSTEM_MENU           |   \
+                                        wxMAXIMIZE              |   \
+                                        wxMINIMIZE_BOX          |   \
+                                        wxMAXIMIZE_BOX          |   \
+                                        wxCLOSE_BOX             |   \
+                                        wxSIMPLE_BORDER         |   \
+                                        wxTAB_TRAVERSAL
+
 #define SYMBOL_IMAGEBROWSER_TITLE _("Image Browser 3")
 #define SYMBOL_IMAGEBROWSER_IDNAME ID_IMAGEBROWSER
 #define SYMBOL_IMAGEBROWSER_SIZE wxSize(400, 300)
@@ -131,6 +143,7 @@ public:
 };
 
 
+
 //! ImageBrowser class declaration
 class ImageBrowser: public wxFrame
 {    
@@ -140,6 +153,8 @@ class ImageBrowser: public wxFrame
 public:
     /// Constructors
     ImageBrowser();
+    ImageBrowser(int showImageNumber);
+
     ImageBrowser(Image_BrowserApp* parent, wxWindowID id = SYMBOL_IMAGEBROWSER_IDNAME, const wxString& caption = SYMBOL_IMAGEBROWSER_TITLE, const wxPoint& pos = SYMBOL_IMAGEBROWSER_POSITION, const wxSize& size = SYMBOL_IMAGEBROWSER_SIZE, long style = SYMBOL_IMAGEBROWSER_STYLE );
 
     bool Create(Image_BrowserApp* parent, wxWindowID id = SYMBOL_IMAGEBROWSER_IDNAME, const wxString& caption = SYMBOL_IMAGEBROWSER_TITLE, const wxPoint& pos = SYMBOL_IMAGEBROWSER_POSITION, const wxSize& size = SYMBOL_IMAGEBROWSER_SIZE, long style = SYMBOL_IMAGEBROWSER_STYLE );
@@ -173,6 +188,7 @@ public:
 	void ReNumberImages(wxCommandEvent &evt);
     void MakeTopDirectory(wxCommandEvent &evt);
     void OnKeyDown(wxKeyEvent &event);
+    void OnTreeKeyDown(wxKeyEvent &event);
     void SetAcceleratorTable(const wxAcceleratorTable &accel);
     void RefreshDirTree(wxString path);
 
@@ -186,6 +202,8 @@ public:
 
     void        OnDropDirFiles(wxDropFilesEvent &event);
     void JumpToRandomDirectory(wxCommandEvent   &event);
+    void         MarkDirectory(wxCommandEvent   &event);
+    void         BackDirectory(wxCommandEvent   &event);
     void        TouchDirectory(wxCommandEvent   &event);
 
     wxString GetCurrentDir();
@@ -197,6 +215,9 @@ public:
     void testFunc2(int i);
     void SelectPathOnly(wxString path);
         
+    void LoadArrayString(wxArrayString &arrayString, wxString fileName);
+    void SaveArrayString(wxArrayString &arrayString, wxString fileName);
+    void SaveMarkedDirs();
 ////@begin ImageBrowser member variables
 
     Image_BrowserApp    *image_BrowserApp;
@@ -212,10 +233,14 @@ public:
 
 	wxArrayString		 privateDirs;
     wxArrayString        knownDirList;
+    wxArrayString        history;
+    wxArrayString		 markedDirsIncoming;
+    wxArrayString		 markedDirsOutgoing;
     wxString             currentDirectory;
 
     wxTimer              decorationTimer;
     bool                 allowTreeDecoration;
+    bool                 recordHistory;
 
     ImageResizerPermanent           imageResizerPermanent;
     deque_thread_safe<ResizerEntry> resizerEntries;
@@ -227,4 +252,4 @@ public:
 
 
 #endif
-    // _IMAGEBROWSER_H_
+// _IMAGEBROWSER_H_

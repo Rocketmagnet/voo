@@ -44,7 +44,7 @@ class ConfigParser;
 ////@end control identifiers
 
 #define TEXT_MSG(fmt, ...) { wxString s; s.Printf(fmt, __VA_ARGS__); if (textCtrl) textCtrl->AppendText(s);  /*std::cout << "* " << s << std::endl; */}
-
+/*
 class ImagePanel : public wxPanel
 {
     DECLARE_CLASS(ImagePanel)
@@ -52,16 +52,17 @@ class ImagePanel : public wxPanel
 
 public:
     ImagePanel(wxWindow* parent, wxWindowID id = ID_IMAGEPANEL, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = 0);
-
+    
     void DisplayImage(wxString filename);
     void OnPaint(wxPaintEvent &event);
     void OnMouseWheel(wxMouseEvent &event);
-
+    void OnMouse(wxMouseEvent &event);
+    
 private:
     wxImage     image;
     wxBitmap    bitmap;
 };
-
+*/
 
 enum DISAPPEAR_STATE
 {
@@ -103,10 +104,13 @@ public:
         glPanel->SetFileNameList(fnl);
     }
 
+    void DisplayImage(wxFileName fileName);
     void DisplayImage(int imageNumber);
     void OnKeyUp(wxKeyEvent &event);
     void OnKeyDown(wxKeyEvent &event);
     void OnMouseWheel(wxMouseEvent &event);
+    void OnMouse(wxMouseEvent &event);
+    void OnMouseLDClick(wxMouseEvent& event);
     void OnIdle(wxIdleEvent &event);
     void OnClose(wxCloseEvent &event);
     void EnableClose() { closeEnabled = true; }

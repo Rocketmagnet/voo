@@ -40,6 +40,7 @@ public:
     void MouseReleased(wxMouseEvent& event);
     void RightClick(wxMouseEvent& event);
     void MouseLeftWindow(wxMouseEvent& event);
+    void MouseDClick(wxMouseEvent &event);
     void KeyPressed(wxKeyEvent& event);
     void KeyReleased(wxKeyEvent& event);
     void Render(bool blankScreen);

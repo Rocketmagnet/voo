@@ -4,8 +4,10 @@
 #include <iostream>
 #include "wx/bitmap.h"
 #include "wx/filename.h"
+#include "wx/textctrl.h"
 #include "file_name_list.h"
 #include "wx/thread.h"
+#include "wx/dialog.h"
 
 
 extern "C"
@@ -55,7 +57,6 @@ public:
         v.clear();
         AddFrom(src);
     }
-
 
     void AddSingle(int s)
     {
@@ -318,6 +319,15 @@ private:
     FileNameList    &fileNameList;
 };
 
+class PasswordDialog : public wxDialog
+{
+public:
+    PasswordDialog();
+    wxString GetPass() { return passCtrl->GetValue(); }
+
+    wxTextCtrl     *passCtrl;
+};
+
 
 
 // Loads a single thumbnail, then quits.
@@ -415,6 +425,11 @@ public:
     //void SetImageSize(wxSize size);
     void FinishedLoading()  { imageLoaded = true; }
     friend class ThumbnailLoader;
+
+    void SetDateTime(wxDateTime dt) { dateTime = dt; }
+    const wxDateTime& GetDateTime() const { return dateTime; }
+    const wxFileName& GetFileName() const { return fullPath; }
+
     //friend class ThumbnailCanvas;
 protected:
 
@@ -438,7 +453,6 @@ protected:
 };
 
 
-
 class ThumbnailCanvas : public wxScrolledWindow
 {
     enum DRAG_STATE
@@ -455,12 +469,16 @@ class ThumbnailCanvas : public wxScrolledWindow
 
     };
 
+    static const int SORT_NAME_FORWARDS = 1;
+    static const int SORT_DATE_FORWARDS = 2;
+
 public:
 	ThumbnailCanvas(ImageBrowser *imgBrs, wxWindow *parent, wxWindowID, const wxPoint &pos, const wxSize &size);
 	~ThumbnailCanvas();
 
 	void OnPaint(wxPaintEvent &event);
-	void CreateAntiAliasedBitmap();
+    void OnContextMenu(wxMouseEvent &event);
+    void CreateAntiAliasedBitmap();
 	void ClearThumbnails();
 	void LoadThumbnails(wxString directory);
     void UnLoadThumbnails(wxString directory);
@@ -513,8 +531,26 @@ public:
 
     void ReadHeadersCompleted() { readHeadersCompleted = true; }
 
+    void SortThumbnailsByName(wxCommandEvent & evt);
+    void SortThumbnailsByDate(wxCommandEvent & evt);
+    void RenameSequence(wxCommandEvent & evt);
+
+    bool operator()(int a, int b)
+    {
+        std::cout << a << "<" << b << std::endl;
+
+        if (sortType == SORT_NAME_FORWARDS)      return thumbnails[a].GetFileName().GetName() < thumbnails[b].GetFileName().GetName();
+        if (sortType == SORT_DATE_FORWARDS)      return thumbnails[a].GetDateTime().IsEarlierThan(thumbnails[b].GetDateTime());
+    }
+
+
 private:
     void HandleCursorScrolling();
+    void AddPopupMenuItem(const wxString& label, void(ThumbnailCanvas::*function)(wxCommandEvent &));
+    int  GetAvailableID() { return m_availableID++; }
+    int  FindThumbnailIndex(int th);
+
+    bool CheckPasswordProtection(wxString directory);
 
     //void ReportInt1(int pos, wxString str, int i);
     //void ReportInt2(int pos, wxString str, int i, int j);
@@ -555,6 +591,12 @@ private:
     //ConfigParser           *configParser;
     bool                    readHeadersCompleted;
     wxFileDataObject       *dragingFilesDataObject;
+    wxMenu*                 popUpMenu;
+    int                     m_availableID;
+
+    int                     sortType;
+
+    wxArrayString           allowedDirectories;
 
 	wxDECLARE_EVENT_TABLE();
 };

@@ -451,8 +451,24 @@ void  VideoThumbnailReader::CreateBitmap(char *imageData, int width, int height,
         }
         else                                    // Destination is wider than source
         {                                       // Touching at top/bottom
-            cout << "Aspect 2 " << sWidth << ", " << sHeight << endl;
+            //cout << "Aspect 2 " << sWidth << ", " << sHeight << endl;
             //cout << "C" << endl;
+            sx1 = 0;
+            sx2 = sWidth;
+
+            sy2 = sHeight;
+            sy1 = 0;
+
+            dx1 = 0;
+            dx2 = sWidth * dHeight / sHeight;
+            dy1 = 0;
+            dy2 = height;
+
+            newWidth = dx2;
+            newHeight = dy2;
+
+            cout << sx1 << ", " << sy1 << ", " << sx2 << ", " << sy2 << endl;
+            cout << dx1 << ", " << dy1 << ", " << dx2 << ", " << dy2 << endl;
         }
 
         //int i = 3*width * (-y1 * height / (m_format->imageHeightPels*2));

@@ -53,6 +53,8 @@ BEGIN_EVENT_TABLE( ImageViewer, wxFrame )
     //EVT_IDLE(ImageViewer::OnIdle)
     EVT_TIMER(IMAGE_VIEWER_TIMER_ID, ImageViewer::OnTimer)
     EVT_MOUSEWHEEL(ImageViewer::OnMouseWheel)
+    EVT_MOUSE_EVENTS(ImageViewer::OnMouse)
+    EVT_LEFT_DCLICK(ImageViewer::OnMouseLDClick)
     EVT_CLOSE(ImageViewer::OnClose)
 END_EVENT_TABLE()
 
@@ -85,10 +87,11 @@ ImageViewer::ImageViewer(ImageBrowser* parent, wxWindowID id, const wxString& ca
     Init();
     //cout << "ImageViewer::ImageViewer(" << parent << ") " << this << endl;
 
-    wxSize sz(wxSystemSettings::GetMetric(wxSYS_SCREEN_X)+16, wxSystemSettings::GetMetric(wxSYS_SCREEN_Y));
+    wxSize sz(wxSystemSettings::GetMetric(wxSYS_SCREEN_X)+4, wxSystemSettings::GetMetric(wxSYS_SCREEN_Y)+4);
     //wxSize sz(400,400);
     //Create(parent, id, caption, wxPoint(-8, -8), sz, style);
     Create(parent, id, caption, wxPoint(-2, -2), sz, style);
+    //Create(parent, id, caption, wxPoint(0,0), sz, style);
 
     //wxTextCtrl* dropTarget = new wxTextCtrl(this, wxID_ANY, _("Drop files onto me!"), wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
     //dropTarget->DragAcceptFiles(true);
@@ -272,6 +275,50 @@ void ImageViewer::ClearCache()
     glPanel->ClearCache();
 }
 
+
+void ImageViewer::DisplayImage(wxFileName fileName)
+{
+    /*
+    wxString ext        = fileName.GetExt();
+    ext.MakeLower();
+
+    cout << "videoFileExtensions = " << videoFileExtensions << endl;
+
+    if (videoFileExtensions.Contains(ext))
+    {
+        cout << "It's a video!" << endl;
+        wxString command = videoPlayerPath + wxT(" \"") + fileName.GetFullPath() + wxT("\"");
+        cout << command << endl;
+        wxExecute(command.c_str(), wxEXEC_ASYNC, NULL);
+
+        return;
+    }
+
+
+    //TEXT_MSG("ImageViewer::DisplayImage(%d)\n", imageNumber);
+
+    if (imageNumber < 0)
+        return;
+
+    if (imageNumber > fileNameList->MaxFileNumber())
+        return;
+
+    currentImage = imageNumber;
+
+    if (glPanel)
+    {
+        //TEXT_MSG("  Display\n");
+        Show(true);
+        ////ShowFullScreen(true);
+        displayNumber = imageNumber;
+        SetFocus();
+        Refresh();
+        timer.Start(10);
+        disappearState = DISAPPEAR_STATE_NONE;
+    }
+    */
+}
+
 // Called by ThumbnailCanvas whenever an image is requested
 // to be displayed.
 // 
@@ -306,6 +353,9 @@ void ImageViewer::DisplayImage(int imageNumber)
 
     if (glPanel)
     {
+        //long styleflag = GetWindowStyle();
+        //SetWindowStyle(styleflag | wxSTAY_ON_TOP);
+
         //TEXT_MSG("  Display\n");
         Show(true);
         ////ShowFullScreen(true);
@@ -437,19 +487,39 @@ void ImageViewer::OnClose(wxCloseEvent &event)
 
 void ImageViewer::OnMouseWheel(wxMouseEvent &event)
 {
+    cout << "ImageViewer::OnMouseWheel()\n";
     int newImage = currentImage;
 
-    if (event.GetWheelRotation() < 0)
+    if (event.GetWheelRotation() > 0)
     {
         PrevImage();
     }
 
-    if (event.GetWheelRotation() > 0)
+    if (event.GetWheelRotation() < 0)
     {
         NextImage();
     }
 
     event.Skip();
+}
+
+
+void ImageViewer::OnMouse(wxMouseEvent& event)
+{
+    cout << "ImageViewer::OnMouse()\n";
+
+    if (event.LeftDClick())
+    {
+        cout << "Left Double Click\n";
+        disappearState = DISAPPEAR_STATE_REQUESTED;
+        //Disappear();
+    }
+}
+
+void ImageViewer::OnMouseLDClick(wxMouseEvent& event)
+{
+    cout << "ImageViewer::OnMouseLDClick()\n";
+    Disappear();
 }
 
 void ImageViewer::HomeImage()

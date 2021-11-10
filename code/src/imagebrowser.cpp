@@ -72,22 +72,23 @@ IMPLEMENT_CLASS(ImageBrowser, wxFrame)
  */
 
 BEGIN_EVENT_TABLE(ImageBrowser, wxFrame)
-	EVT_DIRCTRL_SELECTIONCHANGED(ID_DIRECTORY_CTRL, ImageBrowser::OnDirClicked)
-	//EVT_DIRCTRL_MENU_POPPED_UP(wxID_MENU_DIR,       ImageBrowser::DirMenuPopped)
-    EVT_DIRCTRL_SHOWING_POPUP_MENU(0,               ImageBrowser::MenuPopped)
-    EVT_KEY_DOWN(                                   ImageBrowser::OnKeyDown)
-    EVT_MENU(ID_DELETE_DIRECTORY,                   ImageBrowser::OnDeleteDirectory)
-    EVT_MENU(ID_ARCHIVE_DIRECTORY,                  ImageBrowser::OnArchiveDirectory)
-    EVT_MENU(ID_RANDOM_DIRECTORY,                   ImageBrowser::JumpToRandomDirectory)
-    EVT_MENU(ID_TOUCH_DIRECTORY,                    ImageBrowser::TouchDirectory)
-    EVT_TIMER(555, ImageBrowser::OnDecorationTimer)
+    EVT_KEY_DOWN(                                         ImageBrowser::OnKeyDown)
+    EVT_DIRCTRL_SHOWING_POPUP_MENU(0,                     ImageBrowser::MenuPopped)
+    EVT_TIMER(                     555,                   ImageBrowser::OnDecorationTimer)
+    EVT_DIRCTRL_SELECTIONCHANGED(  ID_DIRECTORY_CTRL,     ImageBrowser::OnDirClicked)
+    EVT_MENU(                      ID_DELETE_DIRECTORY,   ImageBrowser::OnDeleteDirectory)
+    EVT_MENU(                      ID_ARCHIVE_DIRECTORY,  ImageBrowser::OnArchiveDirectory)
+    EVT_MENU(                      ID_RANDOM_DIRECTORY,   ImageBrowser::JumpToRandomDirectory)
+    EVT_MENU(                      ID_MARK_DIRECTORY,     ImageBrowser::MarkDirectory)
+    EVT_MENU(                      ID_BACK_DIRECTORY,     ImageBrowser::BackDirectory)
+    EVT_MENU(                      ID_TOUCH_DIRECTORY,    ImageBrowser::TouchDirectory)
 END_EVENT_TABLE()
 
-//BEGIN_EVENT_TABLE(wxGenericTreeCtrl, wxFrame)
+//BEGIN_EVENT_TABLE(wxGenericTreeCtrl, wxControl)
 //    EVT_DIRCTRL_SELECTIONCHANGED(ID_DIRECTORY_CTRL, ImageBrowser::OnDirClicked)
 //    //EVT_DIRCTRL_MENU_POPPED_UP(wxID_MENU_DIR,       ImageBrowser::DirMenuPopped)
 //    EVT_DIRCTRL_SHOWING_POPUP_MENU(0, ImageBrowser::MenuPopped)
-//    EVT_KEY_DOWN(ImageBrowser::OnKeyDown)
+//      EVT_KEY_DOWN(ImageBrowser::OnTreeKeyDown)
 //    EVT_MENU(ID_DELETE_DIRECTORY, ImageBrowser::OnDeleteDirectory)
 //    EVT_MENU(ID_ARCHIVE_DIRECTORY, ImageBrowser::OnArchiveDirectory)
 //    EVT_MENU(ID_RANDOM_DIRECTORY, ImageBrowser::JumpToRandomDirectory)
@@ -101,19 +102,22 @@ END_EVENT_TABLE()
 ImageBrowser::ImageBrowser()
 : allowTreeDecoration(false),
   decorationTimer(this, 555),
-  imageResizerPermanent(resizerEntries)
+  imageResizerPermanent(resizerEntries),
+  recordHistory(true)
 {
-    //cout << "ImageBrowser::ImageBrowser() " << this << endl;
+    history.reserve(32);
     Init();
 }
+
 
 ImageBrowser::ImageBrowser(Image_BrowserApp* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style )
 : allowTreeDecoration(false),
   decorationTimer(this, 555),
   image_BrowserApp(parent),
-  imageResizerPermanent(resizerEntries)
+  imageResizerPermanent(resizerEntries),
+  recordHistory(true)
 {
-    //cout << "ImageBrowser::ImageBrowser(" << parent << ") " << this << endl;
+    history.reserve(32);
     Init();
     Create( parent, id, caption, pos, size, style );
 }
@@ -123,10 +127,16 @@ ImageBrowser::ImageBrowser(Image_BrowserApp* parent, wxWindowID id, const wxStri
  * ImageBrowser creator
  */
 
+ImageBrowser::ImageBrowser(int showImageNumber)
+: imageResizerPermanent(resizerEntries)
+{
+    Init();
+}
+
 bool ImageBrowser::Create(Image_BrowserApp* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style )
 {
 ////@begin ImageBrowser creation
-    //cout << "ImageBrowser::Create(" << parent << ")" << endl;
+    //cout << "ImageBrowser::Create(" << parent << ")  style = " << style << endl;
     wxFrame::Create( NULL, id, caption, pos, size, style );
     //cout << "ImageBrowser::Create done frame create" << endl;
 
@@ -138,17 +148,7 @@ bool ImageBrowser::Create(Image_BrowserApp* parent, wxWindowID id, const wxStrin
 
     decorationTimer.StartOnce(1000);
     imageResizerPermanent.Run();
-
-    //ResizerEntry re;
-    //re.fileName = wxFileName("C:\data\Test1.txt");
-    //re.xSize = 666;
-    //re.ySize = 999;
-    //resizerEntries.emplace_back(re);
-    //
-    //re.fileName = wxFileName("C:\data\Test2.txt");
-    //re.xSize = 222;
-    //re.ySize = 111;
-    //resizerEntries.emplace_back(re);
+    LoadArrayString(markedDirsIncoming, "marked.txt");
 
     return true;
 }
@@ -160,6 +160,7 @@ bool ImageBrowser::Create(Image_BrowserApp* parent, wxWindowID id, const wxStrin
 
 ImageBrowser::~ImageBrowser()
 {
+    SaveMarkedDirs();
 }
 
 
@@ -441,8 +442,6 @@ void ImageBrowser::MenuRescaleImages(wxCommandEvent &event)
     {
         //cout << "Hit Cancel" << endl;
     }
-
-
 }
 
 /*
@@ -651,12 +650,14 @@ void ImageBrowser::CreateControls()
     }
     dirTreeCtrl->ExpandPath(currentDirectory);
 
-    wxAcceleratorEntry entries[3];
+    wxAcceleratorEntry entries[6];
     entries[0].Set(wxACCEL_CTRL, (int) 'D', ID_DELETE_DIRECTORY);
     entries[1].Set(wxACCEL_CTRL, (int) 'K', ID_ARCHIVE_DIRECTORY);
     entries[2].Set(wxACCEL_CTRL, (int) 'R', ID_RANDOM_DIRECTORY);
-    entries[1].Set(wxACCEL_CTRL, (int) 'T', ID_TOUCH_DIRECTORY);
-    wxAcceleratorTable accel(3, entries);
+    entries[3].Set(wxACCEL_CTRL, (int) 'M', ID_MARK_DIRECTORY);
+    entries[4].Set(wxACCEL_CTRL, (int) 'T', ID_TOUCH_DIRECTORY);
+    entries[5].Set(wxACCEL_CTRL, (int) 'B', ID_BACK_DIRECTORY);
+    wxAcceleratorTable accel(6, entries);
     SetAcceleratorTable(accel);
 }
 
@@ -745,9 +746,23 @@ void ImageBrowser::OnDirClicked(wxTreeEvent& event)
 
     if (dirTreeCtrl)
 	{
+        if (recordHistory && thumbnailCanvas->GetNumThumbnails())
+        {
+            history.Add(currentDirectory);
+            for (auto hist : history)
+            {
+                cout << "History: " << hist << endl;
+            }
+        }
+        else
+        {
+            recordHistory = true;
+        }
+        
         wxTreeItemId id = event.GetItem();
         currentDirectory = dirTreeCtrl->GetPath(id);
-    
+
+
         dirTreeCtrl->GetTreeCtrl()->SetScrollPos(wxHORIZONTAL, 0, true);
 
 		thumbnailCanvas->LoadThumbnails(currentDirectory);
@@ -810,20 +825,93 @@ void ImageBrowser::SelectPathOnly(wxString path)
 }
 
 
+void ImageBrowser::BackDirectory(wxCommandEvent& event)
+{
+    if (history.size())
+    {
+        wxString path = history.back();
+        history.pop_back();
+        recordHistory = false;
+        dirTreeCtrl->ExpandPath(path);
+    }
+}
+
+void ImageBrowser::MarkDirectory(wxCommandEvent& event)
+{
+    cout << "Marking: " << currentDirectory << endl;
+
+    markedDirsOutgoing.push_back(currentDirectory);
+    cout << markedDirsOutgoing.size() << endl;
+    //SaveArrayString(markedDirsOutgoing, "marked.txt");
+    SaveMarkedDirs();
+}
+
+
+// Save the incoming and outgoing arrays to a file, with no duplicates
+void ImageBrowser::SaveMarkedDirs()
+{
+    //cout << "Saving Marked" << endl;
+    wxTextFile out("marked.txt");
+
+    out.Open();
+    out.Clear();
+
+    // Save Outgoing
+    int i, n = markedDirsIncoming.size();
+
+    for (i=0; i<n; i++)
+    {
+        //cout << "  Out: " << markedDirsIncoming[i] << endl;
+        out.AddLine(markedDirsIncoming[i]);
+    }
+
+    // Save Incoming (but checking for duplicates)
+    n = markedDirsOutgoing.size();
+    for (i = 0; i < n; i++)
+    {
+        //cout << "  In:  " << markedDirsOutgoing[i] << endl;
+        wxString path = markedDirsOutgoing[i];
+        if (markedDirsIncoming.Index(path) == wxNOT_FOUND)      // duplicate check
+        {
+            out.AddLine(path);
+        }
+    }
+
+    out.Write();
+    out.Close();
+}
+
 void ImageBrowser::JumpToRandomDirectory(wxCommandEvent &event)
 {
     static const int HAS_FILES = 1;
     static const int HAS_DIRS  = 2;
 
+    if ((rand() & 0x0F) == 0x00)
+    {
+        if (markedDirsIncoming.size())
+        {
+            wxString path = markedDirsIncoming.front();
+            cout << "Using Marked directory " << path << endl;
+            markedDirsIncoming.RemoveAt(0, 1);
+            dirTreeCtrl->ExpandPath(path);
+
+            treeCtrl->SetFocus();                   // Set focus away from thumbnailCanvas and back
+            thumbnailCanvas->SetFocus();            // to ensure TNC get a focus event.
+            SaveMarkedDirs();
+            return;
+        }
+    }
     int n = knownDirList.size();
+
 
     if (!n)
         return;
 
     int r = rand() % n;
 
-    if (!n)
-        return;
+    //cout << "Using Random directory " << r << " / " << n << endl;
+    //if (!n)
+    //    return;
 
     wxFileName fn(knownDirList[r]);
     wxString sub;
@@ -839,6 +927,7 @@ void ImageBrowser::JumpToRandomDirectory(wxCommandEvent &event)
         {
         case HAS_FILES:
             dirTreeCtrl->ExpandPath(fn.GetFullPath());
+            treeCtrl->SetFocus();
             thumbnailCanvas->SetFocus();
             return;
 
@@ -852,6 +941,7 @@ void ImageBrowser::JumpToRandomDirectory(wxCommandEvent &event)
 
         case HAS_FILES + HAS_DIRS:
             dirTreeCtrl->ExpandPath(fn.GetFullPath());
+            treeCtrl->SetFocus();
             thumbnailCanvas->SetFocus();
             return;
 
@@ -863,6 +953,7 @@ void ImageBrowser::JumpToRandomDirectory(wxCommandEvent &event)
     }
 
     dirTreeCtrl->ExpandPath(fn.GetFullPath());
+    treeCtrl->SetFocus();
     thumbnailCanvas->SetFocus();
 }
 
@@ -872,9 +963,23 @@ void ImageBrowser::TouchDirectory(wxCommandEvent& event)
     currentDirectory.Touch();
 }
 
+void ImageBrowser::OnTreeKeyDown(wxKeyEvent& event)
+{
+    cout << "Tree Key Down" << endl;
+}
 
 void ImageBrowser::OnKeyDown(wxKeyEvent &event)
 {
+    switch (event.GetKeyCode())
+    {
+        case '1':
+            cout << "BACKSPACE" << endl;
+            wxString path = history.back();
+            history.pop_back();
+            recordHistory = false;
+            dirTreeCtrl->ExpandPath(path);
+            break;
+    }
     cout << "ImageBrowser::OnKeyDown(" << event.GetKeyCode() << ")" << endl;
 }
 
@@ -1033,6 +1138,44 @@ void ImageBrowser::MenuDeleteDirectory(wxCommandEvent &evt)
 void ImageBrowser::OnArchiveDirectory(wxCommandEvent &event)
 {
 
+}
+
+
+void ImageBrowser::LoadArrayString(wxArrayString &arrayString, wxString fileName)
+{
+    wxTextFile in(fileName);
+
+    if (!in.Exists())
+        return;
+
+    in.Open();
+
+    int i, n = in.GetLineCount();
+
+    for (i = 0; i < n; i++)
+    {
+        wxString path = in.GetLine(i);
+        arrayString.push_back(path);
+    }
+    in.Close();
+}
+
+
+void ImageBrowser::SaveArrayString(wxArrayString &arrayString, wxString fileName)
+{
+    wxTextFile out(fileName);
+
+    out.Open();
+    out.Clear();
+
+    int i, n = arrayString.size();
+
+    for (i=0; i<n; i++)
+    {
+        out.AddLine(arrayString[i]);
+    }
+    out.Write();
+    out.Close();
 }
 
 
@@ -1232,7 +1375,7 @@ wxThread::ExitCode ImageResizerPermanent::Entry()
 
         STATUS_TEXT(STATUS_BAR_INFORMATION, "Saving %s %d remain", fileNameFragment, imagesRemaining);
 
-        JpegWrite(fullPath.GetFullPath(), newWidth, newHeight, image.GetData());
+        JpegWrite(fullPath.GetFullPath(), newWidth, newHeight, image.GetData(), 80);
         image.Destroy();
 
         SaveState();                // Save our current state to a file, so that we can resume after a crash.

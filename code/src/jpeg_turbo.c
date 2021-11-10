@@ -180,7 +180,7 @@ int JpegRead(unsigned char* imageBuffer, jpeg_load_state* load_state)
 }
 
 
-int JpegWrite(const char* filename, int width, int height, unsigned char *data)
+int JpegWrite(const char* filename, int width, int height, unsigned char *data, int quality)
 {
     struct jpeg_compress_struct cinfo;
     struct jpeg_error_mgr jerr;
@@ -219,7 +219,7 @@ int JpegWrite(const char* filename, int width, int height, unsigned char *data)
     cinfo.in_color_space   = JCS_RGB;         // Arbitrary guess
     jpeg_set_defaults(&cinfo);
 
-    jpeg_set_quality(&cinfo, 95, TRUE);
+    jpeg_set_quality(&cinfo, quality, TRUE);
     printf("D2\n");
     jpeg_start_compress(&cinfo, TRUE);
     printf("E\n");

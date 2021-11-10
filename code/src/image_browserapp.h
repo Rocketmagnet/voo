@@ -75,7 +75,8 @@ public:
     ConfigParser* GetConfigParser() {return &configParser;}
     ImageBrowser *imageBrowser;
     ConfigParser  configParser;
-    ////@begin Image_BrowserApp event handler declarations
+
+////@begin Image_BrowserApp event handler declarations
 
 ////@end Image_BrowserApp event handler declarations
 

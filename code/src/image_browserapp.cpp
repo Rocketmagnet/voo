@@ -126,8 +126,10 @@ bool Image_BrowserApp::OnInit()
     //cout << "currentDirectory = " << currentDirectory  << " success=" << success << endl;
     if (success)
     {
-        //cout << "Setting currentDirectory to " << currentDirectory << endl;
-        configParser.SetString("currentDirectory", currentDirectory.ToStdString());
+        wxFileName fileName = currentDirectory; // .ToStdString();
+        configParser.SetString("currentDirectory", fileName.GetPath().ToStdString());
+
+
     }
 
 
@@ -143,7 +145,8 @@ bool Image_BrowserApp::OnInit()
 #if wxUSE_GIF
 	wxImage::AddHandler(new wxGIFHandler);
 #endif
-	imageBrowser = new ImageBrowser( this, -1, _T("Image Browser 2"), wxPoint(700,0), wxSize(1200, 640));
+
+	imageBrowser = new ImageBrowser( this, -1, _T("Image Browser"), wxPoint(700,0), wxSize(1200, 640));
     imageBrowser->Show(true);
 
 

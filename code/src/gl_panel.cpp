@@ -15,25 +15,26 @@ extern void NoteTime(wxString s);
 
 
 BEGIN_EVENT_TABLE(BasicGLPanel, wxGLCanvas)
-    EVT_MOTION(      BasicGLPanel::MouseMoved)
-    EVT_LEFT_DOWN(   BasicGLPanel::MouseDown)
-    EVT_LEFT_UP(     BasicGLPanel::MouseReleased)
-    EVT_RIGHT_DOWN(  BasicGLPanel::RightClick)
-    EVT_LEAVE_WINDOW(BasicGLPanel::MouseLeftWindow)
+    //EVT_MOTION(      BasicGLPanel::MouseMoved)
+    //EVT_LEFT_DOWN(   BasicGLPanel::MouseDown)
+    //EVT_LEFT_UP(     BasicGLPanel::MouseReleased)
+    //EVT_LEFT_DCLICK( BasicGLPanel::MouseDClick)
+    //EVT_RIGHT_DOWN(  BasicGLPanel::RightClick)
+    //EVT_LEAVE_WINDOW(BasicGLPanel::MouseLeftWindow)
     EVT_SIZE(        BasicGLPanel::Resized)
-    EVT_MOUSEWHEEL(  BasicGLPanel::MouseWheelMoved)
+    //EVT_MOUSEWHEEL(  BasicGLPanel::MouseWheelMoved)
     EVT_PAINT(       BasicGLPanel::OnPaint)
 END_EVENT_TABLE()
 
 
 // some useful events to use
-void BasicGLPanel::MouseMoved(wxMouseEvent& event)      {event.Skip();}
-void BasicGLPanel::MouseDown(wxMouseEvent& event)       {event.Skip();}
-void BasicGLPanel::MouseWheelMoved(wxMouseEvent& event) {event.Skip();}
-void BasicGLPanel::MouseReleased(wxMouseEvent& event)   {event.Skip();}
-void BasicGLPanel::RightClick(wxMouseEvent& event)      {event.Skip();}
-void BasicGLPanel::MouseLeftWindow(wxMouseEvent& event) {event.Skip();}
-
+void BasicGLPanel::MouseMoved(wxMouseEvent& event)      { cout << "BasicGLPanel::MouseMoved()\n"; event.Skip();}
+void BasicGLPanel::MouseDown(wxMouseEvent& event)       { cout << "BasicGLPanel::MouseDown()\n"; event.Skip();}
+void BasicGLPanel::MouseWheelMoved(wxMouseEvent& event) { cout << "BasicGLPanel::MouseWheelMoved()\n"; event.Skip();}
+void BasicGLPanel::MouseReleased(wxMouseEvent& event)   { cout << "BasicGLPanel::MouseReleased()\n"; event.Skip();}
+void BasicGLPanel::RightClick(wxMouseEvent& event)      { cout << "BasicGLPanel::RightClick()\n"; event.Skip();}
+void BasicGLPanel::MouseLeftWindow(wxMouseEvent& event) { cout << "BasicGLPanel::MouseLeftWindow()\n"; event.Skip();}
+void BasicGLPanel::MouseDClick(wxMouseEvent& event)     { cout << "BasicGLPanel::MouseDClick()\n"; event.Skip(); }
 
 BasicGLPanel::BasicGLPanel(wxFrame* parent, int* args)
 : wxGLCanvas(parent, -1, 0, wxDefaultPosition, wxDefaultSize, 0, wxT("GLCanvas")),
@@ -46,6 +47,8 @@ BasicGLPanel::BasicGLPanel(wxFrame* parent, int* args)
 {
     m_context = new wxGLContext(this);
     imageServer.SetPointers(this, m_context);
+
+    //subImage.Create(256, 256, true);
 
 }
 
@@ -309,15 +312,22 @@ void BasicGLPanel::Render(bool blankScreen)
         if (fontTimeRemaining)
         {
             fontTimeRemaining--;
+            float transparency = 1.0f;
+
+            if (fontTimeRemaining < 20)
+                transparency = fontTimeRemaining * 0.05f;
+
             glLoadIdentity();
 			wxString s = currentImage->GetInfoString();
 			s.Append("\n");
 			s.Append(GetImageNumberInfo());
 
-            screenFont.SetColour(0.0f, 0.0f, 0.0f, 0.5f);
+            screenFont.SetColour(0.0f, 0.0f, 0.0f, transparency*0.5f);
             screenFont.Print(2.0, 2.0, 24.0, s);
-            screenFont.SetColour(1, 1, 1, 1);
+            screenFont.SetColour(1, 1, 1, transparency);
             screenFont.Print(0.0, 0.0, 24.0, s);
+            screenFont.SetColour(1, 1, 1, 1);
+            screenFont.Print(0.0, 120.0, 24.0, " ");
 
 			//s.Printf("%d/%d", currentImageNumber, 0);
 			//screenFont.SetColour(0.0f, 0.0f, 0.0f, 0.5f);
@@ -326,14 +336,22 @@ void BasicGLPanel::Render(bool blankScreen)
 			//screenFont.Print(0.0, 60.0, 24.0, s);
 		}
 
-        if (zoomTimeRemaining)
+        if (zoomTimeRemaining)          // For a while after we adust the zoom, show the zoom percentage on the screen
         {
             zoomTimeRemaining--;
+
+            float transparency = 1.0f;
+
+            if (zoomTimeRemaining < 20)
+                transparency = zoomTimeRemaining * 0.05f;
+
             glLoadIdentity();
-            screenFont.SetColour(0.0f, 0.0f, 0.0f, 0.5f);
-            screenFont.Print(2.0, 122.0, 24.0, currentImage->GetZoomInfo());
+            screenFont.SetColour(0.0f, 0.0f, 0.0f, transparency*0.5f);
+            screenFont.Print(2.0, 152.0, 24.0, currentImage->GetZoomInfo());
+            screenFont.SetColour(1, 1, 1, transparency);
+            screenFont.Print(0.0, 150.0, 24.0, currentImage->GetZoomInfo());
             screenFont.SetColour(1, 1, 1, 1);
-            screenFont.Print(0.0, 120.0, 24.0, currentImage->GetZoomInfo());
+            screenFont.Print(0.0, 150.0, 24.0, " ");
         }
     }
 

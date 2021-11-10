@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -129,7 +129,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(WXWIN)\lib\vc_x64_lib;$(WXWIN)\include;$(WXWIN)\lib\vc_x64_lib\mswu;.;$(WXWIN)\lib;%(AdditionalIncludeDirectories);lib;..\..\external_libs\freetype-2.3.11\include;D:\Repositories\Projects\_T-CAT_Racers\Code\C\boost_1_61_0;$(GLEW_INCLUDE);D:\Libraries\wxWidgets\include;..\lib;..\..\lib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(WXWIN)\lib\vc_x64_lib;$(WXWIN)\include;$(WXWIN)\lib\vc_x64_lib\mswu;.;$(WXWIN)\lib;%(AdditionalIncludeDirectories);lib;..\..\external_libs\freetype-2.3.11\include;D:\Repositories\Projects\_T-CAT_Racers\Code\C\boost_1_61_0;$(GLEW_INCLUDE);D:\Libraries\wxWidgets\include;..\lib;..\..\lib;D:\Libraries\FFTW\fftw-3.3.5-dll64</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>wxUSE_ANY;_NDEBUG;_CRT_SECURE_NO_DEPRECATE=1;_CRT_NON_CONFORMING_SWPRINTFS=1;_SCL_SECURE_NO_WARNINGS=1;__WXMSW__;_UNICODE;_WINDOWS;NOPCH;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -138,8 +138,8 @@
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>propsys.lib;mfuuid.lib;mfplat.lib;mfreadwrite.lib;wxmsw31u_core.lib;wxmsw31u_gl.lib;wxbase31u.lib;wxtiff.lib;wxpng.lib;wxzlib.lib;wxregexu.lib;turbojpeg-static.lib;wxexpat.lib;kernel32.lib;user32.lib;gdi32.lib;comdlg32.lib;winspool.lib;winmm.lib;shell32.lib;shlwapi.lib;comctl32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;advapi32.lib;version.lib;wsock32.lib;wininet.lib;opengl32.lib;glu32.lib;glew32.lib;freetype2311MT.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(WXWIN)\lib\vc_x64_lib;..\..\lib\x64;..\..\external_libs\freetype-2.3.11\objs\x64\vc2008;D:\Libraries\glew-2.1.0\lib\Release\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libfftw3-3.lib;propsys.lib;mfuuid.lib;mfplat.lib;mfreadwrite.lib;wxmsw31u_core.lib;wxmsw31u_gl.lib;wxbase31u.lib;wxtiff.lib;wxpng.lib;wxzlib.lib;wxregexu.lib;turbojpeg-static.lib;wxexpat.lib;kernel32.lib;user32.lib;gdi32.lib;comdlg32.lib;winspool.lib;winmm.lib;shell32.lib;shlwapi.lib;comctl32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;advapi32.lib;version.lib;wsock32.lib;wininet.lib;opengl32.lib;glu32.lib;glew32.lib;freetype2311MT.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(WXWIN)\lib\vc_x64_lib;..\..\lib\x64;..\..\external_libs\freetype-2.3.11\objs\x64\vc2008;D:\Libraries\glew-2.1.0\lib\Release\x64;D:\Libraries\FFTW\fftw-3.3.5-dll64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ProfileGuidedDatabase>$(OutDir)$(TargetName).pgd</ProfileGuidedDatabase>
       <ProgramDatabaseFile>$(OutDir)$(TargetName).pdb</ProgramDatabaseFile>
     </Link>
@@ -156,6 +156,7 @@
     <ClInclude Include="..\..\src\imagebrowser.h" />
     <ClInclude Include="..\..\src\imageviewer.h" />
     <ClInclude Include="..\..\src\image_browserapp.h" />
+    <ClInclude Include="..\..\src\image_fft.h" />
     <ClInclude Include="..\..\src\image_file_handler.h" />
     <ClInclude Include="..\..\src\image_file_handler_registry.h" />
     <ClInclude Include="..\..\src\image_loader.h" />
@@ -184,6 +185,7 @@
     <ClCompile Include="..\..\src\imagebrowser.cpp" />
     <ClCompile Include="..\..\src\imageviewer.cpp" />
     <ClCompile Include="..\..\src\image_browserapp.cpp" />
+    <ClCompile Include="..\..\src\image_fft.cpp" />
     <ClCompile Include="..\..\src\image_file_handler.cpp" />
     <ClCompile Include="..\..\src\image_file_handler_registry.cpp" />
     <ClCompile Include="..\..\src\image_loader.cpp" />

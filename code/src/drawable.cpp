@@ -44,7 +44,8 @@ void ZoomAway(float &point, float centre, float amount)
 
 
 GL_Image::GL_Image()
-: basicGLPanel(0)
+: basicGLPanel(0),
+  imageFFT(256)
 {
     //cout << this << "  GL_Image::GL_Image()" << endl;
 
@@ -718,6 +719,10 @@ void GL_Image::Load(wxString path)
     startTime     = wxGetLocalTimeMillis();
     width         = wxImg.GetWidth();
     height        = wxImg.GetHeight();
+
+    //imageFFT.CreateFftSubImage(wxImg, wxImg, wxPoint(0, 0), 256);
+    //imageFFT.CreateFftWholeImage(wxImg);
+
     //textureWidth  = width;
     //textureHeight = height;
     //cout << "  size = (" << width << ", " << height << ")" << endl;
@@ -809,9 +814,16 @@ wxString GL_Image::GetInfoString() const
     return fileName;
 }
 
+wxString GL_Image::GetDimensionsString() const
+{
+    return dimensionsString;
+}
+
 void GL_Image::SetFileName(wxString fn)
 {
-    fileName.Printf("%s  %dx%d", fn, width, height);
+    fileName.Printf("%s\n%dx%d", fn, width, height);
+    //fileName.Printf("%s", fn);
+    //dimensionsString.Printf("%d x %d", width, height);
 }
 
 wxString GL_Image::GetZoomInfo() const

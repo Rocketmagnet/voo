@@ -55,6 +55,18 @@ T clamp(T x, T min, T max)
 }
 
 template<typename T>
+T deadband(T x, T bandCentre, T bandWidth)
+{
+    if (x < (bandCentre-bandWidth*0.5))
+        return x + bandWidth*0.5;
+
+    if (x > (bandCentre+bandWidth*0.5))
+        return x - bandWidth*0.5;
+
+    return bandCentre;
+}
+
+template<typename T>
 T remap(T x, T s1, T s2, T d1, T d2)
 {
   return ((x-s1)/(s2-s1))*(d2-d1)+d1;
