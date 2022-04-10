@@ -27,6 +27,7 @@
 #include <iostream>
 using namespace std;
 
+extern void NoteTime(wxString s);
 
 
 wxBEGIN_EVENT_TABLE(  ThumbnailCanvas, wxScrolledWindow)
@@ -82,18 +83,26 @@ bool SortedVectorInts::Test()
 
 wxThread::ExitCode ThumbnailLoader::Entry()
 {
+    SetPriority(wxPRIORITY_MIN);
     thumbnail.isLoading = true;
-    //image.SetOption(wxIMAGE_OPTION_GIF_TRANSPARENCY, wxIMAGE_OPTION_GIF_TRANSPARENCY_UNCHANGED);
+    NoteTime("starting");
+    started             = true;
+
     wxFileName fn(fileName);
     wxString   extension = fn.GetExt().Upper();
 
     ImageFileHandler *imageFileHandler = ImageFileHandlerRegistry::instance().GetImageFileHandlerFromExtension(extension);
-    if (imageFileHandler)
-        imageFileHandler->LoadThumbnail(fn.GetFullPath(), thumbnail);
-    else
-        thumbnail.imageLoaded = true;
 
-    delete imageFileHandler;
+    if (imageFileHandler)
+    {
+        imageFileHandler->LoadThumbnail(fn.GetFullPath(), thumbnail);
+        delete imageFileHandler;
+    }
+    else
+    {
+        thumbnail.imageLoaded = true;
+    }
+    NoteTime("stopped");
 
     return (wxThread::ExitCode)0;
 }
@@ -214,6 +223,33 @@ Thumbnail::Thumbnail(const wxPoint &pos, wxFileName path, bool fetchHeader)
         FetchHeader();
 }
 
+void Thumbnail::PauseLoadingThumbnail(int milliSeconds)
+{
+    cout << "PauseLoadingThumbnail: " << thumbnailLoader << ": ";
+    if (thumbnailLoader)
+    {
+        cout << "loader exists. ";
+        if (!imageLoaded)
+        {
+            //cout << "is alive";
+            NoteTime("Sleeping");
+            thumbnailLoader->Sleep(1000);
+            NoteTime("done");
+        }
+    }
+
+    //if (isLoading)
+    //{
+    //    cout << "loading ";
+    //    if (!imageLoaded)
+    //    {
+    //        cout << "not finished";
+    //        thumbnailLoader->Sleep(20);
+    //    }
+    //}
+    cout << endl;
+}
+
 void Thumbnail::FetchHeader()
 {
     if ((fullPath.GetExt().Upper() == "JPG") ||
@@ -240,7 +276,8 @@ Thumbnail::~Thumbnail()
         if (isLoading)
         {
             //cout << "  loader running" << endl;
-            thumbnailLoader->Delete();
+            if (thumbnailLoader)
+                thumbnailLoader->Delete();
             //cout << "  killed" << endl;
         }
     }
@@ -356,6 +393,7 @@ void Thumbnail::Draw(wxPaintDC &dc, bool selected, bool cursor, bool inFocus)
 
     if (imageLoaded && bitmap.IsOk())
     {
+        thumbnailLoader = 0;
         int x = position.x + (tnSize.GetWidth()  - bitmap.GetWidth() ) / 2;
         int y = position.y + (tnSize.GetHeight() - bitmap.GetHeight()) / 2;
 
@@ -416,11 +454,11 @@ void Thumbnail::SetImage(wxImage &image)
 
 
 
-ThumbnailCanvas::ThumbnailCanvas(ImageBrowser *imgBrs, wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size)
+ThumbnailCanvas::ThumbnailCanvas(ImageBrowser *imgBrs, FileNameList &fNameList, wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size)
 : wxScrolledWindow(parent, id, pos, size, wxSUNKEN_BORDER | wxVSCROLL | wxEXPAND | wxWANTS_CHARS),
-  fileNameList(),
+  fileNameList(fNameList),
   inFocus(false),
-  cursorP(tnColumns, fileNameList),
+  cursorP(tnColumns, fNameList),
   selectionStart(0),
   backgroundColor(wxColor(64, 64, 64)),
   tnSize(150, 150),
@@ -437,18 +475,19 @@ ThumbnailCanvas::ThumbnailCanvas(ImageBrowser *imgBrs, wxWindow *parent, wxWindo
   imageViewer(0),
   imageBrowser(imgBrs),
   popUpMenu(0),
-  m_availableID(1)
+  m_availableID(1),
+  thumbnailLoadingActive(false)
 {
     SetBackgroundColour(backgroundColor);
-    ImageFileHandlerRegistry& imageFileHandlerRegistry = ImageFileHandlerRegistry::instance();
-    wxArrayString &filtersList = imageFileHandlerRegistry.GetFiltersList();
-
-    int i, n = filtersList.size();
-
-    for (i = 0; i < n; i++)
-    {
-        fileNameList.AddFilter(filtersList[i].Lower());
-    }
+    //ImageFileHandlerRegistry& imageFileHandlerRegistry = ImageFileHandlerRegistry::instance();
+    //wxArrayString &filtersList = imageFileHandlerRegistry.GetFiltersList();
+    //
+    //int i, n = filtersList.size();
+    //
+    //for (i = 0; i < n; i++)
+    //{
+    //    fileNameList.AddFilter(filtersList[i].Lower());
+    //}
 
     Thumbnail::SetSize(tnSize);
     Thumbnail::SetSelectBorder(3);
@@ -960,21 +999,12 @@ void ThumbnailCanvas::LoadThumbnails(wxString directory)
     }
 
     readHeadersCompleted = true;
-    //readHeadersCompleted = false;
-    //ThumbnailHeaderReader *thr = new ThumbnailHeaderReader(*this);
-    //thr->Run();
 
     wxString hrs = HumanFileSize(totalDirectorySizeBytes.GetLo());
     STATUS_TEXT(STATUS_BAR_DIRECTORY_SUMMARY, "%d files (%s)", n, hrs.c_str());
     
-    //for (int i = 0; i < n; i++)
-    //{
-    //    thumbnailPointers.push_back( &thumbnails[i] );
-    //}
-
     if (n > 0)
     {
-        //cout << "waitingSet.SetRange(0, " << n - 1 << ")" << endl;
         waitingSet.SetRange(0, n - 1);
     }
 	else
@@ -983,9 +1013,9 @@ void ThumbnailCanvas::LoadThumbnails(wxString directory)
 	}
     loadingSet.Clear();
     redrawSetP.Clear();
+    thumbnailLoadingActive = true;
 
     RecalculateRowsCols();
-	//cout << "LoadThumbnails(" << directory << ")  done" << endl;
 }
 
 void ThumbnailCanvas::StopLoadingThumbnails(wxString directory)
@@ -995,10 +1025,20 @@ void ThumbnailCanvas::StopLoadingThumbnails(wxString directory)
         (fileNameList.directory.GetName().StartsWith(directory))
         )
     {
+        //thumbnailLoadingActive = false;
         waitingSet.Clear();
     }
 }
 
+void ThumbnailCanvas::ContinueLoadingThumbnails()
+{
+    maxLoading = 1;
+}
+
+void ThumbnailCanvas::PauseLoadingThumbnails()
+{
+    maxLoading = 0;
+}
 
 int  ThumbnailCanvas::FindThumbnailIndex(int th)
 {
@@ -1651,6 +1691,13 @@ void ThumbnailCanvas::SortThumbnailsByName(wxCommandEvent & evt)
 
     ThumbnailSortingFunctor sortingFunctor(ThumbnailSortingFunctor::SORT_NAME_FORWARDS, thumbnails);
     sort(thumbnailIndex.begin(), thumbnailIndex.end(), sortingFunctor);
+
+    int i = 0;
+    for (auto index : thumbnailIndex)
+    {
+        cout << i << ": " << index << endl;
+        i++;
+    }
 
     RecalculateRowsCols();
     redrawType = REDRAW_ALL;

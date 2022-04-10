@@ -105,6 +105,7 @@ bool Image_BrowserApp::OnInit()
 
     wxString configDirectoryParameter = commandLineArguments.GetParameter("-CD");
     wxString configDirectory = (GetConfigFilePath() + CONFIG_FILE_NAME).ToStdString();              // Assume config.txt directory is local
+
     if (configDirectoryParameter.Length() > 0)                                                      // If a directory was specified on the command line, 
     {
         //cout << "config Directory = " << configDirectoryParameter << endl;
@@ -124,12 +125,11 @@ bool Image_BrowserApp::OnInit()
     wxString currentDirectory;                                                                      // Image directory    
     bool success = commandLineArguments.GetPath(currentDirectory);
     //cout << "currentDirectory = " << currentDirectory  << " success=" << success << endl;
+
     if (success)
     {
-        wxFileName fileName = currentDirectory; // .ToStdString();
-        configParser.SetString("currentDirectory", fileName.GetPath().ToStdString());
-
-
+        //cout << "Path detected: " << currentDirectory.ToStdString() << endl;
+        configParser.SetString("currentDirectory", currentDirectory.ToStdString());
     }
 
 
@@ -146,9 +146,21 @@ bool Image_BrowserApp::OnInit()
 	wxImage::AddHandler(new wxGIFHandler);
 #endif
 
+    // Create the image browser, but don't show it yet.
 	imageBrowser = new ImageBrowser( this, -1, _T("Image Browser"), wxPoint(700,0), wxSize(1200, 640));
-    imageBrowser->Show(true);
+    //imageBrowser->Create(this, -1);
 
+    if (commandLineArguments.HasFileName())
+    {
+        //cout << "Launching image viewer" << endl;
+        // Launch image viewer immediately
+        //cout << "imageBrowser = " << imageBrowser << endl;
+        imageBrowser->ShowImageViewer(commandLineArguments.GetFileName());
+    }
+    else
+    {
+        imageBrowser->Show(true);
+    }
 
     return true;
 }
@@ -226,6 +238,23 @@ wxString CommandLineArguments::GetParameter(const wxString parameterName) const
     return "";
 }
 
+bool CommandLineArguments::HasFileName()
+{
+    return path.FileExists();
+}
+
+wxString CommandLineArguments::GetFileName()
+{
+    if (path.FileExists())
+    {
+        return path.GetFullName();
+    }
+    else
+    {
+        return "";
+    }
+}
+
 bool CommandLineArguments::GetPath(wxString& pathReturn)
 {
     if (path.DirExists())
@@ -233,6 +262,8 @@ bool CommandLineArguments::GetPath(wxString& pathReturn)
         pathReturn = path.GetPath();
         return true;
     }
-
-    return false;
+    else
+    {
+        return false;
+    }
 }

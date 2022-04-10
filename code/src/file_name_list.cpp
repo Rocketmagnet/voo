@@ -7,10 +7,6 @@
 using namespace std;
 
 
-//#include <gl/glu.h>
-
-
-
 FileNameList::FileNameList()
 {
 }
@@ -22,24 +18,14 @@ FileNameList::FileNameList(wxString dir)
 
 bool FileSortNatural(const DirSortingItem &fn1, const DirSortingItem &fn2)
 {
-    //return (fn1.fileName.GetName().CmpNoCase(fn2.fileName.GetName()) < 0);
-    //return (wxCmpNatural(fn1.fileName.GetName(), fn2.fileName.GetName()) < 0);
-    return (wxDictionaryStringSortAscending(fn1.fileName.GetName(), fn2.fileName.GetName()) < 0);
+    return (wxCmpNatural(fn1.fileName.GetName(), fn2.fileName.GetName()) < 0);
 }
-
-//bool FileBasic(const DirSortingItem &fn1, const DirSortingItem &fn2)
-//{
-//    //return (fn1.fileName.GetName().CmpNoCase(fn2.fileName.GetName()) < 0);
-//    return (wxCmpNatural(fn1.fileName.GetName(), fn2.fileName.GetName()) < 0);
-//}
 
 void FileNameList::LoadFileList(wxString dir)
 {
     cout << "LoadFileList(" << dir << ")" << endl;
     files.clear();
     directory.Open(dir);
-
-    //cout << directory.GetName() << directory.IsOpened() << endl;
 
     if (!directory.IsOpened())
         return;
@@ -90,8 +76,6 @@ void FileNameList::FillArrayWithFileNamesFrom(wxString dir, wxArrayString &array
             cont = directory.GetNext(&filename);
         }
     }
-
-
 }
 
 void FileNameList::AddFilter(wxString ext)
@@ -112,7 +96,7 @@ void FileNameList::Resort()
 
 bool FileNameList::DeleteFileNumber(int fileNumber)
 {
-    cout << "FileNameList::DeleteFile(" << fileNumber << ") = " << files[fileNumber].fileName.GetFullName() << endl;
+    //cout << "FileNameList::DeleteFile(" << fileNumber << ") = " << files[fileNumber].fileName.GetFullName() << endl;
     bool success = wxRemoveFile(files[fileNumber].fileName.GetFullPath());
 
     if (success)

@@ -77,6 +77,7 @@ class wxGenericDirCtrl;
 class ThumbnailCanvas;
 class ImageViewer;
 class Image_BrowserApp;
+class FileNameList;
 
 #define ID_DIRECTORY_CTRL	100
 
@@ -218,6 +219,17 @@ public:
     void LoadArrayString(wxArrayString &arrayString, wxString fileName);
     void SaveArrayString(wxArrayString &arrayString, wxString fileName);
     void SaveMarkedDirs();
+
+    // Main Events
+    void EventOpenImageViewer();
+    void EventCloseImageViewer();
+    void EventOpenThumbnails();
+    void EventExit();
+
+    void ShowImageViewer(wxString fileName);
+    bool Show(bool show = true);
+    FileNameList* GetFileNameList() { return fileNameList; }
+
 ////@begin ImageBrowser member variables
 
     Image_BrowserApp    *image_BrowserApp;
@@ -230,6 +242,7 @@ public:
     ImageViewer         *imageViewer;
     wxTextCtrl          *directoryNameCtrl;
     RightHandWindow     *rightHandWindow;
+    FileNameList        *fileNameList;
 
 	wxArrayString		 privateDirs;
     wxArrayString        knownDirList;
@@ -241,7 +254,7 @@ public:
     wxTimer              decorationTimer;
     bool                 allowTreeDecoration;
     bool                 recordHistory;
-
+    bool                 created;
     ImageResizerPermanent           imageResizerPermanent;
     deque_thread_safe<ResizerEntry> resizerEntries;
 

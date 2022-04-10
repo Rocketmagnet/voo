@@ -32,6 +32,7 @@ std::ostream & operator << (std::ostream & os, const RectangleVector & rv)
 
 wxThread::ExitCode ImageLoader::Entry()
 {
+    SetPriority(wxPRIORITY_MAX);
 	glImage.Load(fileName);
     return 0;
 }
@@ -895,8 +896,6 @@ void GL_ImageServer::Reset()
 
 int GL_ImageServer::Cache(int imageNumber)
 {
-    //cout << "  Cache(" << imageNumber << ")" << endl;
-
     if (!fileNameList)
         return -1;
     
@@ -920,6 +919,8 @@ int GL_ImageServer::Cache(int imageNumber)
     imageSet[cacheLocation].imageNumber             = imageNumber;
 
     wxString fileName = (*fileNameList)[imageNumber];
+    //cout << "    caching " << fileName << endl;
+
     ImageLoader *imageLoader = new ImageLoader(imageSet[cacheLocation].glImage, fileName, basicGLPanel, glContext);      // Begin loading the image in the background.
     imageLoader->Run();
 

@@ -337,13 +337,15 @@ public:
     ThumbnailLoader(wxString fn, Thumbnail &tn)
     : wxThread(wxTHREAD_DETACHED),
       fileName(fn),
-      thumbnail(tn)
+      thumbnail(tn),
+      started(false)
     {
     }
 
+    bool                started;
+
 protected:
     ExitCode Entry();
-
     wxString            fileName;
     Thumbnail          &thumbnail;
 	jpeg_load_state		jpegLoadState;
@@ -392,6 +394,7 @@ public:
     void SetPosition(const wxPoint &pos)                 { position = pos; }
     void Erase(wxPaintDC &dc);
     bool IsMouseInside(const wxPoint &mousePos);
+    void PauseLoadingThumbnail(int milliSeconds);
 
 	wxSize GetTnImageSize(wxSize imageSize)
 	{
@@ -411,12 +414,11 @@ public:
 		return wxSize(newXsize, newYsize);
 	}
 
-    bool ImageIsLoaded()       { return imageLoaded; }
-    bool HasBeenDrawn()        { return hasBeenDrawn;  }
-    wxFileName  GetFullPath()  { return fullPath; }
-    wxSize      GetImageSize() { return imageSize; }
-
-    wxPoint GetPosition() { return position; }
+    bool        ImageIsLoaded()     { return imageLoaded;   }
+    bool        HasBeenDrawn()      { return hasBeenDrawn;  }
+    wxFileName  GetFullPath()       { return fullPath;      }
+    wxSize      GetImageSize()      { return imageSize;     }
+    wxPoint     GetPosition()       { return position;      }
 
     void SetImage(wxImage &image);
     void SetImage(wxBitmap &bm) { bitmap = bm; }
@@ -473,7 +475,7 @@ class ThumbnailCanvas : public wxScrolledWindow
     static const int SORT_DATE_FORWARDS = 2;
 
 public:
-	ThumbnailCanvas(ImageBrowser *imgBrs, wxWindow *parent, wxWindowID, const wxPoint &pos, const wxSize &size);
+	ThumbnailCanvas(ImageBrowser *imgBrs, FileNameList &fNameList, wxWindow *parent, wxWindowID, const wxPoint &pos, const wxSize &size);
 	~ThumbnailCanvas();
 
 	void OnPaint(wxPaintEvent &event);
@@ -484,6 +486,8 @@ public:
     void UnLoadThumbnails(wxString directory);
     void ReLoadThumbnails();
     void StopLoadingThumbnails(wxString directory);
+    void ContinueLoadingThumbnails();
+    void PauseLoadingThumbnails();
 
     //void KillAllThreads();
     void DirectoryWasDeleted(wxString path);
@@ -535,6 +539,25 @@ public:
     void SortThumbnailsByDate(wxCommandEvent & evt);
     void RenameSequence(wxCommandEvent & evt);
 
+    int GetSortedImageNumber(int imageNumber)
+    {
+        if (imageNumber < 0)                        imageNumber = 0;
+        if (imageNumber >= thumbnailIndex.size())   imageNumber = thumbnailIndex.size() - 1;
+        return thumbnailIndex[imageNumber];
+    }
+
+    int GetSortedImageNumberReverse(int imageNumber)
+    {
+        int n = thumbnailIndex.size();
+        for (int i= 0; i < n; i++)
+        {
+            if (thumbnailIndex[i] == imageNumber)
+                return i;
+        }
+        return 0;
+    }
+
+
     bool operator()(int a, int b)
     {
         std::cout << a << "<" << b << std::endl;
@@ -577,7 +600,7 @@ private:
 	wxSize                  tnSize;
 	wxSize                  mySize;
 	int                     thBorder;
-	FileNameList            fileNameList;
+	FileNameList           &fileNameList;
     DRAG_STATE              dragState;
     REDRAW_TYPE             redrawType;
     wxPoint                 clickPoint;
@@ -595,7 +618,7 @@ private:
     int                     m_availableID;
 
     int                     sortType;
-
+    bool                    thumbnailLoadingActive;
     wxArrayString           allowedDirectories;
 
 	wxDECLARE_EVENT_TABLE();

@@ -48,6 +48,9 @@ public:
     CommandLineArguments(int argc, wxCmdLineArgsArray& argv);
 
     wxString GetParameter(const wxString parameterName) const;
+
+    bool     HasFileName();
+    wxString GetFileName();
     bool     GetPath(wxString &pathReturn);
 
 private:

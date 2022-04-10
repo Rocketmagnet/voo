@@ -70,7 +70,6 @@ ImageViewer::ImageViewer()
     displayNumber(-1),
     disappearState(DISAPPEAR_STATE_NONE)
 {
-    //cout << "ImageViewer::ImageViewer() " << this << endl;
     Init();
 }
 
@@ -83,7 +82,7 @@ ImageViewer::ImageViewer(ImageBrowser* parent, wxWindowID id, const wxString& ca
   thumbnailCanvas(0),
   disappearState(DISAPPEAR_STATE_NONE)
 {
-    //cout << "ImageViewer::ImageViewer(" << parent << ") " << this << endl;
+    fileNameList = imageBrowser->GetFileNameList();
     Init();
     //cout << "ImageViewer::ImageViewer(" << parent << ") " << this << endl;
 
@@ -157,15 +156,11 @@ ImageViewer::~ImageViewer()
 
 void ImageViewer::Init()
 {
-    //cout << "ImageViewer::Init()" << endl;
-    //cout << "  imageBrowser = " << imageBrowser << endl;
-    ////@begin ImageViewer member initialisation
     keys.resize(512, 0);
     ConfigParser *configParser = imageBrowser->GetConfigParser();
-    //cout << "  configParser = " << configParser << endl;
+
     videoFileExtensions = configParser->GetString("videoExtensions");
     videoPlayerPath     = configParser->GetString("videoPlayer");
-////@end ImageViewer member initialisation
 }
 
 
@@ -324,15 +319,14 @@ void ImageViewer::DisplayImage(wxFileName fileName)
 // 
 void ImageViewer::DisplayImage(int imageNumber)
 {
-    wxFileName fileName = (*fileNameList)[imageNumber];
+    thumbnailCanvas->PauseLoadingThumbnails();
+    int sortedImageNumber = thumbnailCanvas->GetSortedImageNumber(imageNumber);
+    wxFileName fileName = (*fileNameList)[sortedImageNumber];
     wxString ext        = fileName.GetExt();
     ext.MakeLower();
 
-    cout << "videoFileExtensions = " << videoFileExtensions << endl;
-
     if (videoFileExtensions.Contains(ext))
     {
-        cout << "It's a video!" << endl;
         wxString command = videoPlayerPath + wxT(" \"") + fileName.GetFullPath() + wxT("\"");
         cout << command << endl;
         wxExecute(command.c_str(), wxEXEC_ASYNC, NULL);
@@ -343,10 +337,10 @@ void ImageViewer::DisplayImage(int imageNumber)
 
     //TEXT_MSG("ImageViewer::DisplayImage(%d)\n", imageNumber);
 
-    if (imageNumber < 0)
+    if (sortedImageNumber < 0)
         return;
 
-    if (imageNumber > fileNameList->MaxFileNumber())
+    if (sortedImageNumber > fileNameList->MaxFileNumber())
         return;
 
     currentImage = imageNumber;
@@ -359,7 +353,7 @@ void ImageViewer::DisplayImage(int imageNumber)
         //TEXT_MSG("  Display\n");
         Show(true);
         ////ShowFullScreen(true);
-        displayNumber = imageNumber;
+        displayNumber = sortedImageNumber;
         SetFocus();
         Refresh();
         timer.Start(10);
@@ -370,15 +364,17 @@ void ImageViewer::DisplayImage(int imageNumber)
 
 void ImageViewer::Disappear()
 {
+    thumbnailCanvas->ContinueLoadingThumbnails();
     glPanel->Clear();
-    currentImage = -1;
     ClearKeys();
-    thumbnailCanvas->SetCursor(glPanel->GetImageNumber());
+
+    thumbnailCanvas->SetCursor(currentImage);
+    currentImage = -1;
     Show(false);
     thumbnailCanvas->SetFocus();
     disappearState = DISAPPEAR_STATE_NONE;
     thumbnailCanvas->SetFocus();
-    //ShowFullScreen(false);
+    imageBrowser->Show();
 }
 
 wxLongLong keyTime = 0;
@@ -386,15 +382,10 @@ wxLongLong keyTime = 0;
 void ImageViewer::OnKeyDown(wxKeyEvent &event)
 {
     wxLongLong kt = wxGetLocalTimeMillis();
-    //if (keyTime != 0)
-    //{
-    //    cout << "keyTime = " << keyTime - kt << endl;
-    //}
     keyTime = kt;
 
 
 	lastKeyCode = event.GetKeyCode();
-	//cout << "Key: " << event.GetKeyCode() << endl;
     switch (event.GetKeyCode())
     {
     case WXK_DELETE:
@@ -423,9 +414,8 @@ void ImageViewer::OnKeyDown(wxKeyEvent &event)
 
 void ImageViewer::OnKeyUp(wxKeyEvent &event)
 {
-    //cout << "Frame Key Up" << event.GetKeyCode() << endl;
-    int pageJump = 5;
-    int lineJump = 1;
+    int  pageJump = 5;
+    int  lineJump = 1;
     int imageJump = 1;
 
     if (thumbnailCanvas)
@@ -441,10 +431,7 @@ void ImageViewer::OnKeyUp(wxKeyEvent &event)
     switch (event.GetKeyCode())
     {
     case WXK_ESCAPE:
-        //cout << "Escape" << endl;
         ClearKeys();
-        //Show(false);
-        //ShowFullScreen(false);
         break;
 
     case WXK_HOME:
@@ -487,7 +474,6 @@ void ImageViewer::OnClose(wxCloseEvent &event)
 
 void ImageViewer::OnMouseWheel(wxMouseEvent &event)
 {
-    cout << "ImageViewer::OnMouseWheel()\n";
     int newImage = currentImage;
 
     if (event.GetWheelRotation() > 0)
@@ -506,19 +492,14 @@ void ImageViewer::OnMouseWheel(wxMouseEvent &event)
 
 void ImageViewer::OnMouse(wxMouseEvent& event)
 {
-    cout << "ImageViewer::OnMouse()\n";
-
     if (event.LeftDClick())
     {
-        cout << "Left Double Click\n";
         disappearState = DISAPPEAR_STATE_REQUESTED;
-        //Disappear();
     }
 }
 
 void ImageViewer::OnMouseLDClick(wxMouseEvent& event)
 {
-    cout << "ImageViewer::OnMouseLDClick()\n";
     Disappear();
 }
 
@@ -609,20 +590,11 @@ void ImageViewer::ResetZoom()
 
 void ImageViewer::OnTimer(wxTimerEvent &event)
 {
-    //wxLongLong t = wxGetLocalTimeMillis();
-    //TEXT_MSG("ImageViewer::OnTimer() %d", (t-onTimer).GetLo());
-    //cout << "ImageViewer::OnTimer() " << (t - onTimer).GetLo() << endl;
-    //onTimer = t;
-
-    //NoteTime(wxT("ImageViewer::OnTimer"));
-
     if (!IsShown())
     {
-        //TEXT_MSG(" No\n");
         return;
     }
 
-    //cout << "ImageViewer::OnIdle" << endl;
     float dx = 0, dy = 0;
 
     if (keys['E'])                      { glPanel->ZoomIn(); }
