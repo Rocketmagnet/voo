@@ -90,14 +90,14 @@ GLuint* LoadImage(wxString path, int* imageWidth, int* imageHeight, int* texture
             }
         }
 
-        gluBuild2DMipmaps(GL_TEXTURE_2D,
+        int mapmapResult = gluBuild2DMipmaps(GL_TEXTURE_2D,
                           GL_RGB,
                           *imageWidth, *imageHeight,
                           GL_RGB,
                           GL_UNSIGNED_BYTE,
                           imageData);
 
-
+        //cout << "mapmapResult = " << mapmapResult << endl;
         /*
          // if yes, everything is fine
         glTexImage2D(GL_TEXTURE_2D,

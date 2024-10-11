@@ -36,9 +36,12 @@ using namespace std;
 #define CONFIG_FILE_NAME           "config.txt"
 #define DIRFLAGS_CONTAINS_FILES    1
 
+extern void NoteTime(wxString s);
 
 ////@begin XPM images
 ////@end XPM images
+
+// nZcMifUgg#?oJW^M
 
 
 /*
@@ -74,7 +77,7 @@ wxString GetConfigFilePath()
  */
 Image_BrowserApp::Image_BrowserApp()
 {
-    cout << "Num Args = " << wxApp::argc << endl;
+    //cout << "Num Args = " << wxApp::argc << endl;
     Init();
 }
 
@@ -99,7 +102,8 @@ void Image_BrowserApp::Init()
 wxDynamicLibrary library_glew32_dll;
 
 bool Image_BrowserApp::OnInit()
-{    
+{   
+    NoteTime("Image_BrowserApp::OnInit()");
     CommandLineArguments commandLineArguments(argc, argv);                                          // Parse command line arguments
                                                                                                     // ----------------------------
 
@@ -203,7 +207,7 @@ CommandLineArguments::CommandLineArguments(int argc, wxCmdLineArgsArray& argv)
                 parameterValue = argv[i];
                 parameters.push_back(parameterName);
                 parameters.push_back(parameterValue);
-                cout << "Parameter: " << parameterName << " = " << parameterValue << endl;
+                //cout << "Parameter: " << parameterName << " = " << parameterValue << endl;
             }
         }
 
@@ -218,7 +222,7 @@ CommandLineArguments::CommandLineArguments(int argc, wxCmdLineArgsArray& argv)
     }
 
     path = pathAccumulator;
-    cout << "Path = " << pathAccumulator << endl;
+    //cout << "Path = " << pathAccumulator << endl;
 
 }
 
@@ -228,10 +232,10 @@ wxString CommandLineArguments::GetParameter(const wxString parameterName) const
 
     for (int i = 0; i < n; i+=2)
     {
-        cout << "Checking " << parameters[i] << endl;
+        //cout << "Checking " << parameters[i] << endl;
         if (parameters[i] == parameterName)
         {
-            cout << "Found " << parameters[i + 1] << endl;
+            //cout << "Found " << parameters[i + 1] << endl;
             return (parameters[i + 1]);
         }
     }

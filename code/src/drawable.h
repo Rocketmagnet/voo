@@ -3,21 +3,23 @@
 
 #include "wx/image.h"
 #include "wx/thread.h"
+#include "wx/filename.h"
 #include <vector>
 
-#include "image_fft.h"
+#include "thumbnail_canvas.h"
 #include "vector3d.h"
 #include <iostream>
+#include <GL/glu.h>
 
 extern "C"
 {
-#include "jpeg_turbo.h"
+    #include "jpeg_turbo.h"
 };
 
 
 #define MAX_WIDTH          (4096 - 10)
 #define MAX_HEIGHT         10000
-#define BLOCK_SIZE_PIXELS (4096*32)
+#define BLOCK_SIZE_PIXELS  (4096 * 32)
 
 #define OVERLAP_NONE   0
 #define OVERLAP_TOP    1
@@ -75,14 +77,14 @@ std::ostream& operator << (std::ostream& os, const RectangleVector& v);
 class ImageLoader : public wxThread
 {
 public:
-    ImageLoader(GL_Image &image, wxString fn, BasicGLPanel *panel, wxGLContext *context)
+    ImageLoader(GL_Image &image, wxFileName fn, BasicGLPanel *panel, wxGLContext *context)
     : wxThread(wxTHREAD_DETACHED),
       glImage(image),
       fileName(fn),
       basicGLPanel(panel),
       glContext(context)
     {
-        std::cout << "Thread constructor" << std::endl;
+        //std::cout << "Thread constructor" << std::endl;
     }
 
     //~ImageLoader();
@@ -93,7 +95,7 @@ protected:
     ExitCode Entry();
 
     GL_Image      &glImage;
-    wxString       fileName;
+    wxFileName     fileName;
     BasicGLPanel  *basicGLPanel;
     wxGLContext   *glContext;
 };
@@ -144,7 +146,7 @@ public:
     ~GL_Image();
 
     void Invalidate();
-    void Load(wxString path);
+    void Load(wxFileName fileName);
     void UploadNextBlock();
     void Render();
     //void rotate(int angle);
@@ -189,11 +191,11 @@ public:
     double GetScaleDifference(const GL_Image& glImage) const;
     void   CalculateTextureSizes();
 
+    void        SetInfoString(wxString& s) {infoString = s;}
     wxString    GetInfoString()           const;
     wxString    GetDimensionsString()     const;
     wxString    GetZoomInfo()             const;
-    void        SetFileName(wxString fn);
-
+    void        SetFileName(wxFileName fileName);
 
 //protected:
     int              width, height;                 // Actual image dimensions
@@ -212,29 +214,27 @@ public:
     bool        loadedImage;
     wxString    fileName;
     wxString    dimensionsString;
-
+    wxString    infoString;
     wxImage     subImage;
-    wxImage     fftImage;
 
     //float       
 
 private:
 	jpeg_load_state		load_state;
     float               x, y, scale;  // (x=y=0 means image is centered)
-    ImageFFT            imageFFT;
 };
 
 
-struct ImageAndNumber
+struct ImageAndFileName
 {
-    ImageAndNumber()
-        : imageNumber(-1),
+    ImageAndFileName()
+        : fileName(""),
         creationTime(0)
     {
     }
 
     GL_Image   glImage;
-    int        imageNumber;
+    wxFileName fileName;
     size_t     creationTime;
 };
 
@@ -244,11 +244,13 @@ class GL_ImageServer
 public:
     GL_ImageServer(size_t _cacheSize)
     : imageSet(_cacheSize),
-      currentImage(-1),
-      fileNameList(0),
+      thumbnailCanvas(0),
+      currentImageFileName(""),
       t(0)
     {
     }
+
+    void SetThumbnailCanvas(ThumbnailCanvas *_thumbnailCanvas)  { thumbnailCanvas = _thumbnailCanvas; }
 
     void SetPointers(BasicGLPanel *panel, wxGLContext *context)
     {
@@ -266,24 +268,26 @@ public:
     int  NextImageToCache();
 
     void ClearCache();
-    int       Cache(int imageNumber);
-    GL_Image* GetImage(int imageNumber);
+    int       Cache(wxFileName fileName);
+    GL_Image* GetImage(wxFileName fileName);
 
     void UpdateDebuggingText();
 	size_t GetNumImages();
 
+
 private:
-    int GetCacheLocation(int imageNumber);
+    int GetCacheLocation(wxFileName fileName);
     int GetOldestCacheLocation();
 
-    std::vector<ImageAndNumber>     imageSet;
-    int                             currentImage;
+    std::vector<ImageAndFileName>   imageSet;
+    wxFileName                      currentImageFileName;
     size_t                          t;                  // time. Each image has a sequence number, used to determine which image is oldest.
-    FileNameList                   *fileNameList;
+    //FileNameList                   *fileNameList;
     BasicGLPanel                   *basicGLPanel;
     wxGLContext                    *glContext;
 
     wxString                        currentDirectory;
+    ThumbnailCanvas                *thumbnailCanvas;
 };
 
 #endif

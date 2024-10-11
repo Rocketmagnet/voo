@@ -1,4 +1,5 @@
 #pragma once
+#include "wx/wx.h"
 
 
 template <class T> void SafeRelease(T **ppT)
@@ -76,8 +77,9 @@ public:
     int     GetDuration(long long *phnsDuration);
 
     void    CreateBitmap(char *imageData, int width, int height, long long& hnsPos);
-    int     GetNewWidth()  { return newWidth;  }
-    int     GetNewHeight() { return newHeight; }
+    int     GetNewWidth()   { return newWidth;  }
+    int     GetNewHeight()  { return newHeight; }
+    wxSize  GetSize()       { return wxSize(newWidth, newHeight); }
 
 private:
     static  bool mfStarted;

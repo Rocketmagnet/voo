@@ -14,9 +14,9 @@ ImageFileHandler* CreatePartialHandler()
     return new PartialHandler();
 }
 
-bool reg_PartialHandler = ImageFileHandlerRegistry::instance().RegisterImageFileHandler(CreatePartialHandler, _T("Partial"), _T("part"), _T("Partially downloaded file"));
+bool reg_PartialHandler = ImageFileHandlerRegistry::instance().RegisterImageFileHandler(CreatePartialHandler, _T("Partial"), _T("part"), _T("Partially downloaded file"), CANNOT_VIEW_IMAGE);
 
-void PartialHandler::LoadThumbnail(wxString fileName, Thumbnail &thumbnail)
+bool PartialHandler::LoadThumbnail(wxString fileName, Thumbnail &thumbnail)
 {
     wxLogNull logNo;													// logging is suspended while this object is in scope
     
@@ -32,6 +32,8 @@ void PartialHandler::LoadThumbnail(wxString fileName, Thumbnail &thumbnail)
     vr.Render(program, bitmap);
 
     thumbnail.FinishedLoading();
+
+    return true;
 }
 
 

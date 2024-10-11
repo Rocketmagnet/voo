@@ -11,7 +11,7 @@ public:
     PartialHandler()
     {}
 
-    void LoadThumbnail(wxString fileName, Thumbnail &thumbnail);
+    bool LoadThumbnail(wxString fileName, Thumbnail &thumbnail);
     int  LoadImage(wxString fileName);
 
 private:

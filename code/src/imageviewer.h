@@ -26,10 +26,12 @@ class ConfigParser;
 #include "wx/filename.h"
 #include "wx/timer.h"
 #include "wx/textctrl.h"
-#include "gl_panel.h"
 #include <vector>
 
+#include "thumbnail_canvas.h"
+#include "gl_panel.h"
 
+//class JpegGpu;
 
 ////@begin control identifiers
 #define ID_IMAGEVIEWER        10000
@@ -92,20 +94,25 @@ public:
 
     /// Initialises member variables
     void Init();
-    void SetThumbnailCanvas(ThumbnailCanvas *tnc) { thumbnailCanvas = tnc; }
+    void SetThumbnailCanvas(ThumbnailCanvas *tnc)
+    {
+        if (glPanel)
+            glPanel->SetThumbnailCanvas(tnc);
+;        thumbnailCanvas = tnc;
+    }
 
     //void SetStatusBar(wxStatusBar            *sBar) { statusBar = sBar; }
     /// Creates the controls and sizers
     void CreateControls();
 
-    void SetFileNameList(FileNameList *fnl)
-    {
-        fileNameList = fnl;
-        glPanel->SetFileNameList(fnl);
-    }
+    //void SetFileNameList(FileNameList *fnl)
+    //{
+    //    fileNameList = fnl;
+    //    glPanel->SetFileNameList(fnl);
+    //}
 
     void DisplayImage(wxFileName fileName);
-    void DisplayImage(int imageNumber);
+    //void DisplayImage(int imageNumber);
     void OnKeyUp(wxKeyEvent &event);
     void OnKeyDown(wxKeyEvent &event);
     void OnMouseWheel(wxMouseEvent &event);
@@ -124,6 +131,15 @@ public:
     void HomeImage();
     void  EndImage();
     void Disappear();
+    void AddViewableExtensions(wxString extensions)
+    {
+        for (auto extension : extensions)
+        {
+            wxString e = extension;
+            e.MakeLower();
+            viewableExtensions.Append(e);
+        }
+    }
 
 	int GetLastKeyCode() { return lastKeyCode; }
     ////@begin ImageViewer event handler declarations
@@ -142,12 +158,14 @@ public:
     void ClearKeys();
 
     BasicGLPanel            *glPanel;
-    FileNameList            *fileNameList;
+    //FileNameList            *fileNameList;    // No. This was a bad idea
 	int						 lastKeyCode;
-    size_t                   currentImage;
+    //size_t                   currentImageNumber;
     float                    zoomRate;
     std::vector<char>        keys;
-    int                      displayNumber;       // File to load and display, when the viewer becomes visible.
+    //int                      displayNumber;       // File to load and display, when the viewer becomes visible.
+    wxFileName               displayThisFileName;
+    wxFileName               currentImageFileName;
     bool                     closeEnabled;
     DISAPPEAR_STATE          disappearState;
     wxTimer                  timer;
@@ -156,6 +174,8 @@ public:
     ImageBrowser            *imageBrowser;
     wxString                 videoFileExtensions;
     wxString                 videoPlayerPath;
+    wxString                 viewableExtensions;
+    //JpegGpu                 *jpegGpu;
 };
 
 #endif

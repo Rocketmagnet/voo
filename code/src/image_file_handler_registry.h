@@ -3,8 +3,16 @@
 #include <wx/arrstr.h>
 
 class ImageFileHandler;
+class Thumbnail;
 
 typedef ImageFileHandler* (*ImageFileHandlerFunction)();        // A function which returns a pointer to an ImageFileHandler
+
+enum ViewImageAbility
+{
+    CANNOT_VIEW_IMAGE = 0,
+    CAN_VIEW_IMAGE = 1
+};
+
 
 struct ImageFileHandlerInfo
 {
@@ -12,6 +20,7 @@ struct ImageFileHandlerInfo
     wxString                    formatName;
     wxString                    formatExtension;
     wxString                    formatDescription;
+    ViewImageAbility            viewImageAbility;
 };
 
 /// Singleton class which holds a registry of RenderTargetFile instances.
@@ -27,13 +36,18 @@ struct ImageFileHandlerRegistry
     bool RegisterImageFileHandler(ImageFileHandlerFunction imageFileHandlerFunction,
                                   const wxString & name,
                                   const wxString & extension,
-                                  const wxString & description);                            //<! Create a RenderTargetFile with the provided arguments and register it to the registry.
+                                  const wxString & description,
+                                ViewImageAbility   viewImageAbility);                            //<! Create a RenderTargetFile with the provided arguments and register it to the registry.
 
 
 
     ImageFileHandler* GetImageFileHandlerFromExtension(const wxString & ext);               //<! Retrieve the RenderTargetFile which saves files with the provided extension.
                                                                                             //<! \param name The name of the renderer, as given to RegisterRenderTargetFile( ).
+
+    void SearchForHandler(wxString fileName, Thumbnail& thumbnail);
+
     wxArrayString& GetFiltersList() { return filtersList; }
+    const wxString GetViewableExtensions() { return viewableExtensions; }
 
 private:
     std::vector<ImageFileHandlerInfo> imageFileHandlerInfoVector;
@@ -41,6 +55,7 @@ private:
 private:                                                                                    // protecting the ctor, the copy ctor and the assignment operator make this class a singleton
     ImageFileHandlerRegistry();
     wxArrayString       filtersList;
+    wxString            viewableExtensions;
 };
 
 

@@ -16,9 +16,9 @@ ImageFileHandler* CreateRarHandler()
 }
 
 
-bool reg_RarHandler = ImageFileHandlerRegistry::instance().RegisterImageFileHandler(CreateRarHandler, _T("RAR"), _T("rar"), _T("Compressed Archive"));
+bool reg_RarHandler = ImageFileHandlerRegistry::instance().RegisterImageFileHandler(CreateRarHandler, _T("RAR"), _T("rar"), _T("Compressed Archive"), CANNOT_VIEW_IMAGE);
 
-void RarHandler::LoadThumbnail(wxString fileName, Thumbnail &thumbnail)
+bool RarHandler::LoadThumbnail(wxString fileName, Thumbnail &thumbnail)
 {
     wxLogNull logNo;													// logging is suspended while this object is in scope
     
@@ -34,6 +34,8 @@ void RarHandler::LoadThumbnail(wxString fileName, Thumbnail &thumbnail)
     vr.Render(program, bitmap);
 
     thumbnail.FinishedLoading();
+
+    return true;
 }
 
 //void CreateDirectoryInParts(wxString original, wxString newDirectories)

@@ -159,6 +159,22 @@ int ReadJpegHeaderOnly(jpeg_load_state *load_state, const char* filename)
     return 1;
 }
 
+void ConvertGreyscaleToRGB(int w, int h, unsigned char *data)
+{
+    int lastPixel = w * h;
+
+    unsigned char* src = data + lastPixel;
+    unsigned char* dst = data + (lastPixel * 3);
+
+    for (int i = lastPixel - 1; i >= 0; i--)
+    {
+        unsigned char grey = *src--;
+        *dst-- = grey;
+        *dst-- = grey;
+        *dst-- = grey;
+    }
+}
+
 int JpegRead(unsigned char* imageBuffer, jpeg_load_state* load_state)
 {
     char *dest = imageBuffer;
@@ -171,6 +187,9 @@ int JpegRead(unsigned char* imageBuffer, jpeg_load_state* load_state)
 		dest += load_state->row_stride;
     }
 
+    if (load_state->cinfo.num_components == 1)
+        ConvertGreyscaleToRGB(load_state->width, load_state->height, imageBuffer);
+
     (void)jpeg_finish_decompress(&load_state->cinfo);
     jpeg_destroy_decompress(&load_state->cinfo);
     fclose(load_state->infile);
@@ -182,6 +201,7 @@ int JpegRead(unsigned char* imageBuffer, jpeg_load_state* load_state)
 
 int JpegWrite(const char* filename, int width, int height, unsigned char *data, int quality)
 {
+    //printf("JpegWrite(%s, %d, %d, , %d)\n", filename, width, height, quality);
     struct jpeg_compress_struct cinfo;
     struct jpeg_error_mgr jerr;
     //struct cdjpeg_progress_mgr progress;
@@ -206,13 +226,13 @@ int JpegWrite(const char* filename, int width, int height, unsigned char *data, 
         printf("File Error\n");
         return -1;
     }
-    printf("A\n");
+    //printf("A\n");
     cinfo.err = jpeg_std_error(&jerr);      // Allocate and initialize a JPEG compression object
-    printf("B\n");
+    //printf("B\n");
     jpeg_create_compress(&cinfo);
-    printf("C\n");
+    //printf("C\n");
     jpeg_stdio_dest(&cinfo, output_file);
-    printf("D\n");
+    //printf("D\n");
     cinfo.image_width      = width;         // Set parameters for compression, including image size & colorspace
     cinfo.image_height     = height;
     cinfo.input_components = 3;
@@ -220,27 +240,29 @@ int JpegWrite(const char* filename, int width, int height, unsigned char *data, 
     jpeg_set_defaults(&cinfo);
 
     jpeg_set_quality(&cinfo, quality, TRUE);
-    printf("D2\n");
+    //printf("D2\n");
     jpeg_start_compress(&cinfo, TRUE);
-    printf("E\n");
+    //printf("E\n");
      
     JSAMPROW row_pointer;          /* pointer to a single row */
 
     while (cinfo.next_scanline < cinfo.image_height)
     {
         row_pointer = (JSAMPROW)&data[cinfo.next_scanline*3*width];
+        //printf("%d ", (int)row_pointer[0]);
         jpeg_write_scanlines(&cinfo, &row_pointer, 1);
     }
+    //printf("\n");
 
 
     // jpeg_finish_compress(...);
     jpeg_finish_compress(&cinfo);
-    printf("F\n");
+    //printf("F\n");
     // Release the JPEG compression object
     jpeg_destroy_compress(&cinfo);
-    printf("G\n");
+    //printf("G\n");
     fclose(output_file);
-    printf("H\n");
+    //printf("H\n");
 
     return 0;
 }

@@ -36,34 +36,34 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Optimised|Win32'">
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Optimised|x64'">
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -144,17 +144,20 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(WXWIN)\lib\vc_x64_lib;$(WXWIN)\include;$(WXWIN)\lib\vc_x64_lib\mswu;.;$(WXWIN)\lib;%(AdditionalIncludeDirectories);lib;..\..\external_libs\freetype-2.3.11\include;D:\Repositories\Projects\_T-CAT_Racers\Code\C\boost_1_61_0;$(GLEW_INCLUDE);D:\Libraries\wxWidgets\include;..\lib;..\..\lib;D:\Libraries\FFTW\fftw-3.3.5-dll64</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(WXWIN)\lib\vc_x64_lib;$(WXWIN)\include;$(WXWIN)\lib\vc_x64_lib\mswu;.;$(WXWIN)\lib;%(AdditionalIncludeDirectories);lib;..\..\external_libs\freetype-2.3.11\include;D:\Repositories\Projects\_T-CAT_Racers\Code\C\boost_1_61_0;$(GLEW_INCLUDE);D:\Libraries\wxWidgets\include;..\lib;..\..\lib;D:\Libraries\FFTW\fftw-3.3.5-dll64;D:\Libraries\glfw-3.2.1\include;D:\Libraries\glew-2.1.0\include;D:\Libraries\glm-0.9.9.5;D:\Libraries\qt5\qtwebengine\src\3rdparty\chromium\third_party\swiftshader\include;D:\Repositories\voo\code\external_libs\jpeg_gpu_cpp\src</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>wxUSE_ANY;_NDEBUG;_CRT_SECURE_NO_DEPRECATE=1;_CRT_NON_CONFORMING_SWPRINTFS=1;_SCL_SECURE_NO_WARNINGS=1;__WXMSW__;_UNICODE;_WINDOWS;NOPCH;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <ExceptionHandling>Sync</ExceptionHandling>
       <EnablePREfast>true</EnablePREfast>
+      <MinimalRebuild>false</MinimalRebuild>
+      <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>
     <Link>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>libfftw3-3.lib;propsys.lib;mfuuid.lib;mfplat.lib;mfreadwrite.lib;wxmsw31u_core.lib;wxmsw31u_gl.lib;wxbase31u.lib;wxtiff.lib;wxpng.lib;wxzlib.lib;wxregexu.lib;turbojpeg-static.lib;wxexpat.lib;kernel32.lib;user32.lib;gdi32.lib;comdlg32.lib;winspool.lib;winmm.lib;shell32.lib;shlwapi.lib;comctl32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;advapi32.lib;version.lib;wsock32.lib;wininet.lib;opengl32.lib;glu32.lib;glew32.lib;freetype2311MT.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(WXWIN)\lib\vc_x64_lib;..\..\lib\x64;..\..\external_libs\freetype-2.3.11\objs\x64\vc2008;D:\Libraries\glew-2.1.0\lib\Release\x64;D:\Libraries\FFTW\fftw-3.3.5-dll64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <EnableCOMDATFolding>false</EnableCOMDATFolding>
+      <OptimizeReferences>false</OptimizeReferences>
+      <AdditionalDependencies>propsys.lib;mfuuid.lib;mfplat.lib;mfreadwrite.lib;wxmsw31u_core.lib;wxmsw31u_gl.lib;wxbase31u.lib;wxtiff.lib;wxpng.lib;wxzlib.lib;wxregexu.lib;turbojpeg-static.lib;wxexpat.lib;kernel32.lib;user32.lib;gdi32.lib;comdlg32.lib;winspool.lib;winmm.lib;shell32.lib;shlwapi.lib;comctl32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;advapi32.lib;version.lib;wsock32.lib;wininet.lib;opengl32.lib;glu32.lib;glew32.lib;freetype2311MT.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(WXWIN)\lib\vc_x64_lib;..\..\lib\x64;..\..\external_libs\freetype-2.3.11\objs\x64\vc2008;D:\Libraries\glew-2.1.0\lib\Release\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ProfileGuidedDatabase>$(OutDir)$(TargetName).pgd</ProfileGuidedDatabase>
       <ProgramDatabaseFile>$(OutDir)$(TargetName).pdb</ProgramDatabaseFile>
     </Link>
@@ -172,7 +175,7 @@
       <ExceptionHandling>false</ExceptionHandling>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <AdditionalIncludeDirectories>$(WXWIN)\lib\vc_x64_lib;$(WXWIN)\include;$(WXWIN)\lib\vc_x64_lib\mswu;.;$(WXWIN)\lib;%(AdditionalIncludeDirectories);lib;..\..\external_libs\freetype-2.3.11\include;D:\Repositories\Projects\_T-CAT_Racers\Code\C\boost_1_61_0;$(GLEW_INCLUDE);D:\Libraries\wxWidgets\include;..\lib;..\..\lib;D:\Libraries\FFTW\fftw-3.3.5-dll64</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(WXWIN)\lib\vc_x64_lib;$(WXWIN)\include;$(WXWIN)\lib\vc_x64_lib\mswu;.;$(WXWIN)\lib;%(AdditionalIncludeDirectories);lib;..\..\external_libs\freetype-2.3.11\include;D:\Repositories\Projects\_T-CAT_Racers\Code\C\boost_1_61_0;$(GLEW_INCLUDE);D:\Libraries\wxWidgets\include;..\lib;..\..\lib;D:\Libraries\FFTW\fftw-3.3.5-dll64;D:\Libraries\glm-0.9.9.5;D:\Libraries\glfw-3.2.1\include;D:\Libraries\glew-2.1.0\include;D:\Repositories\voo\code\external_libs\jpeg_gpu_cpp\src</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>wxUSE_ANY;_NDEBUG;_CRT_SECURE_NO_DEPRECATE=1;_CRT_NON_CONFORMING_SWPRINTFS=1;_SCL_SECURE_NO_WARNINGS=1;__WXMSW__;_UNICODE;_WINDOWS;NOPCH;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -201,7 +204,6 @@
     <ClInclude Include="..\..\src\imagebrowser.h" />
     <ClInclude Include="..\..\src\imageviewer.h" />
     <ClInclude Include="..\..\src\image_browserapp.h" />
-    <ClInclude Include="..\..\src\image_fft.h" />
     <ClInclude Include="..\..\src\image_file_handler.h" />
     <ClInclude Include="..\..\src\image_file_handler_registry.h" />
     <ClInclude Include="..\..\src\image_loader.h" />
@@ -211,7 +213,9 @@
     <ClInclude Include="..\..\src\natural_sort.h" />
     <ClInclude Include="..\..\src\partial_handler.h" />
     <ClInclude Include="..\..\src\png_handler.h" />
+    <ClInclude Include="..\..\src\safe_queue.h" />
     <ClInclude Include="..\..\src\status_bar.h" />
+    <ClInclude Include="..\..\src\thumbnail_cache.h" />
     <ClInclude Include="..\..\src\thumbnail_canvas.h" />
     <ClInclude Include="..\..\src\vector3d.h" />
     <ClInclude Include="..\..\src\vector_renderer.h" />
@@ -230,7 +234,6 @@
     <ClCompile Include="..\..\src\imagebrowser.cpp" />
     <ClCompile Include="..\..\src\imageviewer.cpp" />
     <ClCompile Include="..\..\src\image_browserapp.cpp" />
-    <ClCompile Include="..\..\src\image_fft.cpp" />
     <ClCompile Include="..\..\src\image_file_handler.cpp" />
     <ClCompile Include="..\..\src\image_file_handler_registry.cpp" />
     <ClCompile Include="..\..\src\image_loader.cpp" />
@@ -239,6 +242,7 @@
     <ClCompile Include="..\..\src\natural_sort.cpp" />
     <ClCompile Include="..\..\src\partial_handler.cpp" />
     <ClCompile Include="..\..\src\png_handler.cpp" />
+    <ClCompile Include="..\..\src\thumbnail_cache.cpp" />
     <ClCompile Include="..\..\src\thumbnail_canvas.cpp" />
     <ClCompile Include="..\..\src\vector3d.cpp" />
     <ClCompile Include="..\..\src\vector_renderer.cpp" />

@@ -1,10 +1,8 @@
-#include <gl/glew.h>
-#include "drawable.h"
-#include "gl_panel.h"
+//#include <gl/glew.h>
 #include <iostream>
 using namespace std;
 
-#include <GL/gl.h>
+//#include <GL/gl.h>
 #include <wx/glcanvas.h>
 #include "wx/wx.h"
 #include "wx/image.h"
@@ -12,6 +10,9 @@ using namespace std;
 #include "file_name_list.h"
 #include "wx/time.h"
 #include "wx/filename.h"
+
+#include "drawable.h"
+#include "gl_panel.h"
 
 //extern "C"
 //{
@@ -45,8 +46,7 @@ void ZoomAway(float &point, float centre, float amount)
 
 
 GL_Image::GL_Image()
-: basicGLPanel(0),
-  imageFFT(256)
+: basicGLPanel(0)
 {
     //cout << this << "  GL_Image::GL_Image()" << endl;
 
@@ -174,7 +174,7 @@ void GL_Image::CopyScaleAndPositionFrom(const GL_Image &image)
     if (image.IsFullyVisible())
     {
         //std::cout << "Fully visible" << std::endl;
-        scale = 0.01;
+        scale = 0.01f;
         x = 0;
         y = 0;
         ExpandToSides();
@@ -321,7 +321,7 @@ void TextureUpload::Render(Vector2D scrTL, Vector2D scrBR)
     //cout << "TextureUpload::Render()" << endl;
     if (!valid)
     {
-        //cout << "         - " << endl;
+        //cout << "!valid" << endl;
         return;
     }
 
@@ -350,8 +350,8 @@ void TextureUpload::Render(Vector2D scrTL, Vector2D scrBR)
     glBindTexture(GL_TEXTURE_2D, ID);
 
     //cout << ID << "        (" << x0 << ", " << y0 << ") - (" << x1 << ", " << y1 << ")" << endl;
-    //cout << "(" << myTexturePortion.TL.x << ", " << myTexturePortion.TL.y << ")";
-    //cout << "(" << myTexturePortion.BR.x << ", " << myTexturePortion.BR.y << ")" << endl;
+    //cout << "(" << renderableTexturePortion.TL.x << ", " << renderableTexturePortion.TL.y << ")";
+    //cout << "(" << renderableTexturePortion.BR.x << ", " << renderableTexturePortion.BR.y << ")" << endl;
 
     glBegin(GL_QUADS);
         //glColor3f(1.0, 0.00, 0);    glVertex2f(x0, y0);
@@ -382,10 +382,14 @@ void GL_Image::Render()
     //cout << endl << endl << "GL_Image::Render()" << endl;
 
     if (!loadedImage)
+    {
+        //cout << "!loadedImage" << endl;
         return;
+    }
 
     if (!uploadedTexture)
     {
+        //cout << "!uploadedTexture" << endl;
         //uploadedTexture = true;
         for (int i = 0; i < 4; i++)
         {
@@ -577,16 +581,24 @@ void TextureUpload::Init(wxImage *img, Vector2D TL, Vector2D BR, int overlap)
 
 bool TextureUpload::UploadNextBlock()
 {
+    //cout << "TextureUpload::UploadNextBlock()" << endl;
     if (!wxImg)
+    {
+        //cout << "  !wxImg" << endl;
         return true;
+    }
 
     if (uploadedTexture)
+    {
+        //cout << "  uploadedTexture" << endl;
         return true;
+    }
 
     if (!valid)
+    {
+        //cout << "  !valid" << endl;
         return true;
-
-    //return true;
+    }
 
     int imageWidth  = wxImg->GetSize().x;
     int imageHeight = wxImg->GetSize().y;
@@ -612,7 +624,7 @@ bool TextureUpload::UploadNextBlock()
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-        //cout << "Texture size = " << textureSize.x << ", " << textureSize.y << endl;
+        //cout << "Texture size = " << textureSize.TL << ", " << textureSize.BR << endl;
 
         glBindTexture(GL_TEXTURE_2D, ID);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureSize.BR.x, textureSize.BR.y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
@@ -622,6 +634,12 @@ bool TextureUpload::UploadNextBlock()
         glBindTexture(GL_TEXTURE_2D, ID);
     }
 
+    //cout << "expandedImagePortion = " << expandedImagePortion.TL << " - " << expandedImagePortion.BR << endl;
+    wxSize imageSize = wxImg->GetSize();
+    size_t bytes = imageSize.GetWidth() * imageSize.GetHeight() * 3;
+
+    //cout << "image size = " << bytes  << endl;
+
     for (int i = 0; i < 64; i++)
     {
         int texX = 0;
@@ -630,18 +648,20 @@ bool TextureUpload::UploadNextBlock()
         //cout << "(" << currentY << " x " << wxImg->GetSize().x << " + " << originalImagePortion.TL.x << ") * 3" << endl;
         int srcAddress = (currentY * wxImg->GetSize().x + expandedImagePortion.TL.x) * 3;
         unsigned char* imageData = wxImg->GetData();
+
         int level = 0;
         int leftEdge = 0;
-        //cout << "Copying: (0, " << currentY << ")   size = (" << copyWidth << ", " << 1 << ")  from " << srcAddress << endl;
+        //cout << "Copying: (0, " << currentY << ")   size = (" << copyWidth << ", " << 1 << ")  from " << srcAddress  << ", " << bytes-srcAddress << endl;
         glTexSubImage2D(GL_TEXTURE_2D, level, leftEdge, currentY, copyWidth, 1, GL_RGB, GL_UNSIGNED_BYTE, &imageData[srcAddress]);
-
+        //cout << "done" << endl;
         currentY++;
         if (currentY == expandedImagePortion.BR.y)
         {
             //cout << "uploadedTexture = true  1" << endl;
             uploadedTexture = true;
-            //glGenerateMipmap(GL_TEXTURE_2D);
+            //glGenerateMipmap(GL_TEXTURE_2D);  
             //glGenerateTextureMipmap(ID);
+            break;
         }
         //GL_INVALID_ENUM
         if (uploadedTexture)
@@ -661,39 +681,62 @@ void GL_Image::Invalidate()
     uploadedTexture     = false;
 }
 
-
-void GL_Image::Load(wxString path)
+// True if image width is 2^n - 9
+// For some reason that doesn't work
+// 
+bool IsBadWidth(int w)
 {
-    //cout << "GL_Image::Load(" << path << ")" << endl;
+    int x = 16;
+
+    while (true)
+    {
+        if (w == (x - 9))
+            return true;
+
+        if (x > w)
+            return false;
+           
+        x *= 2;
+    }
+}
+
+void GL_Image::Load(wxFileName fileName)
+{
+    //cout << "GL_Image::Load(" << fileName.GetFullPath() << ")" << endl;
 
     Invalidate();
 
 
     // check the file exists
-    if (!wxFileExists(path))
+    if (!wxFileExists(fileName.GetFullPath()))
     {
-        cout << "  File doesn't exist: " << path << endl;
+        cout << "  File doesn't exist: " << fileName.GetFullPath() << endl;
         exit(1);
     }
 
-	int w, h;
-	wxFileName fn(path);
+    //int w, h;
+    wxFileName fn(fileName);
 
 	if ((fn.GetExt().Lower() == "jpg") ||
 		(fn.GetExt().Lower() == "jpeg"))
 	{
-		//cout << "  Using JPEG Turbo for " << path << endl;
+		//cout << "  Using JPEG Turbo for " << fileName.GetFullPath() << endl;
 
 		wxLongLong startTime = wxGetLocalTimeMillis();
 		//int exitCode = LoadJPEGTest("IMG_2287.jpg"); // fileName.char_str());
-		int success = ReadJpegHeader(&load_state, (const  char*)path.c_str());
+		int success = ReadJpegHeader(&load_state, (const  char*)fileName.GetFullPath().c_str());
 		
 		int w = load_state.width, h = load_state.height;
-		cout << "Success = " << success << ", " << w << ", " << h << endl;
+		//cout << "Success = " << success << ", " << w << ", " << h << endl;
 		if (success)
         {		
             wxImg.Create(w, h);
             JpegRead(wxImg.GetData(), &load_state);
+
+            if (IsBadWidth(w))                                              // If image is 1015 or 2039 etc. pixels wide, 
+            {
+                wxImg.Resize(wxSize(w + 2, h), wxPoint(0, 0), 0, 0, 0);     // then add a 1-pixel border on the left and right edges. Strange bug.
+            }
         }
 		else
 		{
@@ -710,8 +753,9 @@ void GL_Image::Load(wxString path)
 	}
 	else
 	{
+        //cout << "Using wxImg.LoadFile()\n";
 		wxImg.SetOption(wxIMAGE_OPTION_GIF_TRANSPARENCY, wxIMAGE_OPTION_GIF_TRANSPARENCY_UNCHANGED);
-		wxImg.LoadFile(path);
+		wxImg.LoadFile(fileName.GetFullPath());
 	}
 
     //cout << "  Loading done. Starting upload." << endl;
@@ -812,7 +856,8 @@ void GL_Image::Load(wxString path)
 
 wxString GL_Image::GetInfoString() const
 {
-    return fileName;
+    return infoString;
+    //return fileName;
 }
 
 wxString GL_Image::GetDimensionsString() const
@@ -820,9 +865,9 @@ wxString GL_Image::GetDimensionsString() const
     return dimensionsString;
 }
 
-void GL_Image::SetFileName(wxString fn)
+void GL_Image::SetFileName(wxFileName fileName)
 {
-    fileName.Printf("%s\n%dx%d", fn, width, height);
+    //fileName.Printf("%s\n%dx%d", fileName.GetFullPath(), width, height);
     //fileName.Printf("%s", fn);
     //dimensionsString.Printf("%d x %d", width, height);
 }
@@ -875,18 +920,18 @@ void GL_ImageServer::ClearCache()
 
     for (i = 0; i < n; i++)
     {
-        imageSet[i].imageNumber = -1;
+        imageSet[i].fileName         = "";
         imageSet[i].glImage.fileName = "";
-        imageSet[i].creationTime = 0;
+        imageSet[i].creationTime     = 0;
     }
 
     UpdateDebuggingText();
 }
 
-void GL_ImageServer::SetFileNameList(FileNameList *fnl)
-{
-    fileNameList = fnl;
-}
+//void GL_ImageServer::SetFileNameList(FileNameList *fnl)
+//{
+//    fileNameList = fnl;
+//}
 
 
 void GL_ImageServer::Reset()
@@ -894,14 +939,11 @@ void GL_ImageServer::Reset()
     ClearCache();
 }
 
-int GL_ImageServer::Cache(int imageNumber)
+int GL_ImageServer::Cache(wxFileName fileName)
 {
-    if (!fileNameList)
-        return -1;
-    
 
     //cout << "  - Caching.  fileNameList[" << imageNumber << " = " << (*fileNameList)[imageNumber] << endl;
-    int cacheLocation = GetCacheLocation(imageNumber);
+    int cacheLocation = GetCacheLocation(fileName);
 
     if (cacheLocation > -1)                             // Is the image already in the cache?
     {
@@ -916,9 +958,8 @@ int GL_ImageServer::Cache(int imageNumber)
 
     imageSet[cacheLocation].glImage.Invalidate();
     imageSet[cacheLocation].creationTime            = t;
-    imageSet[cacheLocation].imageNumber             = imageNumber;
+    imageSet[cacheLocation].fileName = fileName;
 
-    wxString fileName = (*fileNameList)[imageNumber];
     //cout << "    caching " << fileName << endl;
 
     ImageLoader *imageLoader = new ImageLoader(imageSet[cacheLocation].glImage, fileName, basicGLPanel, glContext);      // Begin loading the image in the background.
@@ -935,7 +976,7 @@ int GL_ImageServer::Cache(int imageNumber)
 
 
 
-GL_Image* GL_ImageServer::GetImage(int imageNumber)
+GL_Image* GL_ImageServer::GetImage(wxFileName fileName)
 {
     wxString text;
 
@@ -945,20 +986,34 @@ GL_Image* GL_ImageServer::GetImage(int imageNumber)
 
     //cout << endl << "GL_ImageServer::GetImage(" << imageNumber  << ")" << endl;
 
-    int cacheLocation = GetCacheLocation(imageNumber);
+    int cacheLocation = GetCacheLocation(fileName);
 
     if (cacheLocation == -1)
     {
-        cacheLocation = Cache(imageNumber);
+        cacheLocation = Cache(fileName);
     }
     //cout << "  Found at " << cacheLocation << endl;
-    
-    imageSet[cacheLocation].glImage.SetFileName((*fileNameList)[imageNumber]);
+
+    //cout << "thumbnailCanvas = " << &thumbnailCanvas << endl;
+
+    imageSet[cacheLocation].glImage.SetFileName(fileName);
+
+    if (thumbnailCanvas)
+    {
+        wxString infoString = thumbnailCanvas->GetInfoString(fileName);
+        //cout << "Setting info string: " << infoString << endl;
+        imageSet[cacheLocation].glImage.SetInfoString(infoString);
+    }
+    else
+    {
+        //cout << "No info string" << endl;
+    }
+
     return &(imageSet[cacheLocation].glImage);
 }
 
 
-int GL_ImageServer::GetCacheLocation(int imageNumber)
+int GL_ImageServer::GetCacheLocation(wxFileName fileName)
 {
     //cout << "GL_ImageServer::GetCacheLocation(" << imageNumber << ")" << endl;
     int i, n = imageSet.size();
@@ -966,7 +1021,7 @@ int GL_ImageServer::GetCacheLocation(int imageNumber)
     for (i = 0; i < n; i++)
     {
         //cout << "  checking " << i << " = " << imageSet[i].imageNumber << endl;
-        if (imageSet[i].imageNumber == imageNumber)
+        if (imageSet[i].fileName == fileName)
             return i;
     }
 
@@ -995,6 +1050,7 @@ int GL_ImageServer::GetOldestCacheLocation()
 
 int  GL_ImageServer::NextImageToCache()
 {
+    /*
     // First check if we need and can get the next image
     if (currentImage < (*fileNameList).MaxFileNumber())
     {
@@ -1006,6 +1062,7 @@ int  GL_ImageServer::NextImageToCache()
     }
 
     // Now start checking 
+    */
     return -1;
 }
 
@@ -1035,7 +1092,7 @@ void GL_ImageServer::UpdateDebuggingText()
         if (imageSet[i].glImage.uploadedTexture == true)      uploaded = '#';
         //if (imageSet[i].glImage.hasGeneratedTexture == true)    genTex = '#';
 
-        s.Printf("%02d: %s  %c %c %c %d\n", imageSet[i].imageNumber, fileName, loadedImage, uploaded, genTex, crTime);
+        s.Printf("%s  %c %c %c %d\n", fileName, loadedImage, uploaded, genTex, crTime);
 
         lines += s;
     }
@@ -1045,5 +1102,5 @@ void GL_ImageServer::UpdateDebuggingText()
 
 size_t GL_ImageServer::GetNumImages()
 {
-	return fileNameList->NumFiles();
+    return 99; // fileNameList->NumFiles();
 }

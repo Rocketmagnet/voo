@@ -20,13 +20,13 @@ FreetypeFont::FreetypeFont():
 
 void FreetypeFont::Initialise(int fontResolution)
 {
-    cout << "LoadFont(nothing)" << endl;
+    //cout << "LoadFont(nothing)" << endl;
     Init("", fontResolution);
 }
 
 void FreetypeFont::LoadFont(const wxFileName & fontFile, int fontResolution)
 {
-    cout << "LoadFont(" << fontFile.GetFullPath() << ")" << endl;
+    //cout << "LoadFont(" << fontFile.GetFullPath() << ")" << endl;
     Init(fontFile.GetFullPath().ToAscii(), fontResolution);
 }
 

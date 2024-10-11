@@ -24,6 +24,7 @@
 #include "wx/frame.h"
 #include "wx/treectrl.h"
 #include "config_parser.h"
+#include "wx/dnd.h"
 //#include <deque>
 #include "deque_thread_safe.h"
 
@@ -47,11 +48,12 @@
 #define ID_PANEL                10003
 #define ID_STATUSBAR            10004
 #define ID_DELETE_DIRECTORY     10005
-#define ID_ARCHIVE_DIRECTORY    10006
-#define ID_RANDOM_DIRECTORY     10007
-#define ID_MARK_DIRECTORY       10008
-#define ID_BACK_DIRECTORY       10009
-#define ID_TOUCH_DIRECTORY      10010
+#define ID_RESCALE_DIRECTORY    10006
+#define ID_ARCHIVE_DIRECTORY    10007
+#define ID_RANDOM_DIRECTORY     10008
+#define ID_MARK_DIRECTORY       10009
+#define ID_BACK_DIRECTORY       10010
+#define ID_TOUCH_DIRECTORY      10011
 
 #define SYMBOL_IMAGEBROWSER_STYLE       wxDEFAULT_FRAME_STYLE   |   \
                                         wxCAPTION               |   \
@@ -81,7 +83,9 @@ class FileNameList;
 
 #define ID_DIRECTORY_CTRL	100
 
-void SetDebuggingText(wxString text);
+void    SetDebuggingText(wxString text);
+void AppendDebuggingText(wxString text);
+int CompareStringsNatural_(const wxString& _a, const wxString& _b);
 
 class RightHandWindow : public wxWindow
 {
@@ -143,6 +147,27 @@ public:
     wxTextCtrl     *heightCtrl;
 };
 
+class TreeDropTargetHandler : public wxDropTarget
+{
+public:
+    TreeDropTargetHandler ()
+        : treeCtrl(0)
+    {
+        SetDataObject(&fileDataObject);
+    }
+
+    wxDragResult OnDragOver(wxCoord x, wxCoord y, wxDragResult defResult);
+    wxDragResult OnData(wxCoord x, wxCoord y, wxDragResult defResult) { return wxDragNone; }
+    wxDragResult OnEnter(   wxCoord x, wxCoord y, wxDragResult defResult) { return wxDragNone; }
+    bool         OnDrop(wxCoord x, wxCoord y);
+
+
+    void SetTreeCtrl(wxTreeCtrl* tc) { treeCtrl = tc; }
+
+    wxTreeCtrl         *treeCtrl;
+    wxFileDataObject    fileDataObject;
+    wxTreeItemId        prevDragItemId;
+};
 
 
 //! ImageBrowser class declaration
@@ -201,6 +226,15 @@ public:
     void OnDeleteDirectory(wxCommandEvent &event);
     void OnArchiveDirectory(wxCommandEvent &event);
 
+    void             DragStart()                            
+    { 
+        std::cout << "DragStart()" << std::endl;
+        draggingFiles = true; 
+    }
+
+    wxDragResult OnDragOver(wxCoord x, wxCoord y, wxDragResult defResult);
+
+    void           OnDragFiles(wxMouseEvent     &event);
     void        OnDropDirFiles(wxDropFilesEvent &event);
     void JumpToRandomDirectory(wxCommandEvent   &event);
     void         MarkDirectory(wxCommandEvent   &event);
@@ -239,6 +273,7 @@ public:
 	wxGenericDirCtrl	*dirTreeCtrl;
     wxTreeCtrl          *treeCtrl;
 	ThumbnailCanvas		*thumbnailCanvas;
+    //wxStaticText        *debuggingWindow;
     ImageViewer         *imageViewer;
     wxTextCtrl          *directoryNameCtrl;
     RightHandWindow     *rightHandWindow;
@@ -258,6 +293,8 @@ public:
     ImageResizerPermanent           imageResizerPermanent;
     deque_thread_safe<ResizerEntry> resizerEntries;
 
+    bool                draggingFiles;
+    TreeDropTargetHandler   treeDropTargetHandler;
     ////@end ImageBrowser member variables
 };
 

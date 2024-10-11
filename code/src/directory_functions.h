@@ -18,7 +18,7 @@ public:
       treeCtrl(tc),
       treeItemId(id)
     {
-        std::cout << "Thread constructor" << std::endl;
+        //std::cout << "Thread constructor" << std::endl;
     }
 
 

@@ -1,12 +1,21 @@
-#include <gl/glew.h>
+//#include <gl/glew.h>
+
+//#include "jpeg_gpu.h"
+#include "jpeglib.h"
+#define GLFW_INCLUDE_GLCOREARB
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
+
 #include "wx/wx.h"
 #include "wx/sizer.h"
 #include "wx/glcanvas.h"
 
+#include <GL/gl.h>
+#include <GL/glu.h>
 #include "drawable.h"
 #include "gl_panel.h"
-#include <GL/glu.h>
-#include <GL/gl.h>
 #include <iostream>
 using namespace std;
 
@@ -42,7 +51,7 @@ BasicGLPanel::BasicGLPanel(wxFrame* parent, int* args)
   glewInitialised(false),
   currentImage(0),
   imageServer(3),
-  imageNumberToLoad(-1),
+  imageToLoad(""),
   screenFont()
 {
     m_context = new wxGLContext(this);
@@ -164,11 +173,10 @@ void BasicGLPanel::DisplayImage(wxString filename)
 }
 */
 
-void BasicGLPanel::DisplayImage(int imageNumber)
+void BasicGLPanel::DisplayImage(wxFileName fileName)
 {
-    //cout << "BasicGLPanel::DisplayImage(" << path << ")" << endl;
-    //imagePathToLoad = path;
-    imageNumberToLoad = imageNumber;
+    //cout << "BasicGLPanel::DisplayImage(" << fileName.GetFullName() << ")" << endl;
+    imageToLoad       = fileName;
     fontTimeRemaining = 100;
     zoomTimeRemaining = 100;
 }
@@ -237,12 +245,13 @@ void BasicGLPanel::Clear()
 void BasicGLPanel::Render(bool blankScreen)
 {
     //cout << endl;
+    //cout << "BasicGLPanel::Render(" << blankScreen << ")" << endl;
     //NoteTime(wxT("BasicGLPanel::Render"));
     //if (currentImage)
     //    cout << "Current = " << currentImage->width << endl;
 
-    if (!IsShown())         return;
-    if (!glewInitialised)   return;
+    if (!IsShown())         {return;}
+    if (!glewInitialised)   {return;}
 
     //cout << "BasicGLPanel::Render " << endl;
 
@@ -253,10 +262,18 @@ void BasicGLPanel::Render(bool blankScreen)
     wxGLCanvas::SetCurrent(*m_context);
     //NoteTime(wxT("Set Current"));
 
-    if (imageNumberToLoad >= 0)
+
+    //if (!jpegGpu)
+    //{
+    //    NoteTime(wxT("Create new JpegGpu"));
+    //    char filename[] = "test_image.jpg";
+    //    jpegGpu = new JpegGpu(filename);
+    //    NoteTime(wxT("Create new JpegGpu - Done"));
+    //}
+
+    if (imageToLoad != "")
     {
-        GL_Image *newImage = imageServer.GetImage(imageNumberToLoad);
-        //NoteTime(wxT("Image Loaded"));
+        GL_Image *newImage = imageServer.GetImage(imageToLoad);
 
         if (newImage->loadedImage)
         {
@@ -265,36 +282,32 @@ void BasicGLPanel::Render(bool blankScreen)
                 bool isFullyVisible = currentImage->IsFullyVisible();
 
                 newImage->CopyScaleAndPositionFrom(*currentImage);
-                //cout << "Scale Diff = " << currentImage->GetScaleDifference(*newImage) << endl;
                 if (newImage->width > 400)
                 {
                     if (isFullyVisible)
-                        newImage->SetScaleAndPosition(0, 0, 0.01);
+                        newImage->SetScaleAndPosition(0, 0, 0.01f);
                     newImage->ExpandToSides();
                 }
             }
             else
             {
-                newImage->Scale(0.01);
+                newImage->Scale(0.01f);
                 newImage->ExpandToSides();
             }
 
             currentImage = newImage;
 
-            currentImageNumber = imageNumberToLoad;
-            imageNumberToLoad = -1;
+            currentImageFileName = imageToLoad;
+            imageToLoad = "";
         }
 
         if (currentImage)
         {
-            //int xCentre = GetWidth() / 2;
-            //int yCentre = GetHeight() / 2;
-            //currentImage->SetScreenSize(GetWidth(), GetHeight());
         }
     }
 
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    //cout << "(" << GetWidth() << ", " << GetHeight() << endl;
     // render loaded image
     Prepare2DViewport(0, 0, GetWidth(), GetHeight());
     //glTranslatef(sprite->image->G)
@@ -319,8 +332,6 @@ void BasicGLPanel::Render(bool blankScreen)
 
             glLoadIdentity();
 			wxString s = currentImage->GetInfoString();
-			s.Append("\n");
-			s.Append(GetImageNumberInfo());
 
             screenFont.SetColour(0.0f, 0.0f, 0.0f, transparency*0.5f);
             screenFont.Print(2.0, 2.0, 24.0, s);
@@ -328,12 +339,6 @@ void BasicGLPanel::Render(bool blankScreen)
             screenFont.Print(0.0, 0.0, 24.0, s);
             screenFont.SetColour(1, 1, 1, 1);
             screenFont.Print(0.0, 120.0, 24.0, " ");
-
-			//s.Printf("%d/%d", currentImageNumber, 0);
-			//screenFont.SetColour(0.0f, 0.0f, 0.0f, 0.5f);
-			//screenFont.Print(2.0, 62.0, 24.0, s);
-			//screenFont.SetColour(1, 1, 1, 1);
-			//screenFont.Print(0.0, 60.0, 24.0, s);
 		}
 
         if (zoomTimeRemaining)          // For a while after we adust the zoom, show the zoom percentage on the screen
@@ -358,16 +363,15 @@ void BasicGLPanel::Render(bool blankScreen)
 
     glFlush();
     SwapBuffers();    
-
-    //cout << "BasicGLPanel::Render Done" << endl;
 }
 
 wxString BasicGLPanel::GetImageNumberInfo()
 {
-	int numImages = imageServer.GetNumImages();
+	//int numImages = imageServer.GetNumImages();
 	wxString s;
 
-	s.Printf("%d of %d", currentImageNumber+1, numImages);
+    s = "# Nothing #";
+	//s.Printf("%d of %d", currentImageNumber+1, numImages);
 	return s;
 }
 

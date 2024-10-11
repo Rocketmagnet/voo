@@ -50,9 +50,20 @@ void GreyEmptyDirectories(wxTreeCtrl &treeCtrl, wxTreeItemId treeItemId, wxArray
             }
             else
             {
+                if (dir.HasFiles("*.mp4") ||
+                    dir.HasFiles("*.wmv") ||
+                    dir.HasFiles("*.avi") ||
+                    dir.HasFiles("*.mpg") ||
+                    dir.HasFiles("*.mpeg"))
+                {
+                    treeCtrl.SetItemTextColour(id, wxColor(64, 64, 255));
+                    //treeCtrl.SetItemImage(id, )
+                }
+
                 knownDirList.push_back(data->m_path);
             }
         }
         id = treeCtrl.GetNextChild(treeItemId, cookie);
     }
 }
+    

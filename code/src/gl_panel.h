@@ -2,14 +2,18 @@
 #define _glpane_
 
 #include "wx/wx.h"
-#include "wx/glcanvas.h"
 #include "drawable.h"
 #include "freetype_fonts.h"
+
+#include "wx/glcanvas.h"
 
 #define GL_PANEL_BLANK_SCREEN   true
 #define GL_PANEL_RENDER_IMAGE   false
 
 class FileNameList;
+class ThumbnailCanvas;
+
+//class JpegGpu;
 
 class BasicGLPanel : public wxGLCanvas
 {
@@ -19,9 +23,13 @@ public:
 
     void SetFileNameList(FileNameList *fileNameList) { imageServer.SetFileNameList(fileNameList); }
     void Resized(wxSizeEvent& evt);
-
-    int GetWidth();
-    int GetHeight();
+    void SetThumbnailCanvas(ThumbnailCanvas* _thumbnailCanvas)
+    {
+        imageServer.SetThumbnailCanvas(_thumbnailCanvas);
+        thumbnailCanvas = _thumbnailCanvas;
+    }
+    int  GetWidth();
+    int  GetHeight();
 
     void OnPaint(wxPaintEvent& evt);
     void Prepare3DViewport(int topleft_x, int topleft_y, int bottomrigth_x, int bottomrigth_y);
@@ -31,7 +39,7 @@ public:
     void ClearCache();
 
     //void DisplayImage(wxString filename);
-    void DisplayImage(int imageNumber);
+    void DisplayImage(wxFileName fileName);
 
     // events
     void MouseMoved(wxMouseEvent& event);
@@ -51,20 +59,22 @@ public:
     
     void InitFont(FreetypeFont & font, int fontResolution = 0);
 
-    int GetImageNumber() { return currentImageNumber; }
+    wxFileName GetImageFileName() { return currentImageFileName; }
 	wxString GetImageNumberInfo();
 
     wxGLContext        *m_context;
 
     GL_ImageServer      imageServer;
     GL_Image           *currentImage;
-    int                 currentImageNumber;
-    int                 imageNumberToLoad;
+    wxFileName          currentImageFileName;
+    wxFileName          imageToLoad;
     float               scaling;
     bool                glewInitialised;
     FreetypeFont	    screenFont;
     int                 fontTimeRemaining;
     int                 zoomTimeRemaining;
+    ThumbnailCanvas    *thumbnailCanvas;
+
     DECLARE_EVENT_TABLE()
 };
 

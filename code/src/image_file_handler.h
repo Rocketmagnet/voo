@@ -21,7 +21,7 @@ public:
     virtual ~ImageFileHandler()
     {}
 
-    virtual void LoadThumbnail(wxString fileName, Thumbnail &thumbnail) = 0;
+    virtual bool LoadThumbnail(wxString fileName, Thumbnail &thumbnail) = 0;
     virtual int  LoadImage(    wxString fileName) = 0;
 
     int a;

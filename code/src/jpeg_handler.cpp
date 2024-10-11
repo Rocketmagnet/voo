@@ -12,14 +12,33 @@ ImageFileHandler* CreateJpegHandler()
     return new JpegHandler();
 }
 
-bool reg_JpegHandler1 = ImageFileHandlerRegistry::instance().RegisterImageFileHandler(CreateJpegHandler, _T("JPEG"), _T("jpg"),  _T("Lossy compressed image."));
-bool reg_JpegHandler2 = ImageFileHandlerRegistry::instance().RegisterImageFileHandler(CreateJpegHandler, _T("JPEG"), _T("jpeg"), _T("Lossy compressed image."));
+bool reg_JpegHandler1 = ImageFileHandlerRegistry::instance().RegisterImageFileHandler(CreateJpegHandler, _T("JPEG"), _T("jpg"),  _T("Lossy compressed image."), CAN_VIEW_IMAGE);
+bool reg_JpegHandler2 = ImageFileHandlerRegistry::instance().RegisterImageFileHandler(CreateJpegHandler, _T("JPEG"), _T("jpeg"), _T("Lossy compressed image."), CAN_VIEW_IMAGE);
 
-void JpegHandler::LoadThumbnail(wxString fileName, Thumbnail &thumbnail)
+void JpegHandler::ConvertGreyscaleToRGB(wxImage& image)
+{
+    int w = image.GetWidth();
+    int h = image.GetHeight();
+
+    int lastPixel = w * h;
+
+    unsigned char* src = image.GetData() + lastPixel;
+    unsigned char* dst = image.GetData() + (lastPixel*3);
+
+    for (int i = lastPixel - 1; i >= 0; i--)
+    {
+        unsigned char grey = *src--;
+        *dst-- = grey;
+        *dst-- = grey;
+        *dst-- = grey;
+    }
+}
+
+bool JpegHandler::LoadThumbnail(wxString fileName, Thumbnail &thumbnail)
 {
     wxLogNull logNo;													// logging is suspended while this object is in scope
     wxImage   image;
-
+    bool      returnValue;
     //cout << "JpegHandler::LoadThumbnail(" << fileName << ")" << endl;
 
     //jpeg_load_state *load_state = ReadJpegHeader((const  char*)fileName.c_str());
@@ -33,24 +52,20 @@ void JpegHandler::LoadThumbnail(wxString fileName, Thumbnail &thumbnail)
         image.Create(w, h);
         image.SetRGB(wxRect(0, 0, w, h), 128, 64, 0);
         JpegRead(image.GetData(), load_state);
+        returnValue = true;
+
+        thumbnail.SetImage(image);
+        thumbnail.FinishedLoading();
+        image.Destroy();
     }
-    else
+    else                                                        // Failed images get the XOR pattern.
     {
-        image.Create(32, 32);
-        unsigned char *data = image.GetData();
-        for (int y = 0; y < 32; y++)
-            for (int x = 0; x < 32; x++)
-            {
-                *data++ = x ^ y;
-                *data++ = (x * 2) ^ (y * 2);
-                *data++ = (x * 3) ^ (y * 3);
-            }
+        returnValue = false;
     }
 
     //image.Resize(dx2, dy2);       // crop it
-    thumbnail.SetImage(image);
-    thumbnail.FinishedLoading();
-    image.Destroy();
+
+    return returnValue;
 }
 
 int JpegHandler::LoadImage(wxString fileName)

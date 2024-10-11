@@ -1,3 +1,6 @@
+#ifndef THUMBNAIL_CANVAS_H_INCLUDED
+#define THUMBNAIL_CANVAS_H_INCLUDED
+
 #include "wx/scrolwin.h"
 #include <vector>
 #include <deque>
@@ -22,6 +25,16 @@ class Thumbnail;
 class ThumbnailCanvas;
 class ImageBrowser;
 
+/* Thumbnails hold the image names. FileNameList does not.
+ * ThumbnailCanvas has a vector of Thumbnails which never changes during a session
+ *                 has a vector of ints which index the Thumbnails.
+ *                 On Delete, an index is removed, and the later ones shifted down
+ * 
+ * ImageViewer doesn't have a pointer to FileNameList. It must get the filenames from ThumbnailCanvas
+ *
+ */
+
+
 //-----------------------------------------------------------------------------
 // MyCanvas
 //-----------------------------------------------------------------------------
@@ -40,16 +53,18 @@ public:
         //Test();
     }
 
-    void AddFrom(SortedVectorInts &src)
+    void AddFrom(const SortedVectorInts &src)
     {
-        v.reserve(v.size() + src.v.size());
+        //v.reserve(v.size() + src.v.size());
 
-        size_t i, n = src.v.size();
+        //size_t i, n = src.v.size();
 
-        for (i = 0; i < n; i++)
-        {
-            v.push_back(src.v[i]);
-        }
+        MergeInPlace(src);
+        //for (i = 0; i < n; i++)
+        //{
+        //    if (!Contains(src.v[i]))
+        //        v.push_back(src.v[i]);
+        //}
     }
 
     void CopyFrom(SortedVectorInts &src)
@@ -78,6 +93,16 @@ public:
         v.push_back(s);
     }
 
+    int Back() const
+    {
+        return v.back();
+    }
+
+    int Front() const
+    {
+        return v[0];
+    }
+
     void RemoveSingle(int s)
     {
         int i, n = v.size();
@@ -97,23 +122,14 @@ public:
 
     void ToggleSingle(int s)
     {
-        std::vector<int>::iterator i;
-
-        for (i = v.begin(); i<v.end(); i++)
+        if (Contains(s))
         {
-            if (*i == s)                                // If this is already selected
-            {
-                v.erase(i);
-                return;                                 // and we're finished.
-            }
-
-            if (*i < s)                                 // If this is NOT already selected
-            {
-                v.insert(i, s);                         // then we can insert here.
-                return;
-            }
+            RemoveSingle(s);
         }
-        v.push_back(s);
+        else
+        {
+            AddSingle(s);
+        }
     }
 
 
@@ -143,7 +159,7 @@ public:
 
     void Clear() { v.clear(); }
 
-    void Print()
+    void Print() const
     {
         std::cout << "[";
         for (size_t i=0; i<v.size(); i++)
@@ -153,12 +169,11 @@ public:
         std::cout << "]" << std::endl;
     }
 
-    wxString SPrint()
+    wxString SPrint() const
     {
         wxString s;
         wxString t;
-
-        s.Printf(wxT("%d ["), v.size());
+        s.Printf(wxT("%d ["), (int)v.size());
         for (size_t i = 0; i<v.size(); i++)
         {
             t.Printf(wxT("%d, "), v[i]);
@@ -169,7 +184,7 @@ public:
         return s;
     }
 
-    bool Contains(int s)
+    bool Contains(int s) const
     {
         int first, last, middle, n;
 
@@ -214,7 +229,7 @@ public:
 		SetRange(selectionStart, selectionEnd);
 	}
 
-    int DistanceTo(int i)
+    int DistanceTo(int i) const
     {
         if (i <= v.front())
         {
@@ -229,11 +244,13 @@ public:
         return 0;
     }
 
-    int size() { return v.size(); }
-    int operator [](int i) { return v[i];}
+    int size() const { return v.size(); }
+    int& operator [](int i) { return v[i];}
+
+    int Get(int i) const { return v[i]; }
 
     bool Test();
-    bool IsNotEmpty() { return v.size() > 0; }
+    bool IsNotEmpty() const { return v.size() > 0; }
 
     std::vector<int>     v;
 	int selectionStart;
@@ -244,6 +261,8 @@ private:
     {
 
     }
+
+    void MergeInPlace(const SortedVectorInts& v2);
 };
 
 
@@ -334,11 +353,12 @@ public:
 class ThumbnailLoader : public wxThread
 {
 public:
-    ThumbnailLoader(wxString fn, Thumbnail &tn)
+    ThumbnailLoader(wxString fn, Thumbnail &tn, FileNameList &FNL)
     : wxThread(wxTHREAD_DETACHED),
       fileName(fn),
       thumbnail(tn),
-      started(false)
+      started(false),
+      fileNameList(FNL)
     {
     }
 
@@ -349,6 +369,7 @@ protected:
     wxString            fileName;
     Thumbnail          &thumbnail;
 	jpeg_load_state		jpegLoadState;
+    FileNameList       &fileNameList;
 };
  
 
@@ -375,7 +396,7 @@ protected:
 class Thumbnail : public wxObject
 {
 public:
-	Thumbnail(const wxPoint &pos, wxFileName filename, bool fetchHeader=false);
+	Thumbnail(const wxPoint &pos, wxFileName filename, bool fetchHeader, FileNameList & fileNameList, size_t uID);
 	~Thumbnail();
 
     void StartLoadingImage() { if (thumbnailLoader) thumbnailLoader->Run(); }
@@ -437,6 +458,7 @@ protected:
 
     void DrawLabelClipped(wxPaintDC &dc, wxString &label, wxRect &rectangle);
 
+    size_t              uniqueID;
     bool                imageLoaded;
     bool                hasBeenDrawn;
     bool                isLoading;
@@ -457,6 +479,8 @@ protected:
 
 class ThumbnailCanvas : public wxScrolledWindow
 {
+    const size_t MAX_THUMBNAILS_LOADING = 4;    
+
     enum DRAG_STATE
     {
         TNC_DRAG_STATE_NONE     = 0,
@@ -503,6 +527,7 @@ public:
     void OnFocusKillEvent(wxFocusEvent &event);
 
     void OnDropFiles(wxDropFilesEvent& event);
+    void OnDropFilesTree(wxDropFilesEvent& event);
 
     int     GetThumbnailFromPosition(wxPoint &position);
     wxPoint GetThumbnailPosition(size_t n);
@@ -519,23 +544,32 @@ public:
     void SetAcceleratorTable(const wxAcceleratorTable &accel);
     void UpdateStatusBar_File();
     void ClearStatusBar();
-    void SetCursor(int imageNumber);
+    void SetCursor(wxFileName fileName);
+    void SetCursor(int tn);
+    int  GetSortedImageNumber(wxFileName fileName) const;
+    int FindThumbnailIndex(wxFileName fileName);
 
-    void RemoveThumbNailFromCanvas(int tn);
-    void DeleteImage(int tn);
+    void RemoveThumbNailFromCanvasIfDeleted(std::vector<wxFileName>  &fileNamesToMaybeRemove);
+    void DeleteImage(wxFileName fileName);
     void DeleteSelection();
 
     void ActivateThumbnail(int n);
+
+    //wxFileName Jump(size_t &currentImage, int delta, wxString viewableExtensions)    const;
+    wxFileName Jump(wxFileName& currentImage, int delta, wxString viewableExtensions) const;
 
     Thumbnail* GetThumbnail(int i)      { return &thumbnails[i];      }
     int        GetNumThumbnails()       { return  thumbnails.size();  }
     int        GetNumColumns()          { return  tnColumns;          }
     int        GetNumRows()             { return  int(GetSize().GetHeight() / (tnSize.GetHeight() + tnSpacingY)); }
     int        GetNumImagesPerPage()    { return  tnColumns * GetNumRows(); }
+    wxString   GetInfoString(wxFileName fileName);
 
     void ReadHeadersCompleted() { readHeadersCompleted = true; }
 
+    void SortThumbnails();
     void SortThumbnailsByName(wxCommandEvent & evt);
+    void SortThumbnailsByNameNumbers(wxCommandEvent& evt);
     void SortThumbnailsByDate(wxCommandEvent & evt);
     void RenameSequence(wxCommandEvent & evt);
 
@@ -568,13 +602,15 @@ public:
 
 
 private:
+    void   ResetUiniqueID() {currentUniqueID = 0;}
+    size_t GetUiniqueID() { return currentUniqueID++; }
     void HandleCursorScrolling();
     void AddPopupMenuItem(const wxString& label, void(ThumbnailCanvas::*function)(wxCommandEvent &));
     int  GetAvailableID() { return m_availableID++; }
     int  FindThumbnailIndex(int th);
-
+    wxString GetExtensionOfImageNumber(size_t index) const;
     bool CheckPasswordProtection(wxString directory);
-
+    void IndexLookup(SortedVectorInts& vec);
     //void ReportInt1(int pos, wxString str, int i);
     //void ReportInt2(int pos, wxString str, int i, int j);
     //void ReportInt3(int pos, wxString str, int i, int j, int k);
@@ -587,6 +623,7 @@ private:
     std::vector<int>	    thumbnailIndex;
     int                     selectionStart;
 	bool                    inFocus;
+    int                     sortingType;
 
     TnCursor                cursorP;
     SortedVectorInts        selectionSetP;                      // Selected thumbnails (pointers)
@@ -608,7 +645,7 @@ private:
     int                     draggedThumb;
     int                     tnSpacingX, tnSpacingY;
     wxULongLong             totalDirectorySizeBytes;
-     
+    
     ImageBrowser           *imageBrowser;
     ImageViewer            *imageViewer;
     //ConfigParser           *configParser;
@@ -620,6 +657,9 @@ private:
     int                     sortType;
     bool                    thumbnailLoadingActive;
     wxArrayString           allowedDirectories;
+    size_t                  currentUniqueID;
 
 	wxDECLARE_EVENT_TABLE();
 };
+
+#endif

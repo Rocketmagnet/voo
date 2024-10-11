@@ -55,14 +55,18 @@ public:
     void AddFilter(wxString ext);
     void AddFileToList(wxString name);
     void Resort();
-    bool DeleteFileNumber(int fileNumber);
+    bool DeleteFileName(wxFileName fileName);
+    //bool DeleteFileNumber(int fileNumber);
     int  GetFileNumber(wxString fileName);
 
     void FillArrayWithFileNamesFrom(wxString directory, wxArrayString &arrayString);
 
-    size_t   NumFiles()        const { return files.size();     }
-    size_t   MaxFileNumber()   const { return files.size() - 1; }
-    wxString operator[](int i) const { return files[i].fileName.GetFullPath();   }
+    bool Rename(wxString src, wxString dst);
+
+    size_t   NumFiles()        const { return files.size();                     }
+    size_t   MaxFileNumber()   const { return files.size() - 1;                 }
+    wxString operator[](int i) const { return files[i].fileName.GetFullPath();  }
+    size_t   Jump(size_t currentImage, int delta, wxString viewableExtensions);
 
 //private:
     std::vector<DirSortingItem>	 files;

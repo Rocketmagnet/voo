@@ -36,7 +36,8 @@
 wxDECLARE_APP(Image_BrowserApp);
 
 using namespace std;
-
+extern void NoteTime(wxString s);
+    
 ////@begin XPM images
 
 ////@end XPM images
@@ -65,9 +66,8 @@ END_EVENT_TABLE()
 
 ImageViewer::ImageViewer()
     : glPanel(0),
-    fileNameList(0),
-    currentImage(0),
-    displayNumber(-1),
+    currentImageFileName(""),
+    displayThisFileName(""),
     disappearState(DISAPPEAR_STATE_NONE)
 {
     Init();
@@ -75,21 +75,23 @@ ImageViewer::ImageViewer()
 
 ImageViewer::ImageViewer(ImageBrowser* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style)
 : glPanel(),
-  fileNameList(0),
-  currentImage(0),
-  displayNumber(-1),
+  currentImageFileName(""),
+  displayThisFileName(""),
   imageBrowser(parent),
   thumbnailCanvas(0),
   disappearState(DISAPPEAR_STATE_NONE)
 {
-    fileNameList = imageBrowser->GetFileNameList();
+    //NoteTime("    AAAA");
+    //NoteTime("    BBBB");
     Init();
+    //NoteTime("    CCCC");
     //cout << "ImageViewer::ImageViewer(" << parent << ") " << this << endl;
 
     wxSize sz(wxSystemSettings::GetMetric(wxSYS_SCREEN_X)+4, wxSystemSettings::GetMetric(wxSYS_SCREEN_Y)+4);
     //wxSize sz(400,400);
     //Create(parent, id, caption, wxPoint(-8, -8), sz, style);
     Create(parent, id, caption, wxPoint(-2, -2), sz, style);
+    //NoteTime("    DDDD");
     //Create(parent, id, caption, wxPoint(0,0), sz, style);
 
     //wxTextCtrl* dropTarget = new wxTextCtrl(this, wxID_ANY, _("Drop files onto me!"), wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
@@ -105,24 +107,28 @@ ImageViewer::ImageViewer(ImageBrowser* parent, wxWindowID id, const wxString& ca
  */
 
 
-static int32_t emptyMask[] = { 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
-                               0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
-                               0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
-                               0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
-                               0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
-                               0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
-                               0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
-                               0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
+static unsigned int emptyMask[] = { 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                                    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                                    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                                    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                                    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                                    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                                    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+                                    0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
 
-bool ImageViewer::Create(ImageBrowser* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style )
+bool ImageViewer::Create(ImageBrowser* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style)
 {
 ////@begin ImageViewer creation
     //cout << "ImageViewer::Create(" << parent << ")" << endl;
+    //NoteTime("      AAAAA");
     wxFrame::Create( parent, id, caption, pos, size, style );
     //cout << "ImageViewer::Create() Done Create Frame" << endl;
+    //NoteTime("      BBBBB");
 
     CreateControls();
+    //NoteTime("      CCCCC");
     Layout();
+    //NoteTime("      DDDDD");
     wxBitmap bitmap((char*)emptyMask, 32, 32);
     wxBitmap   mask((char*)emptyMask, 32, 32);
 
@@ -176,16 +182,19 @@ void ImageViewer::CreateControls()
 
     SetSizer(sizer);
 
+    //NoteTime("      1A");
     glPanel = new BasicGLPanel(this, 0);
-    //textCtrl = new wxTextCtrl(this, -1, wxT("Text Info"), wxDefaultPosition, wxSize(400, 1000), wxTE_MULTILINE|wxTE_READONLY);
     textCtrl = 0;
 
+    //NoteTime("      1B");
     sizer->Add(glPanel,  1, wxEXPAND);
     //sizer->Add(textCtrl, .1, wxEXPAND);
     SetBackgroundColour(wxColor(0, 0, 0));
     Show(false);
+    //NoteTime("      1C");
 
     timer.SetOwner(this, IMAGE_VIEWER_TIMER_ID);
+    //NoteTime("      1D");
 
     //wxAcceleratorEntry entries[1];
     //entries[0].Set(wxACCEL_CTRL, (int) 'D', ID_DELETE_DIRECTORY);
@@ -238,8 +247,13 @@ void ImageViewer::ClearKeys()
 
 void ImageViewer::OnIdle(wxIdleEvent &event)
 {
-	if (!IsShown())
-		return;
+    //cout << "ImageViewer::OnIdle()" << endl;
+    if (!IsShown())
+    {
+        //cout << "ImageViewer::OnIdle not shown" << endl;
+        return;
+    }
+    //cout << "  Shown" << endl;
 
     //cout << "ImageViewer::OnIdle" << endl;
     float dx = 0, dy = 0;
@@ -256,11 +270,11 @@ void ImageViewer::OnIdle(wxIdleEvent &event)
 
     glPanel->Render(GL_PANEL_RENDER_IMAGE);
 
-    if (displayNumber > -1)
+    if (displayThisFileName != "")
     {
         //cout << "displayNumber " << displayNumber << endl;
-        glPanel->DisplayImage(displayNumber);
-        displayNumber = -1;
+        glPanel->DisplayImage(displayThisFileName);
+        displayThisFileName = "";
     }
     event.RequestMore();
 }
@@ -273,62 +287,54 @@ void ImageViewer::ClearCache()
 
 void ImageViewer::DisplayImage(wxFileName fileName)
 {
-    /*
+    //cout << "ImageViewer::DisplayImage(" << fileName.GetFullPath() << ")" << endl;
+
     wxString ext        = fileName.GetExt();
     ext.MakeLower();
 
-    cout << "videoFileExtensions = " << videoFileExtensions << endl;
+    //cout << "videoFileExtensions = " << videoFileExtensions << endl;
 
     if (videoFileExtensions.Contains(ext))
     {
-        cout << "It's a video!" << endl;
+        //cout << "It's a video!" << endl;
         wxString command = videoPlayerPath + wxT(" \"") + fileName.GetFullPath() + wxT("\"");
-        cout << command << endl;
+        //cout << command << endl;
         wxExecute(command.c_str(), wxEXEC_ASYNC, NULL);
 
         return;
     }
 
-
-    //TEXT_MSG("ImageViewer::DisplayImage(%d)\n", imageNumber);
-
-    if (imageNumber < 0)
-        return;
-
-    if (imageNumber > fileNameList->MaxFileNumber())
-        return;
-
-    currentImage = imageNumber;
-
     if (glPanel)
     {
-        //TEXT_MSG("  Display\n");
         Show(true);
-        ////ShowFullScreen(true);
-        displayNumber = imageNumber;
+        displayThisFileName = fileName;
+        //displayNumber = currentImage;
+        currentImageFileName = fileName;
         SetFocus();
         Refresh();
         timer.Start(10);
         disappearState = DISAPPEAR_STATE_NONE;
     }
-    */
 }
 
 // Called by ThumbnailCanvas whenever an image is requested
 // to be displayed.
 // 
+/*
 void ImageViewer::DisplayImage(int imageNumber)
 {
-    thumbnailCanvas->PauseLoadingThumbnails();
+    //thumbnailCanvas->PauseLoadingThumbnails();
     int sortedImageNumber = thumbnailCanvas->GetSortedImageNumber(imageNumber);
     wxFileName fileName = (*fileNameList)[sortedImageNumber];
     wxString ext        = fileName.GetExt();
     ext.MakeLower();
 
+    //cout << "ImageViewer::DisplayImage(" << imageNumber << ") = " << sortedImageNumber << "  " << fileName.GetFullName() << endl;
+
     if (videoFileExtensions.Contains(ext))
     {
         wxString command = videoPlayerPath + wxT(" \"") + fileName.GetFullPath() + wxT("\"");
-        cout << command << endl;
+        //cout << command << endl;
         wxExecute(command.c_str(), wxEXEC_ASYNC, NULL);
 
         return;
@@ -360,16 +366,16 @@ void ImageViewer::DisplayImage(int imageNumber)
         disappearState = DISAPPEAR_STATE_NONE;
     }
 }
-
+*/
 
 void ImageViewer::Disappear()
 {
-    thumbnailCanvas->ContinueLoadingThumbnails();
+    //thumbnailCanvas->ContinueLoadingThumbnails();
     glPanel->Clear();
     ClearKeys();
 
-    thumbnailCanvas->SetCursor(currentImage);
-    currentImage = -1;
+    thumbnailCanvas->SetCursor(currentImageFileName);
+    currentImageFileName = "";
     Show(false);
     thumbnailCanvas->SetFocus();
     disappearState = DISAPPEAR_STATE_NONE;
@@ -381,22 +387,30 @@ wxLongLong keyTime = 0;
 
 void ImageViewer::OnKeyDown(wxKeyEvent &event)
 {
+    //int sortedImageNumber;
     wxLongLong kt = wxGetLocalTimeMillis();
     keyTime = kt;
-
+    wxFileName nextImage;
 
 	lastKeyCode = event.GetKeyCode();
     switch (event.GetKeyCode())
     {
-    case WXK_DELETE:
-        if (!NextImage())
+    case WXK_DELETE:        
+        nextImage = thumbnailCanvas->Jump(currentImageFileName, 1, viewableExtensions);
+
+        if (nextImage == "")
+            nextImage = thumbnailCanvas->Jump(currentImageFileName, -1, viewableExtensions);
+
+        thumbnailCanvas->DeleteImage(currentImageFileName);
+
+        if (nextImage == "")
         {
-            if (!PrevImage())
-            {
-                Disappear();
-            }
+            disappearState = DISAPPEAR_STATE_REQUESTED;
         }
-        thumbnailCanvas->DeleteImage(currentImage);
+        else
+        {
+            DisplayImage(nextImage);
+        }
         break;
 
     case WXK_ESCAPE:
@@ -474,8 +488,6 @@ void ImageViewer::OnClose(wxCloseEvent &event)
 
 void ImageViewer::OnMouseWheel(wxMouseEvent &event)
 {
-    int newImage = currentImage;
-
     if (event.GetWheelRotation() > 0)
     {
         PrevImage();
@@ -505,6 +517,7 @@ void ImageViewer::OnMouseLDClick(wxMouseEvent& event)
 
 void ImageViewer::HomeImage()
 {
+    /*
     unsigned int newImage = 0;
     
     if (newImage > fileNameList->MaxFileNumber())
@@ -515,10 +528,12 @@ void ImageViewer::HomeImage()
         DisplayImage(newImage);
         Refresh();
     }
+    */
 }
 
 void ImageViewer::EndImage()
 {
+    /*
     unsigned int newImage = fileNameList->MaxFileNumber();
 
     if (currentImage != newImage)
@@ -526,19 +541,17 @@ void ImageViewer::EndImage()
         DisplayImage(newImage);
         Refresh();
     }
+    */
 }
 
 bool ImageViewer::NextImage(int jump)
 {
-    unsigned int newImage = currentImage;
-    newImage += jump;
+    wxFileName newFileName = thumbnailCanvas->Jump(currentImageFileName, jump, viewableExtensions);
 
-    if (newImage > fileNameList->MaxFileNumber())
-        newImage = fileNameList->MaxFileNumber();
-
-    if (currentImage != newImage)
+    if (currentImageFileName != newFileName)
     {
-        DisplayImage(newImage);
+        //currentImageFileName = newFileName;
+        DisplayImage(newFileName);
         Refresh();
         return true;
     }
@@ -551,22 +564,7 @@ bool ImageViewer::NextImage(int jump)
 
 bool ImageViewer::PrevImage(int jump)
 {
-    int newImage = currentImage;
-
-    newImage -= jump;
-    if (newImage < 0)
-        newImage = 0;
-
-    if (currentImage != newImage)
-    {
-        DisplayImage(newImage);
-        Refresh();
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+    return NextImage(-jump);
 }
 
 wxLongLong onTimer = 0;
@@ -590,10 +588,12 @@ void ImageViewer::ResetZoom()
 
 void ImageViewer::OnTimer(wxTimerEvent &event)
 {
+    //cout << "ImageViewer::OnTimer()" << endl;
     if (!IsShown())
     {
         return;
     }
+    //cout << "  shown" << endl;
 
     float dx = 0, dy = 0;
 
@@ -607,20 +607,21 @@ void ImageViewer::OnTimer(wxTimerEvent &event)
     if ((dx != 0) || (dy != 0))
         glPanel->MoveRel(dx, dy);
 
-    if (displayNumber > -1)
+    if (displayThisFileName != "")
     {
-        //cout << "displayNumber " << displayNumber << endl;
-        glPanel->DisplayImage(displayNumber);
-        displayNumber = -1;
+        //cout << "displayThisFileName " << displayThisFileName.GetFullPath() << endl;
+        glPanel->DisplayImage(displayThisFileName);
+        displayThisFileName = "";
     }
     //NoteTime(wxT("  display"));
 
-    //cout << "disappearState = " << disappearState << endl;
+    //cout << "  disappearState       = " << disappearState << endl;
+    //cout << "  currentImageFileName = " << currentImageFileName.GetFullPath() << endl;
 
     switch (disappearState)
     {
     case DISAPPEAR_STATE_NONE:
-        if (currentImage >= 0)
+        if (currentImageFileName != "")
         {
             glPanel->Render(GL_PANEL_RENDER_IMAGE);
         }

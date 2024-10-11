@@ -1,4 +1,3 @@
-
 #include "video_thumbnail_reader.h"
 
 #include <windows.h>
@@ -15,6 +14,8 @@
 
 #include <propvarutil.h>
 #include <iostream>
+
+
 using namespace std;
 
 const LONGLONG SEEK_TOLERANCE     = 10000000;
@@ -228,7 +229,7 @@ int VideoThumbnailReader::GetVideoFormat(VideoFormatInfo *pFormat)
         format.rcPicture.SetValues(0, 0, width, height);
     }
 
-    format.imageWidthPels = width;
+    format.imageWidthPels  = width;
     format.imageHeightPels = height;
 
 done:
@@ -280,6 +281,9 @@ int VideoThumbnailReader::OpenFile(const wchar_t* wszFileName)
 
 void  VideoThumbnailReader::CreateBitmap(char *imageData, int width, int height, long long& hnsPos)
 {
+    //cout << endl;
+    //cout << "VideoThumbnailReader::CreateBitmap(" << imageData << ", " << width << ", " << height << ")" << endl;
+
     int             hr           = S_OK;
     unsigned long   dwFlags      = 0;
 
@@ -328,6 +332,7 @@ void  VideoThumbnailReader::CreateBitmap(char *imageData, int width, int height,
 
     while (1)
     {
+
         IMFSample *pSampleTmp = NULL;
 
         hr = m_pReader->ReadSample( (DWORD)MF_SOURCE_READER_FIRST_VIDEO_STREAM,
@@ -339,6 +344,7 @@ void  VideoThumbnailReader::CreateBitmap(char *imageData, int width, int height,
 
         if (FAILED(hr))
         {
+            cout << "Failed 2" << endl;
             goto done;
         }
 
@@ -353,6 +359,7 @@ void  VideoThumbnailReader::CreateBitmap(char *imageData, int width, int height,
             hr = GetVideoFormat(m_format);
             if (FAILED(hr))
             {
+                cout << "Failed 3" << endl;
                 goto done;
             }
         }
@@ -435,9 +442,11 @@ void  VideoThumbnailReader::CreateBitmap(char *imageData, int width, int height,
             sx1 = 0;
             sx2 = sWidth;
 
-            sy2 = sHeight;
             sy1 = 0;
+            sy2 = sHeight;
 
+            if (sWidth < 1)
+                goto done;
             dx1 = 0;
             dx2 = width;
             dy1 = 0;
@@ -451,13 +460,14 @@ void  VideoThumbnailReader::CreateBitmap(char *imageData, int width, int height,
         }
         else                                    // Destination is wider than source
         {                                       // Touching at top/bottom
-            //cout << "Aspect 2 " << sWidth << ", " << sHeight << endl;
-            //cout << "C" << endl;
             sx1 = 0;
             sx2 = sWidth;
 
             sy2 = sHeight;
             sy1 = 0;
+
+            if (sHeight < 1)
+                goto done;
 
             dx1 = 0;
             dx2 = sWidth * dHeight / sHeight;
@@ -482,10 +492,6 @@ void  VideoThumbnailReader::CreateBitmap(char *imageData, int width, int height,
                 int xx = x * (sWidth) / dx2;
                 int yy = y * (sHeight) / dy2;
                 int j = yy * sWidth + xx;
-                //cout << x << ", " << y << "    " << xx << ", " << yy << endl;
-                //int xx = dx1 + x * (dx2-dx1)  / width;
-                //int yy = dy1 + y * (dy2-dy1) / height;
-                //int j = yy * (dx2-dx1) + xx;
                 j *= 4;
 
                 if (Inside(xx, yy, 0,0, m_format->imageWidthPels, m_format->imageHeightPels))
@@ -501,6 +507,7 @@ void  VideoThumbnailReader::CreateBitmap(char *imageData, int width, int height,
     }
     else
     {
+        cout << "  No pSample" << endl;
         hr = MF_E_END_OF_STREAM;
     }
 
@@ -512,9 +519,6 @@ done:
     }
     SafeRelease(&pBuffer);
     SafeRelease(&pSample);
-    //SafeRelease(&pBitmap);
-
-    //return hr;
 }
 
 

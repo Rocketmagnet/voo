@@ -8,6 +8,7 @@ extern "C"
 #include "jpeg_turbo.h"
 };
 
+class wxImage;
 
 class JpegHandler : public ImageFileHandler
 {
@@ -15,10 +16,11 @@ public:
     JpegHandler()
     {}
 
-    void LoadThumbnail(wxString fileName, Thumbnail &thumbnail);
+    bool LoadThumbnail(wxString fileName, Thumbnail &thumbnail);
     int  LoadImage(wxString fileName);
 
 private:
+    void ConvertGreyscaleToRGB(wxImage &image);
     int a;
     jpeg_load_state     jpegLoadState;
 };
