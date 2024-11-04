@@ -23,6 +23,8 @@ bool reg_VideoHandler9 = ImageFileHandlerRegistry::instance().RegisterImageFileH
 
 int tnNum = 0;
 
+// Don Cape Tattis Bound Predicament Elbow Crush Hogtie Harness Ballgag and Intense Penis Gag Torment 868339465 456239045
+
 bool VideoHandler::LoadThumbnail(wxString fileName, Thumbnail &thumbnail)
 {
     wxLogNull logNo;													// logging is suspended while this object is in scope
@@ -32,35 +34,42 @@ bool VideoHandler::LoadThumbnail(wxString fileName, Thumbnail &thumbnail)
     wxImage   image(largerSize, true);
 
     LONGLONG pos = 300000000L;
-    const wchar_t *fn = fileName.wc_str();
+    wxString longPath = fileName;
+    //longPath.Prepend("\\\\?\\");
+
+    const wchar_t *fn = longPath.wc_str();
 
     char *imageData = (char*)image.GetData();
     //cout << "imageData = " << (int)imageData << endl;
     videoThumbnailReader.OpenFile(fn);
-    videoThumbnailReader.CreateBitmap(imageData, largerSize.GetX(), largerSize.GetY(), pos);
-    wxSize newSize   = videoThumbnailReader.GetSize();
-    wxSize finalSize = newSize / 4;
+    bool success = videoThumbnailReader.CreateBitmap(imageData, largerSize.GetX(), largerSize.GetY(), pos);
 
-    //cout << "tnSize =     " <<     tnSize.x << ", " <<     tnSize.y << endl;
-    //cout << "largerSize = " << largerSize.x << ", " << largerSize.y << endl;
-    //cout << "newSize =    " <<    newSize.x << ", " <<    newSize.y << endl;
-    //cout << "finalSize =  " <<  finalSize.x << ", " <<  finalSize.y << endl;
-
-    if (newSize.GetX()*newSize.GetY() > 0)
+    if (success)
     {
-        //wxString fileName;
-        //fileName.Printf("thumbnail_1_%d.png", tnNum);
-        //image.SaveFile(fileName);
-        image.Resize(newSize, wxPoint(0, 0));
+        wxSize newSize = videoThumbnailReader.GetSize();
+        wxSize finalSize = newSize / 4;
 
-        //image.SaveFile("thumbnail_2.png");
+        //cout << "tnSize =     " <<     tnSize.x << ", " <<     tnSize.y << endl;
+        //cout << "largerSize = " << largerSize.x << ", " << largerSize.y << endl;
+        //cout << "newSize =    " <<    newSize.x << ", " <<    newSize.y << endl;
+        //cout << "finalSize =  " <<  finalSize.x << ", " <<  finalSize.y << endl;
 
-        //newSize /= 4;
+        if (newSize.GetX() * newSize.GetY() > 0)
+        {
+            //wxString fileName;
+            //fileName.Printf("thumbnail_1_%d.png", tnNum);
+            //image.SaveFile(fileName);
+            image.Resize(newSize, wxPoint(0, 0));
 
-        image.Rescale(finalSize.GetX(), finalSize.GetY(), wxIMAGE_QUALITY_NORMAL);
-        //fileName.Printf("thumbnail_3_%d.png", tnNum++);
-        //image.SaveFile(fileName);
-        thumbnail.SetImage(image);  
+            //image.SaveFile("thumbnail_2.png");
+
+            //newSize /= 4;
+
+            image.Rescale(finalSize.GetX(), finalSize.GetY(), wxIMAGE_QUALITY_NORMAL);
+            //fileName.Printf("thumbnail_3_%d.png", tnNum++);
+            //image.SaveFile(fileName);
+            thumbnail.SetImage(image);
+        }
     }
 
     //ThumbnailCache::Instance().CacheImage(&image, fileName);

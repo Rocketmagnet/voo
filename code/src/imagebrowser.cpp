@@ -90,16 +90,21 @@ BEGIN_EVENT_TABLE(ImageBrowser, wxFrame)
     EVT_MENU(                      ID_MARK_DIRECTORY,     ImageBrowser::MarkDirectory)
     EVT_MENU(                      ID_BACK_DIRECTORY,     ImageBrowser::BackDirectory)
     EVT_MENU(                      ID_TOUCH_DIRECTORY,    ImageBrowser::TouchDirectory)
+    EVT_CLOSE(                                            ImageBrowser::EventCloseImageViewer)
 END_EVENT_TABLE()
-
 void ImageBrowser::EventOpenImageViewer()
 {
 
 }
 
-void ImageBrowser::EventCloseImageViewer()
+void ImageBrowser::EventCloseImageViewer(wxCloseEvent& event)
 {
+    Show(false);
 
+    if (imageViewer)
+        imageViewer->Show(false);
+    //cout << "EventCloseImageViewer" << endl;
+    Destroy();
 }
 
 void ImageBrowser::EventOpenThumbnails()

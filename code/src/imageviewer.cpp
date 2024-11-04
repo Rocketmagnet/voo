@@ -483,6 +483,8 @@ void ImageViewer::OnKeyUp(wxKeyEvent &event)
 
 void ImageViewer::OnClose(wxCloseEvent &event)
 {
+    Show(false);
+    GetParent()->Show(false);
     wxGetApp().ExitMainLoop();
 }
 

@@ -256,7 +256,7 @@ public:
 
     // Main Events
     void EventOpenImageViewer();
-    void EventCloseImageViewer();
+    void EventCloseImageViewer(wxCloseEvent& event);
     void EventOpenThumbnails();
     void EventExit();
 

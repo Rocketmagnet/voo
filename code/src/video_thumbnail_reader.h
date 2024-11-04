@@ -76,7 +76,7 @@ public:
     int     OpenFile(const wchar_t* wszFileName);
     int     GetDuration(long long *phnsDuration);
 
-    void    CreateBitmap(char *imageData, int width, int height, long long& hnsPos);
+    bool    CreateBitmap(char *imageData, int width, int height, long long& hnsPos);
     int     GetNewWidth()   { return newWidth;  }
     int     GetNewHeight()  { return newHeight; }
     wxSize  GetSize()       { return wxSize(newWidth, newHeight); }

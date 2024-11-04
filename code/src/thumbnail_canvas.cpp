@@ -547,17 +547,21 @@ void Thumbnail::Draw(wxPaintDC &dc, bool selected, bool cursor, bool inFocus)
         dc.SetTextForeground(wxColor(128, 128, 128));
     }
     
-
+    cout << "bitmap m_RedData = " << bitmap.GetRefData() << " " << imageLoaded << " this=" << this << endl;
     if (imageLoaded && bitmap.IsOk())
     {
+        cout << "Inside" << endl;
         thumbnailLoader = 0;
         int x = position.x + (tnSize.GetWidth()  - bitmap.GetWidth() ) / 2;
         int y = position.y + (tnSize.GetHeight() - bitmap.GetHeight()) / 2;
 
+        cout << "Drawing" << endl;
         dc.DrawBitmap(bitmap, x, y, false);
+        cout << "Done" << endl;
     }
     else
     {
+        cout << "else" << endl;
         dc.SetBrush(wxBrush(wxColor(32,32,32)));
         dc.SetPen(*wxBLACK_PEN);
 
@@ -775,6 +779,8 @@ void ThumbnailCanvas::RecalculateRowsCols()
 
 void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
 {
+    static int numPaints  = 0;
+    static int numRedraws = 0;
     int n = thumbnailIndex.size();
     bool selected;
     bool onCursor;
@@ -783,12 +789,28 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
     wxString cursorFileName;
     wxSize   cursorImageSize;
     
+    numPaints++;
+
+    //STATUS_TEXT(0, "%d paints  %d redraws", numPaints, numRedraws);
+
     //cout << "ThumbnailCanvas::OnPaint" << endl;
     //cout << "  " << GetViewStart().y << endl;
     //cout << "  " << GetVirtualSize().y << endl;
 
     if (!n)
         return;
+
+    int viewX, viewY;
+    int pixelsPerUnitX, pixelsPerUnitY;
+
+    GetViewStart(&viewX, &viewY);                               // Get the current scroll position in logical units
+    wxSize clientSize = GetClientSize();                        // width, height in pixels
+    GetScrollPixelsPerUnit(&pixelsPerUnitX, &pixelsPerUnitY);   // Get the pixel ratio
+
+    int topVisiblePixel    = viewY * pixelsPerUnitY;            // Now these are the visible range of the scrolled window
+    int bottomVisiblePixel = topVisiblePixel + clientSize.y;    // 
+
+    //redrawType = REDRAW_ALL;
 
     //cout << "Redraw type " << redrawType << endl;
     switch (redrawType)
@@ -797,14 +819,15 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
             //cout << "Redrawing ALL" << endl;
             for (int i = 0; i < n; i++)
             {
+                int index = thumbnailIndex[i];
                 //cout << thumbnailIndex[i] << endl;
                 //cout << "  " << i << endl;
                 selected = selectionSetP.Contains(i);
                 if (cursorP.GetNumber() == i)
                 {
                     onCursor = true;
-                    cursorFileName  = thumbnails[thumbnailIndex[i]].GetFullPath().GetFullName();
-                    cursorImageSize = thumbnails[thumbnailIndex[i]].GetImageSize();
+                    cursorFileName  = thumbnails[index].GetFullPath().GetFullName();
+                    cursorImageSize = thumbnails[index].GetImageSize();
                     //STATUS_TEXT(0, "%s  (%d, %d)", cursorFileName, cursorImageSize.GetWidth(), cursorImageSize.GetHeight());
                 }
                 else
@@ -812,13 +835,23 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
                     onCursor = false;
                 }
                 //cout << "    Drawing" << endl;
-                thumbnails[thumbnailIndex[i]].Draw(dc, selected, onCursor);
+
+
+                if ((thumbnails[index].GetPosition().y > (topVisiblePixel-200)) && (thumbnails[index].GetPosition().y < (bottomVisiblePixel+100)))
+                {
+                    //thumbnails[index].Erase(dc);
+                    thumbnails[index].Draw(dc, selected, onCursor);
+                    //cout << "DrawA " << index << endl;
+                    //cout << "Scroll " << i << " " << topVisiblePixel << " " << bottomVisiblePixel << " " << thumbnails[index].GetPosition().y << endl;
+                    numRedraws++;
+                }
+
             }
             break;
 
         case REDRAW_SELECTION:
             //cout << "Redrawing Selection" << endl;
-            //cout << "    redrawSetP.size() = " << redrawSetP.size() << endl;
+            //cout << "    redrawSetP.size() = " << redrawSetP.s.ize() << endl;
             //cout << "    redrawSetP = ";        redrawSetP.Print();
 
             for (int i = 0; i<redrawSetP.size(); i++)
@@ -829,6 +862,7 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
                 if (th >= 0)
                 {
                     thumbnails[thumbnailIndex[th]].Erase(dc);
+                    //cout << "Erase " << th << endl;
                 }
             }
 
@@ -844,7 +878,6 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
                     onCursor = true;
                     cursorFileName  = thumbnails[thumbnailIndex[th]].GetFullPath().GetFullName();
                     cursorImageSize = thumbnails[thumbnailIndex[th]].GetImageSize();
-                    //STATUS_TEXT(0, "%s  (%d, %d)", cursorFileName, cursorImageSize.GetWidth(), cursorImageSize.GetHeight());
                 }
                 else
                 {
@@ -854,9 +887,9 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
 
                 if (th >= 0)
                 {
-                    //cout << "    Drawing" << endl;
-                    //cout << "  draw " << th << " " << selected << " " << onCursor << " " << cursorP.GetNumber() << endl;
                     thumbnails[thumbnailIndex[th]].Draw(dc, selected, onCursor, inFocus);
+                    //cout << "Draw  " << th << endl;
+                    numRedraws++;
                 }
             }
 
@@ -864,7 +897,6 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
             break;
     }
     
-    //cout << "Redraw All" << endl;
     redrawType = REDRAW_ALL;
 }
 
@@ -1145,11 +1177,13 @@ void ThumbnailCanvas::LoadThumbnails(wxString directory)
     fileNameList.LoadFileList(directory);
 
     int n = fileNameList.files.size();
-    thumbnails.reserve(n);thumbnailIndex.reserve(n);
+    thumbnails.reserve(n);
+    thumbnailIndex.reserve(n);
     Scroll(0, 0);
 
     totalDirectorySizeBytes = 0;
     ResetUiniqueID();
+    selectionSetP.Clear();
 
     if (n > 0)
         SetCursor(0);
@@ -1230,6 +1264,53 @@ int  ThumbnailCanvas::FindThumbnailIndex(int th)
     return -1;
 }
 
+int ThumbnailCanvas::GetLoadingIndexNearestCursor() const
+{
+    int cursorPos = cursorP.GetNumber();
+    int pre = -1;
+    int post = -1;
+
+
+    for (int i = cursorPos; i < thumbnailIndex.size(); i++)     // search from the cursor to the end
+    {
+        int index = thumbnailIndex[i];
+        if (waitingSet.Contains(index))
+        {
+            post = i;
+            break;
+        }
+    }
+
+    for (int i = cursorPos - 1; i >= 0; i--)     // search from the cursor to the end
+    {
+        int index = thumbnailIndex[i];
+        if (waitingSet.Contains(index))
+        {
+            pre = i;
+            break;
+        }
+    }
+
+    if (pre == -1)
+    {
+        return thumbnailIndex[post];
+    }
+
+    if (post == -1)
+    {
+        return thumbnailIndex[pre];
+    }
+
+    if ((cursorPos - pre) < (post - cursorPos))
+    {
+        return thumbnailIndex[pre];
+    }
+    else
+    {
+        return thumbnailIndex[post];
+    }
+}
+
 bool ThumbnailCanvas::HandleThumbnailLoading()
 {
     int i, n = loadingSet.size();
@@ -1260,7 +1341,9 @@ bool ThumbnailCanvas::HandleThumbnailLoading()
 
     for (i = 0; i < n; i++)                         // Start loading those thumbnails
     {
-        int th = waitingSet[i];
+        //int th = waitingSet[i];
+        int th = GetLoadingIndexNearestCursor();
+
         if (th >= 0)
         {
             //cout << "Starting " << th << " loading " << thumbnails[thumbnailIndex[th]].GetFileName().GetFullName() << endl;
@@ -1661,7 +1744,7 @@ wxPoint ThumbnailCanvas::GetThumbnailPosition(size_t n)
 void ThumbnailCanvas::OnMouseWheel(wxMouseEvent& event)
 {
     //cout << "OnMouseWheel(" << event.GetWheelRotation() << ")" << endl;
-    int scrollPos = GetScrollPos(wxVERTICAL) + event.GetWheelRotation() * 10;
+    int scrollPos = GetScrollPos(wxVERTICAL) + event.GetWheelRotation() * 100;
 
     if (scrollPos < 0)
         scrollPos = 0;
@@ -1881,6 +1964,7 @@ void ThumbnailCanvas::DeleteSelection()
 
     newCursor = clamp(newCursor, 0, (int)thumbnailIndex.size() - 1);
     cursorP.SetTo(newCursor);
+    UpdateStatusBar_File();
 }
 
 /*
@@ -1997,10 +2081,10 @@ wxString ThumbnailCanvas::GetInfoString(wxFileName fileName)
 
     for (auto i: thumbnailIndex)
     {
-        if (thumbnails[i].GetFullPath() == fileName.GetFullPath())
+        index = thumbnailIndex[i];
+        if (thumbnails[index].GetFullPath() == fileName.GetFullPath())
         {
-            thumbnail = &thumbnails[i];
-            index = i;
+            thumbnail = &thumbnails[index];
             break;
         }
 

@@ -324,9 +324,9 @@ public:
         redrawSet.AddSingle(previous);
     }
 
-    int GetNumber() { return number; }
-    int GetX()      { return      x; }
-    int GetY()      { return      y; }
+    int GetNumber() const { return number; }
+    int GetX()      const { return      x; }
+    int GetY()      const { return      y; }
 
  
 private:
@@ -573,6 +573,7 @@ public:
     void SortThumbnailsByDate(wxCommandEvent & evt);
     void RenameSequence(wxCommandEvent & evt);
 
+    int GetLoadingIndexNearestCursor() const;
     int GetSortedImageNumber(int imageNumber)
     {
         if (imageNumber < 0)                        imageNumber = 0;
