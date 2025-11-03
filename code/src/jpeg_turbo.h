@@ -22,12 +22,15 @@ typedef struct
     int         row_stride;         // physical row width in output buffer
     int         exit_code;
     int         width, height;
+    int         scaling;
     char        file_name[1024];
 }jpeg_load_state;
 
 
 int ReadJpegHeader(    jpeg_load_state* load_state, const char* filename);
 int ReadJpegHeaderOnly(jpeg_load_state* load_state, const char* filename);
+int FetchThumbnailReadHeader(jpeg_load_state* load_state, const char* filename, int maxSize);
+
 int JpegRead(unsigned char* buffer, jpeg_load_state* load_state);
 int JpegWrite(const char* filename, int width, int height, unsigned char *data, int quality);
 int* test_malloc();

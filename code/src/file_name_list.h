@@ -49,6 +49,7 @@ class FileNameList
 {
 public:
     FileNameList();
+    ~FileNameList();
     FileNameList(wxString dir);
 
     void LoadFileList(wxString dir);
@@ -56,6 +57,9 @@ public:
     void AddFileToList(wxString name);
     void Resort();
     bool DeleteFileName(wxFileName fileName);
+    void Print();
+    bool Contains(wxFileName fileName);
+
     //bool DeleteFileNumber(int fileNumber);
     int  GetFileNumber(wxString fileName);
 

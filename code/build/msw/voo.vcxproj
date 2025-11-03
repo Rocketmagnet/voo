@@ -90,6 +90,7 @@
     <CodeAnalysisRuleSet>NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <RunCodeAnalysis>false</RunCodeAnalysis>
     <EnableMicrosoftCodeAnalysis>false</EnableMicrosoftCodeAnalysis>
+    <CustomBuildBeforeTargets />
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -146,21 +147,32 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(WXWIN)\lib\vc_x64_lib;$(WXWIN)\include;$(WXWIN)\lib\vc_x64_lib\mswu;.;$(WXWIN)\lib;%(AdditionalIncludeDirectories);lib;..\..\external_libs\freetype-2.3.11\include;D:\Repositories\Projects\_T-CAT_Racers\Code\C\boost_1_61_0;$(GLEW_INCLUDE);D:\Libraries\wxWidgets\include;..\lib;..\..\lib;D:\Libraries\FFTW\fftw-3.3.5-dll64;D:\Libraries\glfw-3.2.1\include;D:\Libraries\glew-2.1.0\include;D:\Libraries\glm-0.9.9.5;D:\Libraries\qt5\qtwebengine\src\3rdparty\chromium\third_party\swiftshader\include;D:\Repositories\voo\code\external_libs\jpeg_gpu_cpp\src</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>wxUSE_ANY;_NDEBUG;_CRT_SECURE_NO_DEPRECATE=1;_CRT_NON_CONFORMING_SWPRINTFS=1;_SCL_SECURE_NO_WARNINGS=1;__WXMSW__;_UNICODE;_WINDOWS;NOPCH;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
       <ExceptionHandling>Sync</ExceptionHandling>
       <EnablePREfast>true</EnablePREfast>
       <MinimalRebuild>false</MinimalRebuild>
-      <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
+      <EnableParallelCodeGeneration>
+      </EnableParallelCodeGeneration>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <SupportJustMyCode>false</SupportJustMyCode>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalBMIDirectories>
+      </AdditionalBMIDirectories>
     </ClCompile>
     <Link>
-      <EnableCOMDATFolding>false</EnableCOMDATFolding>
-      <OptimizeReferences>false</OptimizeReferences>
-      <AdditionalDependencies>propsys.lib;mfuuid.lib;mfplat.lib;mfreadwrite.lib;wxmsw31u_core.lib;wxmsw31u_gl.lib;wxbase31u.lib;wxtiff.lib;wxpng.lib;wxzlib.lib;wxregexu.lib;turbojpeg-static.lib;wxexpat.lib;kernel32.lib;user32.lib;gdi32.lib;comdlg32.lib;winspool.lib;winmm.lib;shell32.lib;shlwapi.lib;comctl32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;advapi32.lib;version.lib;wsock32.lib;wininet.lib;opengl32.lib;glu32.lib;glew32.lib;freetype2311MT.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>propsys.lib;mfuuid.lib;mfplat.lib;mfreadwrite.lib;wxmsw31u_core.lib;wxmsw31u_gl.lib;wxbase31u_xml.lib;wxbase31u.lib;wxexpat.lib;wxtiff.lib;wxpng.lib;wxzlib.lib;wxregexu.lib;turbojpeg-static.lib;kernel32.lib;user32.lib;gdi32.lib;comdlg32.lib;winspool.lib;shell32.lib;shlwapi.lib;comctl32.lib;ole32.lib;uuid.lib;rpcrt4.lib;advapi32.lib;version.lib;opengl32.lib;glu32.lib;glew32.lib;freetype2311MT.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(WXWIN)\lib\vc_x64_lib;..\..\lib\x64;..\..\external_libs\freetype-2.3.11\objs\x64\vc2008;D:\Libraries\glew-2.1.0\lib\Release\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ProfileGuidedDatabase>$(OutDir)$(TargetName).pgd</ProfileGuidedDatabase>
       <ProgramDatabaseFile>$(OutDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <ShowProgress>NotSet</ShowProgress>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
+    <PreBuildEvent>
+      <Command>echo $(WXWIN)</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Optimised|x64'">
     <ClCompile>

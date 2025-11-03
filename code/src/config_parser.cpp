@@ -63,7 +63,7 @@ void ConfigParser::LoadConfigFile(const string& fn)
 
             getline(source, line);
 
-            int eqPos = line.find("=");
+            size_t eqPos = line.find("=");
 
             if (eqPos > 0)
             {
@@ -92,7 +92,7 @@ ConfigParser::ConfigParser(const string &fn)
 
 int ConfigParser::GetIndexFromName(const string &name) const
 {
-    int i, n = configData.size();
+    size_t i, n = configData.size();
 
     for (i=0; i<n; i++)
     {
@@ -185,7 +185,7 @@ void     ConfigParser::SetInt(const string &name, int value)
 
 void     ConfigParser::SetString(const string &name, const string &value)
 {
-    int i, n = configData.size();
+    size_t i, n = configData.size();
 
     for (i=0; i<n; i++)
     {
@@ -209,7 +209,7 @@ void ConfigParser::Write()
     
     if (source.is_open())
     {
-        int i, n = configData.size();
+        size_t i, n = configData.size();
 
         for (i=0; i<n; i++)
         {

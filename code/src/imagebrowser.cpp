@@ -30,6 +30,7 @@
 #include "image_file_handler.h"
 #include "imagebrowser.h"
 #include "thumbnail_canvas.h"
+#include "video_handler.h"
 #include "wx/sizer.h"
 #include "wx/splitter.h"
 #include "wx/dirctrl.h"
@@ -38,11 +39,15 @@
 #include "wx/filefn.h"
 #include "wx/stdpaths.h"
 #include "wx/artprov.h"
+#include "wx/xml/xml.h"
+#include <wx/notebook.h>
+#include <wx/clipbrd.h>
 #include "directory_functions.h"
 #include "imageviewer.h"
 #include "image_browserapp.h"
 #include "file_name_list.h"
 #include "status_bar.h"
+#include "mathhelpers.h"
 #include <chrono>
 #include <thread>
 #include <shlobj_core.h>
@@ -57,53 +62,207 @@ extern void NoteTime(wxString s);
 
 extern "C"
 {
-#include "jpeg_turbo.h"
+    #include "jpeg_turbo.h"
 };
 
 
-
-////@begin XPM images
-////@end XPM images
-
-wxStatusBar  *sBarGlobal;
-
-/*
- * ImageBrowser type definition
- */
-
-IMPLEMENT_CLASS(ImageBrowser, wxFrame)
+#define STATUS_TEXT_RESIZER(pos, fmt, ...)  { wxString s; s.Printf(fmt, __VA_ARGS__); if(imageBrowserFrame) imageBrowserFrame->StatusMessage(-1, pos, s); else cout << "No imageBrowserFrame" << endl;}
 
 
-/*
- * ImageBrowser event table definition
- */
-
-BEGIN_EVENT_TABLE(ImageBrowser, wxFrame)
-    EVT_KEY_DOWN(                                         ImageBrowser::OnKeyDown)
-    EVT_DIRCTRL_SHOWING_POPUP_MENU(0,                     ImageBrowser::MenuPopped)
-    EVT_TIMER(                     555,                   ImageBrowser::OnDecorationTimer)
-    EVT_DIRCTRL_SELECTIONCHANGED(  ID_DIRECTORY_CTRL,     ImageBrowser::OnDirClicked)
-    EVT_MENU(                      ID_DELETE_DIRECTORY,   ImageBrowser::OnDeleteDirectory)
-    EVT_MENU(                      ID_RESCALE_DIRECTORY,  ImageBrowser::MenuRescaleImages)
-    EVT_MENU(                      ID_ARCHIVE_DIRECTORY,  ImageBrowser::OnArchiveDirectory)
-    EVT_MENU(                      ID_RANDOM_DIRECTORY,   ImageBrowser::JumpToRandomDirectory)
-    EVT_MENU(                      ID_MARK_DIRECTORY,     ImageBrowser::MarkDirectory)
-    EVT_MENU(                      ID_BACK_DIRECTORY,     ImageBrowser::BackDirectory)
-    EVT_MENU(                      ID_TOUCH_DIRECTORY,    ImageBrowser::TouchDirectory)
-    EVT_CLOSE(                                            ImageBrowser::EventCloseImageViewer)
+BEGIN_EVENT_TABLE(ImageBrowser, wxPanel)
+    EVT_KEY_DOWN(                                          ImageBrowser::OnKeyDown)
+    EVT_DIRCTRL_SHOWING_POPUP_MENU( 0,                     ImageBrowser::MenuPopped)
+    EVT_TIMER(                      555,                   ImageBrowser::OnDecorationTimer)
+    EVT_DIRCTRL_SELECTIONCHANGED(   ID_DIRECTORY_CTRL,     ImageBrowser::OnDirClicked)
+    EVT_MENU(                       ID_DELETE_DIRECTORY,   ImageBrowser::OnDeleteDirectory)
+    EVT_MENU(                       ID_RESCALE_DIRECTORY,  ImageBrowser::MenuRescaleImages)
+    EVT_MENU(                       ID_ARCHIVE_DIRECTORY,  ImageBrowser::OnArchiveDirectory)
+    EVT_MENU(                       ID_RANDOM_DIRECTORY,   ImageBrowser::JumpToRandomDirectory)
+    EVT_MENU(                       ID_MARK_DIRECTORY,     ImageBrowser::MarkDirectory)
+    EVT_MENU(                       ID_BACK_DIRECTORY,     ImageBrowser::BackDirectory)
+    EVT_MENU(                       ID_TOUCH_DIRECTORY,    ImageBrowser::TouchDirectory)
 END_EVENT_TABLE()
+
+BEGIN_EVENT_TABLE(ImageBrowserFrame, wxPanel)
+    EVT_CLOSE(ImageBrowserFrame::EventCloseImageViewer)
+END_EVENT_TABLE()
+
+wxRect plusRect;
+
+//BEGIN_EVENT_TABLE(ImageBrowserNotebook, wxAuiNotebook)
+//    EVT_NOTEBOOK_PAGE_CHANGED(wxID_ANY, ImageBrowserNotebook::PageChanged)
+//    EVT_KEY_DOWN(                       ImageBrowserNotebook::OnKeyDown)
+//END_EVENT_TABLE()
+
+ImageBrowserNotebook::ImageBrowserNotebook(ImageBrowserFrame* parent)
+ : wxAuiNotebook(parent, wxID_ANY),
+   imageBrowserFrame(parent)
+{
+    customTabArt = new ArtProvider;
+    SetArtProvider(customTabArt);
+
+    std::cout << "wxWidgets version: " << wxMAJOR_VERSION << "." << wxMINOR_VERSION << "." << wxRELEASE_NUMBER << std::endl;
+
+    Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGED, &ImageBrowserNotebook::PageChanged,     this);
+    Bind(wxEVT_KEY_DOWN,                 &ImageBrowserNotebook::OnKeyDown,       this);
+    //Bind(wxEVT_LEFT_UP,                  &ImageBrowserNotebook::OnNotebookClick, this);
+
+    imageResizerPermanent = new ImageResizerPermanent(parent);
+    resizerEntries        = imageResizerPermanent->GetResizerEntries();
+    imageResizerPermanent->Run();
+}
+
+void ImageBrowserNotebook::AddPlusButton()
+{
+    /*
+    wxWindowList& children = GetChildren();
+    for (wxWindowList::iterator it = children.begin(); it != children.end(); ++it)
+    {
+        wxWindow* child = *it;
+        if (child->IsKindOf(CLASSINFO(wxAuiTabCtrl)))
+        {
+            child->Bind(wxEVT_LEFT_UP, &ImageBrowserNotebook::OnNotebookClick, this);
+        }
+    }
+    */
+}
+
+ImageBrowserNotebook::~ImageBrowserNotebook()
+{
+    //cout << "ImageBrowserNotebook::~ImageBrowserNotebook()" << endl;
+    //DeleteAllPages();
+    //cout << "imageResizerPermanent->Delete()" << endl;
+    imageResizerPermanent->Delete();
+}
+
+
+void ImageBrowserNotebook::PageChanged(wxBookCtrlEvent& event)
+{
+    cout << "ImageBrowserNotebook::PageChanged()" << endl;
+    int page = event.GetSelection();
+    ImageBrowser* imageBrowser = (ImageBrowser*)GetPage(page);
+
+    cout << "Page changed " << page << endl;
+    cout << "Name = " << GetPageText(page) << endl;
+
+    if (GetPageText(page) == "+")
+    {
+        InsertPage(page, new ImageBrowser(this, this, wxNewId(), (wxXmlNode*)0), "", false);
+    }
+
+    wxWindowID tabID = imageBrowser->GetWindowID();
+
+    imageBrowser->SetFocus();
+    imageBrowser->Refresh();
+    if (imageBrowser->GetThumbnailCanvas())
+        imageBrowser->GetThumbnailCanvas()->FullRedraw();
+    imageBrowserFrame->PageChanged(tabID);
+}
+
+void ImageBrowserNotebook::OnKeyDown(wxKeyEvent& event)
+{
+    bool  ctrlIsPressed = event.GetModifiers() & wxMOD_CONTROL;
+    bool shiftIsPressed = event.GetModifiers() & wxMOD_SHIFT;
+
+    int direction;
+
+    if (shiftIsPressed) direction = -1;
+    else                direction =  1;
+    
+    switch (event.GetKeyCode())
+    {
+    case WXK_TAB:
+        if (ctrlIsPressed)
+        {
+            int maxPage     = GetPageCount() - 1;
+            int currentPage = GetSelection();
+            int nextPage    = currentPage + direction;
+            nextPage        = clamp(nextPage, 0, maxPage);
+
+            SetSelection(nextPage);
+        }
+    }
+}
+
+void ImageBrowserNotebook::OnNotebookClick(wxMouseEvent& event)
+{
+    cout << "ImageBrowserNotebook::OnNotebookClick" << endl;
+    CallAfter([this, event]()
+        {
+            wxPoint pt = event.GetPosition();
+
+            if (plusRect.Contains(pt))
+            {
+                cout << "Add new tab. Before" << endl;
+                cout << "Add new tab. After" << endl;
+                AddImageBrowser((wxXmlNode*)0);
+                cout << "Done. After" << endl;
+            }
+            else
+            {
+                //event.Skip(); // Let normal event handling occur
+            }
+        }
+    );
+    
+}
+
+void ImageBrowserNotebook::AddImageBrowser(wxXmlNode* xmlConfig)
+{
+    ImageBrowser* imageBrowser = new ImageBrowser(this, this, wxNewId(), xmlConfig);
+    //imageBrowsers.push_back(imageBrowser);
+    AddPage(imageBrowser, "name");
+    SetPathName(imageBrowser->GetCurrentDir(), imageBrowser);
+
+    Layout();
+}
+
+
+void ImageBrowserNotebook::SetPathName(wxFileName pathName, ImageBrowser* imageBrowser)
+{
+    wxString label;
+    const wxArrayString& dirs = pathName.GetDirs();
+
+
+    if (dirs.size())
+    {
+        label = dirs.back();
+    }
+    else
+    {
+        label = pathName.GetFullPath();
+    }
+
+    if (label.size() > 32)
+    {
+        label = label.Left(32);
+    }
+
+    size_t n = GetPageCount(); // imageBrowsers.size();
+
+    for (size_t i = 0; i < n; i++)
+    {
+        if ((ImageBrowser*)GetPage(i) == imageBrowser)
+        {
+            SetPageText(i, label);
+        }
+    }
+}
+
 void ImageBrowser::EventOpenImageViewer()
 {
 
 }
 
-void ImageBrowser::EventCloseImageViewer(wxCloseEvent& event)
+void ImageBrowserFrame::EventCloseImageViewer(wxCloseEvent& event)
 {
-    Show(false);
+    //cout << "ImageBrowserFrame::EventCloseImageViewer()" << endl;
 
-    if (imageViewer)
-        imageViewer->Show(false);
-    //cout << "EventCloseImageViewer" << endl;
+    //Show(false);
+
+    //if (imageViewer)
+    //    imageViewer->Show(false);
+
     Destroy();
 }
 
@@ -132,65 +291,109 @@ void ImageBrowser::EventExit()
  * ImageBrowser constructors
  */
 
-ImageBrowser::ImageBrowser()
-: allowTreeDecoration(false),
+
+
+ImageBrowser::ImageBrowser(wxWindow* _parent, ImageBrowserNotebook* _imageBrowserNotebook, wxWindowID _id, wxXmlNode* _xmlConfig)
+: wxPanel(_parent, -1, wxDefaultPosition, wxDefaultSize, 0 /*wxTAB_TRAVERSAL*/),
+  allowTreeDecoration(false),
   decorationTimer(this, 555),
-  imageResizerPermanent(resizerEntries),
+  parent(_parent),
+  imageBrowserNotebook(_imageBrowserNotebook),
   recordHistory(true),
   created(false),
-  draggingFiles(false)
+  draggingFiles(false),
+  id(_id)
 {
+
+    //cout << "ImageBrowser::ImageBrowser(" << _parent << ", " << imageBrowserNotebook << ", " << _id << ")" << this << endl;
     history.reserve(32);
+
+    if (!_xmlConfig)
+    {
+        currentDirectory = "C:\\";
+        rescaleX = 3500;
+        rescaleY = 3500;
+        Init();
+        return;
+    }
+
+    if (_xmlConfig->GetName() == "Add page")
+    {
+        cout << "Creating an Add Page tab" << endl;
+        Init();
+        return;
+    }
+
+    for (wxXmlNode* node = _xmlConfig; node; node = node->GetNext())
+    {
+        if (node->GetName() == "currentDirectory")
+        {
+            //xmlConfig_Directory = node;
+            currentDirectory = node->GetNodeContent();
+            //cout << "Current Directory " << currentDirectory  << endl;
+        }
+
+        if (node->GetName() == "rescale")
+        {
+            //xmlConfig_Rescale = node;
+            wxString str_rescaleX = node->GetAttribute("x");
+            wxString str_rescaleY = node->GetAttribute("y");
+
+            long longInt;
+            str_rescaleX.ToLong(&longInt); rescaleX = longInt;
+            str_rescaleY.ToLong(&longInt); rescaleY = longInt;
+
+            //cout << "Rescale: x = " << rescaleX  << " y = " << rescaleY << endl;
+        }
+    }
     Init();
+    return;
 }
 
 
-ImageBrowser::ImageBrowser(Image_BrowserApp* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style )
-: allowTreeDecoration(false),
-  decorationTimer(this, 555),
-  image_BrowserApp(parent),
-  imageResizerPermanent(resizerEntries),
-  recordHistory(true),
-  created(false),
-  draggingFiles(false)
+
+void ImageBrowser::AddXmlConfiguration(wxXmlNode* xmlConfig)
 {
-    history.reserve(32);
-    Init();
-    //Create( parent, id, caption, pos, size, style );
+    //cout << "ImageBrowser::AddXmlConfiguration()" << endl;
+    wxXmlNode* myRoot = new wxXmlNode(wxXML_ELEMENT_NODE, "imageBrowser");
+
+    // Add <currentDirectory> element
+    wxXmlNode* currentDirectoryNode = new wxXmlNode(wxXML_ELEMENT_NODE, "currentDirectory");
+    currentDirectoryNode->AddChild(new wxXmlNode(wxXML_TEXT_NODE, "", currentDirectory));
+    myRoot->AddChild(currentDirectoryNode);
+
+    // Add <rescale> element with attributes x and y
+    wxXmlNode* rescaleNode = new wxXmlNode(wxXML_ELEMENT_NODE, "rescale");
+
+    wxString scaleX, scaleY;
+    scaleX.Printf("%d", rescaleX);
+    scaleY.Printf("%d", rescaleX);
+    rescaleNode->AddAttribute("x", scaleX);
+    rescaleNode->AddAttribute("y", scaleY);
+
+    myRoot->AddChild(rescaleNode);
+
+    xmlConfig->AddChild(myRoot);
 }
 
 
-/*
- * ImageBrowser creator
- */
 
-ImageBrowser::ImageBrowser(int showImageNumber)
-: imageResizerPermanent(resizerEntries),
-  draggingFiles(false)
+bool ImageBrowser::Create()
 {
-    Init();
-}
-
-bool ImageBrowser::Create(Image_BrowserApp* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style )
-{
-////@begin ImageBrowser creation
-    //cout << "ImageBrowser::Create(" << parent << ")  style = " << style << endl;
-    wxFrame::Create( NULL, id, caption, pos, size, style );
-    //cout << "ImageBrowser::Create done frame create" << endl;
-
+    //cout << "ImageBrowser::Create()" << endl;
     srand(time(0));
     CreateControls();
     Centre();
-////@end ImageBrowser creation
 
     decorationTimer.StartOnce(1000);
-    imageResizerPermanent.Run();
     LoadArrayString(markedDirsIncoming, "marked.txt");
 
     created = true;
 
+    //cout << "ImageBrowser::Create() done" << endl;
     return true;
 }
+
 
 
 /*
@@ -199,9 +402,13 @@ bool ImageBrowser::Create(Image_BrowserApp* parent, wxWindowID id, const wxStrin
 
 ImageBrowser::~ImageBrowser()
 {
-    SaveMarkedDirs();
+    if (fileNameList)
+    {
+        delete fileNameList;
+    }
+    //cout << "ImageBrowser::~ImageBrowser() " << this << endl;
+    //SaveMarkedDirs();
 }
-
 
 /*
  * Member initialisation
@@ -209,23 +416,19 @@ ImageBrowser::~ImageBrowser()
 
 bool ImageBrowser::Show(bool show)
 {
-    //cout << "ImageBrowser::Show(" << show << ")" << endl;
-
     //if (!created)
     //{
     //    cout << "  Creating" << endl;
     //    Create(0, -1, _T("Image Browser"), wxPoint(700, 0), wxSize(1200, 640));
     //}
 
-    bool ret = wxFrame::Show(show);
+    bool ret = wxWindow::Show(show);
 
     return ret;
 }
 
 void ImageBrowser::Init()
 {
-
-    //cout << "ImageBrowser::Init()" << endl;
     fileNameList = new FileNameList;
 
     ImageFileHandlerRegistry& imageFileHandlerRegistry = ImageFileHandlerRegistry::instance();
@@ -238,27 +441,16 @@ void ImageBrowser::Init()
         fileNameList->AddFilter(filtersList[i].Lower());
     }
 
-    currentDirectory = image_BrowserApp->GetConfigParser()->GetString("currentDirectory");
-
-    if (currentDirectory.IsEmpty())
-    {
-        currentDirectory = wxGetCwd();
-        image_BrowserApp->GetConfigParser()->SetString("currentDirectory", currentDirectory.ToStdString());
-        image_BrowserApp->GetConfigParser()->Write();
-    }
-
-
+    //cout << "Loading " << currentDirectory << endl;
     fileNameList->LoadFileList(currentDirectory);
-    Create(0, -1, _T("Image Browser"), wxPoint(700, 0), wxSize(1200, 640));
+
+    Create();
 }
 
 
 void ImageBrowser::OnDecorationTimer(wxTimerEvent& event)
 {
-    //cout << "Timer Triggered" << endl;
     allowTreeDecoration = true;
-    //liquidMessageDispatcher.ProcessMessage(someMessage);
-    //cout << "DONE" << endl;
 }
 
 
@@ -446,23 +638,31 @@ int CompareStringsNatural_(const wxString &_a, const wxString &_b)
 
 void ImageBrowser::ReNumberImages(wxCommandEvent &evt)
 {
-    wxTreeItemId id = dirTreeCtrl->GetPopupMenuItem();
-    wxDirItemData *data = (wxDirItemData*)(dirTreeCtrl->GetTreeCtrl()->GetItemData(id));
-
+    if (dirTreeCtrl)
+    {
+        wxTreeItemId id = dirTreeCtrl->GetPopupMenuItem();
+        wxDirItemData* data = (wxDirItemData*)(dirTreeCtrl->GetTreeCtrl()->GetItemData(id));
+    }
 
 }
 
-void ImageBrowser::MakeTopDirectory(wxCommandEvent &evt)
+void ImageBrowser::MakeTopDirectory(wxCommandEvent& evt)
 {
-    wxTreeItemId id = dirTreeCtrl->GetPopupMenuItem();
-    wxDirItemData *data = (wxDirItemData*)(dirTreeCtrl->GetTreeCtrl()->GetItemData(id));
-
+    if (dirTreeCtrl)
+    {
+        wxTreeItemId id = dirTreeCtrl->GetPopupMenuItem();
+        wxDirItemData* data = (wxDirItemData*)(dirTreeCtrl->GetTreeCtrl()->GetItemData(id));
+    }
     //cout << "Make Top " << data->m_path << endl;
 }
 
 
-void ImageBrowser::MenuRescaleImages(wxCommandEvent &event)
+// This needs to pass the request up to the ImageBrowserNotebook
+void ImageBrowser::MenuRescaleImages(wxCommandEvent& event)
 {
+    if (!dirTreeCtrl)
+        return;
+
     FileNameList    fileNameList;
     wxDirItemData  *data;
     wxArrayString   selectedFileNames;
@@ -483,34 +683,39 @@ void ImageBrowser::MenuRescaleImages(wxCommandEvent &event)
     fileNameList.AddFilter(wxT("*.jpeg"));
     fileNameList.FillArrayWithFileNamesFrom(pathToRescale, selectedFileNames);
 
-    thumbnailCanvas->StopLoadingThumbnails(pathToRescale);
+    if (thumbnailCanvas)
+        thumbnailCanvas->StopLoadingThumbnails(pathToRescale);
 
-    int rescaleX = GetConfigParser()->GetIntWithDefault("rescaleX", 3000);
-    int rescaleY = GetConfigParser()->GetIntWithDefault("rescaleY", 3000);
+    //int rescaleX = GetConfigParser()->GetIntWithDefault("rescaleX", 3000);
+    //int rescaleY = GetConfigParser()->GetIntWithDefault("rescaleY", 3000);
+
 
     ChooseRescaleSize custom(rescaleX, rescaleY);
+
+    deque_thread_safe<ResizerEntry>* resizerEntries = imageBrowserNotebook->GetResizerEntries();
 
     if (custom.ShowModal() == wxID_OK)
     { 
         int maxWidth  = custom.GetWidth();
         int maxHeight = custom.GetHeight();
 
-        GetConfigParser()->SetInt("rescaleX", maxWidth);            // Save the settings
-        GetConfigParser()->SetInt("rescaleY", maxHeight);
-        GetConfigParser()->Write();
+        //GetConfigParser()->SetInt("rescaleX", maxWidth);            // Save the settings
+        //GetConfigParser()->SetInt("rescaleY", maxHeight);
+        //GetConfigParser()->Write();
 
         int n = selectedFileNames.size();
 
         for (int i = 0; i < n; i++)
         {
             wxFileName fullPath = selectedFileNames[i];
-            resizerEntries.emplace_back(fullPath, maxWidth, maxHeight);
+            resizerEntries->emplace_back(fullPath, maxWidth, maxHeight);
         }
     }
     else
     {
         //cout << "Hit Cancel" << endl;
     }
+    this->SetFocus();
 }
 
 /*
@@ -526,20 +731,7 @@ void ImageBrowser::MenuRescaleImages(wxCommandEvent &event)
     int rescaleY = GetConfigParser()->GetIntWithDefault("rescaleY", 3000);
     ImageResizer* imageResizer = new ImageResizer(data->m_path, rescaleX, rescaleY);
 
-    //ChooseRescaleSize *custom = new ChooseRescaleSize(*imageResizer);
-    ChooseRescaleSize custom(*imageResizer);
-    
-    if (custom.ShowModal() == wxID_OK)
-    {
-        //cout << "Hit OK" << endl;
-        imageResizer->maxWidth  = custom.GetWidth();
-        imageResizer->maxHeight = custom.GetHeight();
-
-        GetConfigParser()->SetInt("rescaleX", imageResizer->maxWidth);
-        GetConfigParser()->SetInt("rescaleY", imageResizer->maxHeight);
-        GetConfigParser()->Write();
-        
-        imageResizer->Run();
+    //ChooseRescaleSize *custom = new ->Run();
     }
     else
     {
@@ -547,8 +739,29 @@ void ImageBrowser::MenuRescaleImages(wxCommandEvent &event)
     }
 }
 */
+
+void ImageBrowser::MenuCopyPath(wxCommandEvent& evt)
+{
+    if (!dirTreeCtrl)
+        return;
+
+    wxTreeItemId id = dirTreeCtrl->GetPopupMenuItem();
+    wxDirItemData* data = (wxDirItemData*)(dirTreeCtrl->GetTreeCtrl()->GetItemData(id));
+
+    if (wxTheClipboard->Open())
+    {
+        // This data objects are held by the clipboard,
+        // so do not delete them in the app.
+        wxTheClipboard->SetData(new wxTextDataObject(data->m_path));
+        wxTheClipboard->Close();
+    }
+}
+
 void ImageBrowser::MenuOpenDirectory(wxCommandEvent &evt)
 {
+    if (!dirTreeCtrl)
+        return;
+
     wxTreeItemId id = dirTreeCtrl->GetPopupMenuItem();
     wxDirItemData *data = (wxDirItemData*)(dirTreeCtrl->GetTreeCtrl()->GetItemData(id));
 
@@ -571,6 +784,9 @@ void ImageBrowser::DirMenuPopped(wxCommandEvent &event)
 
 void ImageBrowser::MenuPopped(wxCommandEvent &event)
 {
+    if (!dirTreeCtrl)
+        return;
+
     wxMenu *menu = dirTreeCtrl->GetPopupMenu();
 	menu->AppendSeparator();
 
@@ -579,12 +795,10 @@ void ImageBrowser::MenuPopped(wxCommandEvent &event)
 
     wxWindowID id = wxNewId();
     menu->Append(id, "Renumber Images");
-    //cout << "ID: " << id << endl;
     dirTreeCtrl->Bind(wxEVT_MENU,       &ImageBrowser::ReNumberImages, this, id);
 
     id = wxNewId();
     menu->Append(id, "Delete Directory");
-    //cout << "ID: " << id << endl;
     dirTreeCtrl->Bind(wxEVT_MENU, &ImageBrowser::MenuDeleteDirectory, this, id);
 
     //id = wxNewId();
@@ -602,6 +816,11 @@ void ImageBrowser::MenuPopped(wxCommandEvent &event)
     //cout << "ID: " << id << endl;
     dirTreeCtrl->Bind(wxEVT_MENU, &ImageBrowser::MenuOpenDirectory, this, id);
 
+    id = wxNewId();
+    menu->Append(id, "Copy Path");
+    //cout << "ID: " << id << endl;
+    dirTreeCtrl->Bind(wxEVT_MENU, &ImageBrowser::MenuCopyPath, this, id);
+
     menu->UpdateUI();
 }
 
@@ -611,7 +830,8 @@ void ImageBrowser::MenuPopped(wxCommandEvent &event)
 void ImageBrowser::SetAcceleratorTable(const wxAcceleratorTable &accel)
 {
     wxWindow::SetAcceleratorTable(accel);
-    thumbnailCanvas->SetAcceleratorTable(accel);
+    if (thumbnailCanvas)
+        thumbnailCanvas->SetAcceleratorTable(accel);
 }
 
 
@@ -677,6 +897,9 @@ wxDragResult ImageBrowser::OnDragOver(wxCoord x, wxCoord y, wxDragResult defResu
 
 void ImageBrowser::OnDropDirFiles(wxDropFilesEvent& event)
 {
+    if (!dirTreeCtrl)
+        return;
+
     //cout << "OnDropDirFiles()" << endl;
     draggingFiles = false;
 
@@ -707,97 +930,306 @@ void ImageBrowser::OnDropDirFiles(wxDropFilesEvent& event)
 
             if (fileName.GetVolume() == destination.GetVolume())
             {
-                //cout << "  move " << fileName.GetFullPath() << " to " << destination.GetFullPath() << endl;
+                cout << "  move " << fileName.GetFullPath() << " to " << destination.GetFullPath() << endl;
                 wxCopyFile(fileName.GetFullPath(), destination.GetFullPath());
                 wxRemoveFile(fileName.GetFullPath());
             }
             else
             {
-                //cout << "  copy " << fileName.GetFullPath() << " to " << destination.GetFullPath() << endl;
+                cout << "  copy " << fileName.GetFullPath() << " to " << destination.GetFullPath() << endl;
                 wxCopyFile(fileName.GetFullPath(), destination.GetFullPath());
             }
         }
     }
 }
 
+void NoticeClick(wxTreeEvent& event)
+{
+    wxLogMessage("Selection changed event fired!");
+    //cout << "Selection changed event fired!" << endl;
+    event.Skip(); // Allow propagation if needed
+
+}
+
+void ImageBrowserFrame::AddNewTab(wxCommandEvent&)
+{
+    imageBrowserNotebook->AddImageBrowser();
+}
+
+
+ImageBrowserFrame::ImageBrowserFrame(Image_BrowserApp* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style)
+: image_BrowserApp(parent),
+  configChangesBlocked(false)
+{
+    //cout << "ImageBrowserFrame::ImageBrowserFrame(" << parent << ")" << endl;
+    wxFrame::Create(NULL, id, caption, pos, size, style);
+
+    ImageBrowserFrame* itemFrame1 = this;
+    itemFrame1->SetIcon(wxIcon(voo_icon));
+
+    statusBarThreadSafe = new StatusBarThreadSafe(this);
+
+    //Bind(wxEVT_DIRCTRL_SELECTIONCHANGED, NoticeClick);
+    wxBoxSizer* frameSizer = new wxBoxSizer(wxVERTICAL);
+
+    cout << "new ImageBrowserNotebook" << endl;
+    imageBrowserNotebook   = new ImageBrowserNotebook(this);
+    cout << "done new ImageBrowserNotebook" << endl;
+
+    //imageBrowserNotebook->GetArtProvider()->SetActiveColour(wxColour(128, 128, 255));
+
+    //auiArtProvider.SetActiveColour(wxColour(128, 128, 255));
+    
+    //auiArtProvider.SetActiveColour(wxColour(128, 128, 255));
+
+    frameSizer->Add(imageBrowserNotebook, wxSizerFlags(1).Expand());
+    SetSizer(frameSizer);
+
+    ReadConfiguration();
+    imageBrowserNotebook->AddPlusButton();
+
+    //wxXmlNode newPageNodeConfig(wxXML_TEXT_NODE, "New page");
+    //imageBrowserNotebook->AddPage(new ImageBrowser(imageBrowserNotebook, imageBrowserNotebook, -1, &newPageNodeConfig), "+", false);
+    //imageBrowserNotebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGED, &ImageBrowserNotebook::PageChanged, this);
+
+    statusBarThreadSafe->Run();
+    ImageBrowser* firstImageBrowser = imageBrowserNotebook->GetImageBrowser(0);
+    wxWindowID tabID = firstImageBrowser->GetWindowID();
+
+    PageChanged(tabID);
+    firstImageBrowser->SetFocus();
+    imageBrowserNotebook->GetArtProvider()->SetActiveColour(wxColour(128, 128, 255));
+    imageBrowserNotebook->GetArtProvider()->SetColour(wxColour(128, 255, 128));
+    //imageBrowserNotebook->GetArtProvider()->SetNormalFont
+}
+
+ImageBrowserFrame::~ImageBrowserFrame()
+{
+    //cout << "ImageBrowserFrame::~ImageBrowserFrame() " << this << endl;
+    //imageBrowserNotebook->DeleteAllPages();
+    statusBarThreadSafe->Delete();
+}
+
+void ImageBrowserFrame::PageChanged(wxWindowID tabID)
+{
+    statusBarThreadSafe->SwitchToTab(tabID);
+}
+
+
+void ImageBrowserFrame::RegisterXmlConfigChange()
+{
+    if (configChangesBlocked)
+    {
+        //cout << "BLOCKED" << endl;
+        return;
+    }
+
+    wxXmlDocument xmlConfig;
+    wxXmlNode* vooRoot = new wxXmlNode(wxXML_ELEMENT_NODE, "voo");
+
+    xmlConfig.SetRoot(vooRoot);
+
+    size_t n = imageBrowserNotebook->GetPageCount();
+
+    for (size_t i = 0; i < n; i++)
+    {
+        ImageBrowser *imageBrowser = (ImageBrowser*)imageBrowserNotebook->GetPage(i);
+        imageBrowser->AddXmlConfiguration(vooRoot);
+    }
+
+    //std::vector<ImageBrowser*>& imageBrowsers = imageBrowserNotebook->GetImageBrowsers();
+    //
+    //cout << "Looping through image browsers" << endl;
+    //for (auto& imageBrowser : imageBrowsers)
+    //{
+    //    cout << imageBrowser << endl;
+    //    imageBrowser->AddXmlConfiguration(vooRoot);
+    //}
+
+    xmlConfig.Save("config.xml");
+}
+
+
+void ImageBrowserFrame::ReadConfiguration()
+{
+    wxXmlDocument            doc;
+    wxFileName fileName("config.xml");
+
+    configChangesBlocked = true;
+
+    //cout << "Exists " << fileName.Exists() << endl;
+
+    if (!doc.Load("config.xml"))
+    {
+        wxLogError("Failed to load XML file.");
+        return;
+    }
+
+    wxXmlNode* root = doc.GetRoot();
+    if (root->GetName() != "voo")
+    {
+        wxLogError("Unexpected root node.");
+        return;
+    }
+
+    // Iterate through the <imageBrowser> nodes
+    for (wxXmlNode* node = root->GetChildren(); node; node = node->GetNext())
+    {
+        if (node->GetName() == "imageBrowser")
+        {
+            //cout << "Found Image Browser" << endl;
+            wxXmlNode* xmlConfig = node->GetChildren();
+            imageBrowserNotebook->AddImageBrowser(xmlConfig);
+            continue;
+        }
+
+        if (node->GetName() == "videoPlayer")
+        {
+            VideoHandler::SetVideoPlayer(node->GetContent());
+        }
+    }
+
+    configChangesBlocked = false;
+}
+
+
+
+void ImageBrowserNotebook::RegisterXmlConfigChange() const
+{
+    imageBrowserFrame->RegisterXmlConfigChange();
+}
+
+void ImageBrowserNotebook::StatusMessage(wxWindowID tabID, size_t place, wxString text)
+{
+    if (imageBrowserFrame)
+        imageBrowserFrame->StatusMessage(tabID, place, text);
+    else
+        cout << "imageBrowserFrame is null" << endl;
+}
+
+/*
+void ImageBrowser::CreateControls()
+{
+    static int numPages = 0;
+    wxBoxSizer* splitter1 = new wxBoxSizer(wxHORIZONTAL);
+ 
+    wxStaticText* text;
+
+    if (numPages++)
+    {
+        text = new wxStaticText(this, wxID_ANY, "ImageBrowser 1");
+        cout << "Making Page 0" << endl;
+    }
+    else
+    {
+        text = new wxStaticText(this, wxID_ANY, "ImageBrowser 0");
+        cout << "Making Page 1" << endl;
+    }
+
+    splitter1->Add(text, wxEXPAND);
+    SetSizer(splitter1);
+}
+*/
+
+
+/*
+void ImageBrowser::CreateControls()
+{
+    static int numPages = 0;
+    wxBoxSizer* boxSizer = new wxBoxSizer(wxHORIZONTAL);
+
+    wxStaticText* text;
+
+    if (numPages++)
+    {
+        text = new wxStaticText(this, wxID_ANY, "ImageBrowser 1");
+        cout << "Making Page 0" << endl;
+    }
+    else
+    {
+        text = new wxStaticText(this, wxID_ANY, "ImageBrowser 0");
+        cout << "Making Page 1" << endl;
+    }
+
+    boxSizer->Add(text, wxEXPAND);
+    SetSizer(boxSizer);
+}
+
+*/
 
 void ImageBrowser::CreateControls()
 {    
-    ImageBrowser* itemFrame1 = this;
-     
-    itemFrame1->SetIcon(wxIcon(voo_icon));
-    
-	splitter1                    = new wxSplitterWindow(this,      -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-    splitter1->SetSize(GetClientSize());
-	splitter1->SetSashGravity(1.0);
-
-    sBarGlobal  = new wxStatusBar(this, ID_STATUSBAR, wxST_SIZEGRIP | wxNO_BORDER);
-    sBarGlobal->SetFieldsCount(4);
-    this->SetStatusBar(sBarGlobal);
-
-	dirTreeCtrl = new wxGenericDirCtrl(splitter1, ID_DIRECTORY_CTRL, _T("C:\\"), wxDefaultPosition, wxSize(640, 200), wxDIRCTRL_DIR_ONLY             |
-																													  wxDIRCTRL_EDIT_LABELS          |
-																													  wxDIRCTRL_POPUP_MENU           |
-                                                                                                                      wxDIRCTRL_POPUP_MENU_SORT_NAME |
-                                                                                                                      wxDIRCTRL_POPUP_MENU_SORT_DATE /*|
-                                                                                                                      wxDIRCTRL_MULTIPLE*/);
-    treeCtrl = dirTreeCtrl->GetTreeCtrl();
-    wxTreeItemId computerId   = treeCtrl->GetRootItem();
-
-    //wxString     desktopPath = wxStandardPaths::MSWGetShellDir(CSIDL_DESKTOP);
-    //wxString myDocumentsPath = wxStandardPaths::MSWGetShellDir(CSIDL_PERSONAL);
-    //
-    ////wxTheFileIconsTable->
-    ////wxBitmap desktopBM(MSWGetBitmapForPath(desktopPath, 32, SHGFI_SMALLICON));
-    //
-    //wxTreeItemId     desktopId = treeCtrl->AppendItem(computerId, "Desktop",      wxFileIconsTable::folder, wxFileIconsTable::folder_open, new wxDirItemData(    desktopPath, "Desktop",      true));
-    //wxTreeItemId myDocumentsId = treeCtrl->AppendItem(computerId, "My Documents", wxFileIconsTable::folder, wxFileIconsTable::folder_open, new wxDirItemData(myDocumentsPath, "My Documents", true));
-    ////wxTreeItemId  downloadsId = treeCtrl->AppendItem(myComputerId, "Downloads", -1, -1, new wxDirItemData("C:\\Users\\hugoe\\Downloads\\", "Downloads", true));
-    //
-    ////treeCtrl->SetItemHasChildren(myComputerId, true);
-    ////treeCtrl->SetItemHasChildren( downloadsId, true);
-    //treeCtrl->SetItemHasChildren(desktopId, true);
-
-    treeCtrl->Bind(wxEVT_TREE_ITEM_EXPANDED, &ImageBrowser::TreeExpanded, this, -1);
-
-    treeCtrl->DragAcceptFiles(true);
-    treeCtrl->Bind(wxEVT_DROP_FILES, &ImageBrowser::OnDropDirFiles, this, -1);
-    //treeCtrl->Bind(wxEVT_MOTION,     &ImageBrowser::OnDragFiles,    this, -1);
-
-    treeCtrl->SetDropTarget(&treeDropTargetHandler);
-    treeDropTargetHandler.SetTreeCtrl(treeCtrl);
-
+    //cout << "ImageBrowser::CreateControls()" << endl;
     if (0)
     {
-        wxFrame *debuggingFrame = new wxFrame(this, -1, wxT("Debugging"), wxPoint(200, 600), wxSize(400, 400));
-        wxBoxSizer *debugSizer = new wxBoxSizer(wxHORIZONTAL);
+        wxFrame* debuggingFrame = new wxFrame(this, -1, wxT("Debugging"), wxPoint(200, 600), wxSize(400, 400));
+        wxBoxSizer* debugSizer = new wxBoxSizer(wxHORIZONTAL);
         debuggingFrame->SetSizer(debugSizer);
-        debuggingWindow = new wxTextCtrl(debuggingFrame, -1, "Default text", wxDefaultPosition, wxDefaultSize, wxTE_READONLY| wxTE_MULTILINE);
+        debuggingWindow = new wxTextCtrl(debuggingFrame, -1, "Default text", wxDefaultPosition, wxDefaultSize, wxTE_READONLY | wxTE_MULTILINE);
         debugSizer->Add(debuggingWindow, 1, wxEXPAND);
         debuggingFrame->Show(true);
     }
 
     ImageFileHandlerRegistry& imageFileHandlerRegistry = ImageFileHandlerRegistry::instance();
-    
 
+    // Image Viewer
+    // ------------
     imageViewer = new ImageViewer(this, -1, wxT("Image Viewer"), wxDefaultPosition, wxDefaultSize, 0);
-
-    //imageViewer->SetFileNameList(fileNameList);
     imageViewer->AddViewableExtensions(imageFileHandlerRegistry.GetViewableExtensions());
-    thumbnailCanvas = new ThumbnailCanvas(this, *fileNameList, splitter1, ID_SCROLLEDWINDOW, wxDefaultPosition, wxDefaultSize);
 
+    // Splitter Window
+    // ---------------
+    splitter1 = new wxSplitterWindow(this, -1, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+    splitter1->SetSize(GetClientSize());
+    splitter1->SetSashGravity(1.0);
+
+    // Directory Tree
+    // --------------
+    
+    dirTreeCtrl = new wxGenericDirCtrl(splitter1, ID_DIRECTORY_CTRL, _T("C:\\"), wxDefaultPosition, wxSize(800, 600),  wxDIRCTRL_DIR_ONLY             |
+                                                                                                                       wxDIRCTRL_EDIT_LABELS          |
+                                                                                                                       wxDIRCTRL_POPUP_MENU           |
+                                                                                                                       wxDIRCTRL_POPUP_MENU_SORT_NAME |
+                                                                                                                       wxDIRCTRL_POPUP_MENU_SORT_DATE );
+    
+    if (dirTreeCtrl)
+    {
+        treeCtrl = dirTreeCtrl->GetTreeCtrl();
+        wxTreeItemId computerId = treeCtrl->GetRootItem();
+
+        treeCtrl->Bind(wxEVT_TREE_ITEM_EXPANDED, &ImageBrowser::TreeExpanded, this, -1);
+        treeCtrl->Bind(wxEVT_DROP_FILES, &ImageBrowser::OnDropDirFiles, this, -1);
+        treeCtrl->DragAcceptFiles(true);
+    }
+    //treeCtrl->Bind(wxEVT_MOTION,     &ImageBrowser::OnDragFiles,    this, -1);
+
+    treeDropTargetHandler = new TreeDropTargetHandler;
+    treeCtrl->SetDropTarget(treeDropTargetHandler);
+    treeDropTargetHandler->SetTreeCtrl(treeCtrl);
+
+    // Thumbnail Canvas
+    // ----------------
+    thumbnailCanvas = new ThumbnailCanvas(splitter1, *fileNameList, this, ID_SCROLLEDWINDOW, wxDefaultPosition, wxDefaultSize);
     thumbnailCanvas->SetImageViewer(imageViewer);
     imageViewer->SetThumbnailCanvas(thumbnailCanvas);
-	thumbnailCanvas->SetScrollbars(10, 10, 50, 275);
+    thumbnailCanvas->SetScrollbars(10, 10, 50, 275);
     thumbnailCanvas->LoadThumbnails(".");
 
-
+    //splitter1->SplitVertically(dirTreeCtrl, new wxPanel(splitter1), 300);
+    //splitter1->SplitVertically(new wxPanel(splitter1), thumbnailCanvas, 300);
+    //splitter1->SplitVertically(new wxPanel(splitter1), new wxPanel(splitter1), 300);
     splitter1->SplitVertically(dirTreeCtrl, thumbnailCanvas, 300);
     splitter1->SetSashGravity(0.0);
 
-	LoadPrivateDirs();
 
-    dirTreeCtrl->ExpandPath(currentDirectory);
+    wxBoxSizer* pageSizer = new wxBoxSizer(wxVERTICAL);
+    pageSizer->Add(splitter1, 1, wxEXPAND);
+    SetSizer(pageSizer);
+    
+    LoadPrivateDirs();
+
+    if (dirTreeCtrl)
+        dirTreeCtrl->ExpandPath(currentDirectory);
 
     wxAcceleratorEntry entries[7];
     entries[0].Set(wxACCEL_CTRL, (int) 'D', ID_DELETE_DIRECTORY);
@@ -809,15 +1241,11 @@ void ImageBrowser::CreateControls()
     entries[6].Set(wxACCEL_CTRL, (int) 'B', ID_BACK_DIRECTORY);
     wxAcceleratorTable accel(7, entries);
     SetAcceleratorTable(accel);
-    itemFrame1->Hide();
 
     SetDebuggingText("Hello");
+    Layout();
+    //cout << "ImageBrowser::CreateControls() done" << endl;
 }
-
-
-/*
- * Should we show tooltips?
- */
 
 bool ImageBrowser::ShowToolTips()
 {
@@ -862,6 +1290,9 @@ wxIcon ImageBrowser::GetIconResource( const wxString& name )
 
 void ImageBrowser::RefreshDirTree(wxString path)
 {
+    if (!dirTreeCtrl)
+        return;
+
     dirTreeCtrl->CollapsePath(path);
     dirTreeCtrl->ExpandPath(path);
 }
@@ -897,8 +1328,11 @@ void ImageBrowser::DirectoryWasDeleted(wxString path, wxTreeItemId removedId)
         treeCtrl->Delete(removedId);                                // just delete it. No problems.
     }                                                               // 
 
-    thumbnailCanvas->DirectoryWasDeleted(path);
-    thumbnailCanvas->HideImageViewer();
+    if (thumbnailCanvas)
+    {
+        thumbnailCanvas->DirectoryWasDeleted(path);
+        thumbnailCanvas->HideImageViewer();
+    }
     treeCtrl->SetFocus();
 }
 
@@ -909,7 +1343,7 @@ void ImageBrowser::OnDirClicked(wxTreeEvent& event)
 
     if (dirTreeCtrl)
 	{
-        if (recordHistory && thumbnailCanvas->GetNumThumbnails())
+        if (recordHistory && thumbnailCanvas && thumbnailCanvas->GetNumThumbnails())
         {
             history.Add(currentDirectory);
             for (auto hist : history)
@@ -925,14 +1359,21 @@ void ImageBrowser::OnDirClicked(wxTreeEvent& event)
         wxTreeItemId id = event.GetItem();
         currentDirectory = dirTreeCtrl->GetPath(id);
 
+        wxFileName filePath(currentDirectory);
+        imageBrowserNotebook->SetPathName(filePath, this);
+
+        //xmlConfig_Directory->SetContent(currentDirectory);
+        imageBrowserNotebook->RegisterXmlConfigChange();
 
         dirTreeCtrl->GetTreeCtrl()->SetScrollPos(wxHORIZONTAL, 0, true);
 
-		thumbnailCanvas->LoadThumbnails(currentDirectory);
-		thumbnailCanvas->Refresh();
-
-        image_BrowserApp->GetConfigParser()->SetString("currentDirectory", currentDirectory.ToStdString());
-        image_BrowserApp->GetConfigParser()->Write();
+        if (thumbnailCanvas)
+        {
+            thumbnailCanvas->LoadThumbnails(currentDirectory);
+            thumbnailCanvas->Refresh();
+        }
+        //imageBrowserFrame->GetConfigParser()->SetString("currentDirectory", currentDirectory.ToStdString());
+        //imageBrowserFrame->GetConfigParser()->Write();
 	}
 
 	event.Skip();
@@ -1012,6 +1453,8 @@ void ImageBrowser::MarkDirectory(wxCommandEvent& event)
 // Save the incoming and outgoing arrays to a file, with no duplicates
 void ImageBrowser::SaveMarkedDirs()
 {
+    return;
+
     // Save Outgoing
     int i, n = markedDirsIncoming.size();
     wxTextFile out("marked.txt");
@@ -1076,7 +1519,8 @@ void ImageBrowser::JumpToRandomDirectory(wxCommandEvent &event)
             dirTreeCtrl->ExpandPath(path);
 
             treeCtrl->SetFocus();                   // Set focus away from thumbnailCanvas and back
-            thumbnailCanvas->SetFocus();            // to ensure TNC get a focus event.
+            if (thumbnailCanvas)
+                thumbnailCanvas->SetFocus();            // to ensure TNC get a focus event.
             SaveMarkedDirs();
             return;
         }
@@ -1108,7 +1552,8 @@ void ImageBrowser::JumpToRandomDirectory(wxCommandEvent &event)
         case HAS_FILES:
             dirTreeCtrl->ExpandPath(fn.GetFullPath());
             treeCtrl->SetFocus();
-            thumbnailCanvas->SetFocus();
+            if (thumbnailCanvas)
+                thumbnailCanvas->SetFocus();
             return;
 
         case HAS_DIRS:
@@ -1122,7 +1567,8 @@ void ImageBrowser::JumpToRandomDirectory(wxCommandEvent &event)
         case HAS_FILES + HAS_DIRS:
             dirTreeCtrl->ExpandPath(fn.GetFullPath());
             treeCtrl->SetFocus();
-            thumbnailCanvas->SetFocus();
+            if (thumbnailCanvas)
+                thumbnailCanvas->SetFocus();
             return;
 
         default:
@@ -1134,7 +1580,8 @@ void ImageBrowser::JumpToRandomDirectory(wxCommandEvent &event)
 
     dirTreeCtrl->ExpandPath(fn.GetFullPath());
     treeCtrl->SetFocus();
-    thumbnailCanvas->SetFocus();
+    if (thumbnailCanvas)
+        thumbnailCanvas->SetFocus();
 }
 
 void ImageBrowser::TouchDirectory(wxCommandEvent& event)
@@ -1265,8 +1712,11 @@ void ImageBrowser::OnDeleteDirectory(wxCommandEvent &event)
 
     wxString pathToDelete = currentDirectory;
 
-    thumbnailCanvas->StopLoadingThumbnails(pathToDelete);
-    thumbnailCanvas->UnLoadThumbnails(pathToDelete);
+    if (thumbnailCanvas)
+    {
+        thumbnailCanvas->StopLoadingThumbnails(pathToDelete);
+        thumbnailCanvas->UnLoadThumbnails(pathToDelete);
+    }
 
     bool success = DeleteDirectory(pathToDelete);
 
@@ -1287,7 +1737,8 @@ void ImageBrowser::MenuDeleteDirectory(wxCommandEvent &evt)
     wxDirItemData *data = (wxDirItemData*)(dirTreeCtrl->GetTreeCtrl()->GetItemData(id));
 
     wxString path = data->m_path;
-    thumbnailCanvas->UnLoadThumbnails(path);
+    if (thumbnailCanvas)
+        thumbnailCanvas->UnLoadThumbnails(path);
     bool success = DeleteDirectory(path);
 
     if (success)
@@ -1361,10 +1812,15 @@ bool ImageBrowser::DeleteDirectory(wxString path)
     }
 }
 
-ConfigParser* ImageBrowser::GetConfigParser()
+void ImageBrowser::FullRedrawThumbnails()
 {
-    return image_BrowserApp->GetConfigParser();
+    
 }
+
+//ConfigParser* ImageBrowser::GetConfigParser()
+//{
+//    return imageBrowserFrame->GetConfigParser();
+//}
 
 void ImageBrowser::ReportDirectoryInfo(wxString path, wxTreeItemId id, int flags)
 {
@@ -1402,6 +1858,9 @@ void ImageResizerPermanent::SaveState()
 {
     wxTextFile out("rescaling.txt");
 
+    if (!out.Exists())
+        out.Create();
+
     out.Open();
     out.Clear();
 
@@ -1413,10 +1872,10 @@ void ImageResizerPermanent::SaveState()
         record.Printf("%s\n%d\n%d", resizerEntries[i].fileName.GetFullPath(),
                                     resizerEntries[i].xSize,
                                     resizerEntries[i].ySize);
-
-        out.AddLine(record);
+       out.AddLine(record);
     }
-    out.Write();
+
+    bool success = out.Write();
     out.Close();
 }
 
@@ -1462,12 +1921,26 @@ wxThread::ExitCode ImageResizerPermanent::Entry()
 
     while (1)
     {
-        if (TestDestroy())          // Have we been asked to terminate?
+        //cout << "Loop" << endl;
+
+        if (TestDestroy())
         {
-            break;
+            //cout << "Returning" << endl;
+            return 0;
+        }
+        else
+        {
+            //cout << "Not Destroy" << endl;
         }
 
-        ResizerEntry resizerEntry     = resizerEntries.pop_front();
+        if (resizerEntries.IsEmpty())
+        {
+            //cout << "resizerEntries.IsEmpty()" << endl;
+            continue;
+        }
+
+        ResizerEntry resizerEntry = resizerEntries.pop_front();
+
         wxFileName   fullPath         = resizerEntry.fileName.GetFullPath();
         wxString     fileNameFragment = fullPath.GetName().Left(10) + "..." + fullPath.GetExt();
         int          maxWidth         = resizerEntry.xSize;
@@ -1475,7 +1948,7 @@ wxThread::ExitCode ImageResizerPermanent::Entry()
         int          imagesRemaining  = resizerEntries.size();
         wxImage      image;
 
-        STATUS_TEXT(STATUS_BAR_INFORMATION, "Loading %s %d remain", fileNameFragment, imagesRemaining);
+        STATUS_TEXT_RESIZER(STATUS_BAR_INFORMATION, "Loading %s %d remain", fileNameFragment, imagesRemaining);
 
         LoadImage2(image, fullPath.GetFullPath());
 
@@ -1533,28 +2006,23 @@ wxThread::ExitCode ImageResizerPermanent::Entry()
 
         if (flags & RESCALED)
         {
-            STATUS_TEXT(STATUS_BAR_INFORMATION, "Rescaling %s %d remain", fileNameFragment, imagesRemaining);
-            //image.Rescale(newWidth, newHeight, wxIMAGE_QUALITY_HIGH);
+            STATUS_TEXT_RESIZER(STATUS_BAR_INFORMATION, "Rescaling %s %d remain", fileNameFragment, imagesRemaining);
             image.Rescale(newWidth, newHeight, wxIMAGE_QUALITY_BILINEAR);
         }
 
-        STATUS_TEXT(STATUS_BAR_INFORMATION, "Saving %s %d remain", fileNameFragment, imagesRemaining);
-
-        //image.SaveFile(fullPath.GetFullPath(), wxBITMAP_TYPE_JPEG);
-        //for (int i = 0; i < 100; i++)
-        //    cout << (int)image.GetData()[i] << " ";
-        //cout << endl;
+        STATUS_TEXT_RESIZER(STATUS_BAR_INFORMATION, "Saving %s %d remain", fileNameFragment, imagesRemaining);
 
         JpegWrite(fullPath.GetFullPath(), newWidth, newHeight, image.GetData(), 80);
-        //JpegWrite(fullPath.GetFullPath(), imageWidth, imageHeight, image.GetData(), 80);
+
         image.Destroy();
 
         SaveState();                // Save our current state to a file, so that we can resume after a crash.
     }
 
-    STATUS_TEXT(STATUS_BAR_INFORMATION, "  ");
+    STATUS_TEXT_RESIZER(STATUS_BAR_INFORMATION, "  ");
     return 0;
 }
+
 
 int ChooseRescaleSize::GetWidth()
 {
@@ -1603,6 +2071,9 @@ ChooseRescaleSize::ChooseRescaleSize(int xs, int ys)
     Centre();
 }
 
+
+
+/*
 bool TreeDropTargetHandler::OnDrop(wxCoord x, wxCoord y)
 {
     //cout << "TreeDropTargetHandler::OnDrop()" << endl;
@@ -1642,3 +2113,6 @@ wxDragResult TreeDropTargetHandler::OnDragOver(wxCoord x, wxCoord y, wxDragResul
     //cout << "TreeDropTargetHandler::OnDragOver(" << x << ", " << y << ")" << endl;
     return wxDragNone;
 }
+*/
+
+

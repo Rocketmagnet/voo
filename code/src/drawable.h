@@ -1,6 +1,9 @@
 #ifndef _drawable_
 #define _drawable_
 
+
+#include <wx/wx.h>
+
 #include "wx/image.h"
 #include "wx/thread.h"
 #include "wx/filename.h"
@@ -87,7 +90,7 @@ public:
         //std::cout << "Thread constructor" << std::endl;
     }
 
-    //~ImageLoader();
+    ~ImageLoader();
     friend class GL_Image;
     friend class GL_ImageServer;
 
@@ -99,6 +102,30 @@ protected:
     BasicGLPanel  *basicGLPanel;
     wxGLContext   *glContext;
 };
+
+/*
+class BlackTexture
+{
+public:
+    BlackTexture()
+    { }
+
+    void CreateTexture();
+
+    GLuint GetId()
+    {
+        if (ID == -1)
+            CreateTexture();
+
+        return ID;
+    }
+
+private:
+
+           GLuint     nothing;
+    static GLuint          ID;
+};
+*/
 
 class TextureUpload
 {
@@ -114,19 +141,20 @@ public:
 
 
     void Init(wxImage *img, Vector2D topLeft, Vector2D bottomRight, int clip);
+    void CreateTexture(size_t width, size_t height);
+
     bool UploadNextBlock();
     void Render(Vector2D scrTL, Vector2D scrBR);
 
     wxImage          *wxImg;
     GLuint            ID;
-    //wxSize            textureSize;                        // The size of the texture for this piece of the image
+        
 
     RectangleVector   textureSize;                          // In pixels
-    RectangleVector     originalImagePortion;               //   
-    RectangleVector     expandedImagePortion;               //   
-    //RectangleVector   renderableImagePortion;               // 
+    RectangleVector   originalImagePortion;                 //   
+    RectangleVector   expandedImagePortion;                 //   
 
-    RectangleVector    allocatedTexturePortion;             // In texture coordinates (0.0 .. 1.0)
+    RectangleVector   allocatedTexturePortion;              // In texture coordinates (0.0 .. 1.0)
     RectangleVector   renderableTexturePortion;             // 
 
 
@@ -157,6 +185,8 @@ public:
     void CopyVisibilityFrom(const GL_Image &image);
     void CopyScaleAndPositionFrom(const GL_Image &image);
     double VisibilityAtScale(double sc) const;
+
+
 
     void SetScaleAndPosition(float xx, float yy, float sc)
     {

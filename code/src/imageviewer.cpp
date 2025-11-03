@@ -163,10 +163,10 @@ ImageViewer::~ImageViewer()
 void ImageViewer::Init()
 {
     keys.resize(512, 0);
-    ConfigParser *configParser = imageBrowser->GetConfigParser();
-
-    videoFileExtensions = configParser->GetString("videoExtensions");
-    videoPlayerPath     = configParser->GetString("videoPlayer");
+    //ConfigParser *configParser = imageBrowser->GetConfigParser();
+    //
+    //videoFileExtensions = configParser->GetString("videoExtensions");
+    //videoPlayerPath     = configParser->GetString("videoPlayer");
 }
 
 
@@ -395,11 +395,19 @@ void ImageViewer::OnKeyDown(wxKeyEvent &event)
 	lastKeyCode = event.GetKeyCode();
     switch (event.GetKeyCode())
     {
-    case WXK_DELETE:        
+    case WXK_DELETE:
+
+        cout << "WXK_DELETE" << endl;
+        cout << "currentImageFileName = " << currentImageFileName.GetFullName() << endl;
+
         nextImage = thumbnailCanvas->Jump(currentImageFileName, 1, viewableExtensions);
 
-        if (nextImage == "")
+        cout << "1. nextImage = " << nextImage.GetFullName() << endl;
+
+        if (nextImage == currentImageFileName)
             nextImage = thumbnailCanvas->Jump(currentImageFileName, -1, viewableExtensions);
+
+        cout << "2. nextImage = " << nextImage.GetFullName() << endl;
 
         thumbnailCanvas->DeleteImage(currentImageFileName);
 
@@ -458,11 +466,13 @@ void ImageViewer::OnKeyUp(wxKeyEvent &event)
 
     case 'R':
     case WXK_PAGEUP:
+    case WXK_NUMPAD_PAGEUP:
         PrevImage(imageJump);
         break;
 
     case 'F':
     case WXK_PAGEDOWN:
+    case WXK_NUMPAD_PAGEDOWN:
         NextImage(imageJump);
         break;
 
@@ -483,8 +493,10 @@ void ImageViewer::OnKeyUp(wxKeyEvent &event)
 
 void ImageViewer::OnClose(wxCloseEvent &event)
 {
+    //cout << "ImageViewer::OnClose()" << endl;
     Show(false);
     GetParent()->Show(false);
+    //cout << "calling wxGetApp().ExitMainLoop()" << endl;
     wxGetApp().ExitMainLoop();
 }
 

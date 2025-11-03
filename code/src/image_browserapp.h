@@ -58,6 +58,8 @@ private:
     std::vector<wxString>   parameters;
 };
 
+
+
 class Image_BrowserApp: public wxApp
 {    
     DECLARE_CLASS( Image_BrowserApp )
@@ -75,9 +77,14 @@ public:
     /// Called on exit
     virtual int OnExit();
 
-    ConfigParser* GetConfigParser() {return &configParser;}
-    ImageBrowser *imageBrowser;
-    ConfigParser  configParser;
+    //ConfigParser* GetConfigParser() {return &configParser;}
+    void          RegisterConfigChange();
+
+private:
+    ImageBrowserFrame  *imageBrowserFrame;
+    //ConfigParser        configParser;
+
+
 
 ////@begin Image_BrowserApp event handler declarations
 
@@ -90,6 +97,8 @@ public:
 ////@begin Image_BrowserApp member variables
 ////@end Image_BrowserApp member variables
 };
+
+
 
 /*!
  * Application instance declaration 

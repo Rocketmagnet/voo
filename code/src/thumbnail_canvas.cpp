@@ -24,8 +24,12 @@
 #include <wx/dataobj.h>
 #include "wx/menu.h"
 #include "mathhelpers.h"
+#include <chrono>
 
 #define wxDragImage wxGenericDragImage
+
+#define STATUS_TEXT(pos, fmt, ...) { wxString s; s.Printf(fmt, __VA_ARGS__); imageBrowser->StatusMessage(pos, s); }
+
 
 #include <iostream>
 using namespace std;
@@ -44,7 +48,7 @@ wxBEGIN_EVENT_TABLE(  ThumbnailCanvas, wxScrolledWindow)
     EVT_MOUSEWHEEL(   ThumbnailCanvas::OnMouseWheel)
     EVT_CLOSE(        ThumbnailCanvas::OnClose)
     //EVT_CONTEXT_MENU( ThumbnailCanvas::OnContextMenu)
-    wxEND_EVENT_TABLE()
+wxEND_EVENT_TABLE()
    
 wxSize      Thumbnail::tnSize(100,100);
 wxArrayInt  Thumbnail::arrayIntStatic;
@@ -205,9 +209,10 @@ bool SortedVectorInts::Test()
 
 wxThread::ExitCode ThumbnailLoader::Entry()
 {
+    cout << "ThumbnailLoader::Entry() " << this << endl;
     SetPriority(wxPRIORITY_MIN);
     thumbnail.isLoading = true;
-    //NoteTime("starting");
+    NoteTime("starting");
     started             = true;
 
     wxFileName fn(fileName);
@@ -215,6 +220,7 @@ wxThread::ExitCode ThumbnailLoader::Entry()
         
     ImageFileHandler *imageFileHandler = ImageFileHandlerRegistry::instance().GetImageFileHandlerFromExtension(extension);
 
+    //cout << "imageFileHandler = " << imageFileHandler << endl;
     if (imageFileHandler)
     {
         //cout << "Loading " << fn.GetFullPath() << endl;
@@ -229,6 +235,7 @@ wxThread::ExitCode ThumbnailLoader::Entry()
             {
                 imageFileHandler = ImageFileHandlerRegistry::instance().GetImageFileHandlerFromExtension("png");
                 bool  newSuccess = imageFileHandler->LoadThumbnail(fn.GetFullPath(), thumbnail);
+                //cout << "Deleting imageFileHandler" << imageFileHandler << endl;
                 delete imageFileHandler;
 
                 if (newSuccess)
@@ -256,14 +263,15 @@ wxThread::ExitCode ThumbnailLoader::Entry()
                 image.Destroy();
             }
         }
+        else
+        {
+            //cout << "Loaded OK\n";
+            thumbnail.imageLoaded = true;
+        }
     }
-    else
-    {
-        //cout << "Loaded OK\n";
-        thumbnail.imageLoaded = true;
-    }
-    //NoteTime("stopped");
+    NoteTime("stopped");
 
+    //cout << "ThumbnailLoader::Exit() " << this << endl;
     return (wxThread::ExitCode)0;
 }
 
@@ -434,15 +442,31 @@ void Thumbnail::FetchHeader()
 }
 
 
+
 Thumbnail::~Thumbnail()
 {
+    //cout << "Thumbnail::~Thumbnail()" << endl;
+
     if (!imageLoaded)
     {
         if (isLoading)
         {
             if (thumbnailLoader)
-                thumbnailLoader->Delete();
+            {
+                //thumbnailLoader->Wait();
+                if (thumbnailLoader)
+                    thumbnailLoader->Delete();
+            }
         }
+    }
+}
+
+void Thumbnail::StartLoadingImage()
+{
+    if (thumbnailLoader)
+    {
+        NoteTime("Before");
+        thumbnailLoader->Run();
     }
 }
 
@@ -547,21 +571,21 @@ void Thumbnail::Draw(wxPaintDC &dc, bool selected, bool cursor, bool inFocus)
         dc.SetTextForeground(wxColor(128, 128, 128));
     }
     
-    cout << "bitmap m_RedData = " << bitmap.GetRefData() << " " << imageLoaded << " this=" << this << endl;
+    //cout << "bitmap m_RedData = " << bitmap.GetRefData() << " " << imageLoaded << " this=" << this << endl;
     if (imageLoaded && bitmap.IsOk())
     {
-        cout << "Inside" << endl;
+        //cout << "Inside" << endl;
         thumbnailLoader = 0;
         int x = position.x + (tnSize.GetWidth()  - bitmap.GetWidth() ) / 2;
         int y = position.y + (tnSize.GetHeight() - bitmap.GetHeight()) / 2;
 
-        cout << "Drawing" << endl;
+        //cout << "Drawing" << endl;
         dc.DrawBitmap(bitmap, x, y, false);
-        cout << "Done" << endl;
+        //cout << "Done" << endl;
     }
     else
     {
-        cout << "else" << endl;
+        //cout << "else" << endl;
         dc.SetBrush(wxBrush(wxColor(32,32,32)));
         dc.SetPen(*wxBLACK_PEN);
 
@@ -616,7 +640,7 @@ void CmpTest(wxString a, wxString b)
 }
 
 
-ThumbnailCanvas::ThumbnailCanvas(ImageBrowser* imgBrs, FileNameList& fNameList, wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size)
+ThumbnailCanvas::ThumbnailCanvas(wxWindow* parent, FileNameList& fNameList, ImageBrowser* imgBrs, wxWindowID id, const wxPoint& pos, const wxSize& size)
 : wxScrolledWindow(parent, id, pos, size, wxSUNKEN_BORDER | wxVSCROLL | wxEXPAND | wxWANTS_CHARS),
   fileNameList(fNameList),
   inFocus(false),
@@ -624,7 +648,7 @@ ThumbnailCanvas::ThumbnailCanvas(ImageBrowser* imgBrs, FileNameList& fNameList, 
   cursorP(tnColumns, fNameList),
   selectionStart(0),
   backgroundColor(wxColor(64, 64, 64)),
-  tnSize(150, 150),
+  tnSize(250, 250),
   thBorder(5),
   redrawType(REDRAW_ALL),
   tnSpacingX(20),
@@ -641,7 +665,6 @@ ThumbnailCanvas::ThumbnailCanvas(ImageBrowser* imgBrs, FileNameList& fNameList, 
   m_availableID(1),
   thumbnailLoadingActive(false)
 {
-
     SetBackgroundColour(backgroundColor);
     //ImageFileHandlerRegistry& imageFileHandlerRegistry = ImageFileHandlerRegistry::instance();
     //wxArrayString &filtersList = imageFileHandlerRegistry.GetFiltersList();
@@ -660,17 +683,8 @@ ThumbnailCanvas::ThumbnailCanvas(ImageBrowser* imgBrs, FileNameList& fNameList, 
 
     RecalculateRowsCols();
     
-    
     DragAcceptFiles(true);
     Bind(wxEVT_DROP_FILES, &ThumbnailCanvas::OnDropFiles, this, -1);
-
-    cout << wxCmpNatural("FtvwWJE.jpg", "ggnExrO.jpg");
-    cout << wxCmpNatural("ggnExrO.jpg", "FtvwWJE.jpg");
-    cout << wxCmpNatural("001.jpg", "01dc6e1118884954.jpg");
-    cout << wxCmpNatural("001.jpg", "002.jpg");
-    cout << wxCmpNatural("_MetArt-Appellato-cover.jpg", "001.jpg");
-    cout << wxCmpNatural("_MetArt-Appellato-cover.jpg", "FtvwWJE.jpg");
-
 }
 
 void ThumbnailCanvas::SetImageViewer(ImageViewer *iv)
@@ -679,6 +693,11 @@ void ThumbnailCanvas::SetImageViewer(ImageViewer *iv)
     //imageViewer->SetFileNameList(&fileNameList);
 }
 
+void ThumbnailCanvas::FullRedraw()
+{
+    redrawType = REDRAW_ALL;
+    Refresh(DONT_ERASE_BACKGROUND);
+}
 
 void ThumbnailCanvas::OnDropFiles(wxDropFilesEvent& event)
 {
@@ -774,8 +793,10 @@ void ThumbnailCanvas::RecalculateRowsCols()
     redrawSetP.Clear();
     redrawType = REDRAW_ALL;
 }
-
-
+void ThumbnailCanvas::StatusMessage(size_t place, wxString text)
+{
+    imageBrowser->StatusMessage(place, text);
+}
 
 void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
 {
@@ -812,6 +833,9 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
 
     //redrawType = REDRAW_ALL;
 
+    wxString debuggingText;
+    wxString debuggingLine;
+
     //cout << "Redraw type " << redrawType << endl;
     switch (redrawType)
     {
@@ -823,6 +847,7 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
                 //cout << thumbnailIndex[i] << endl;
                 //cout << "  " << i << endl;
                 selected = selectionSetP.Contains(i);
+
                 if (cursorP.GetNumber() == i)
                 {
                     onCursor = true;
@@ -845,7 +870,7 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
                     //cout << "Scroll " << i << " " << topVisiblePixel << " " << bottomVisiblePixel << " " << thumbnails[index].GetPosition().y << endl;
                     numRedraws++;
                 }
-
+                //cout << "Debugging text\n";
             }
             break;
 
@@ -896,7 +921,20 @@ void ThumbnailCanvas::OnPaint(wxPaintEvent &event)
             redrawSetP.Clear();
             break;
     }
-    
+
+    //cout << "Redrawing ALL" << endl;
+    for (int i = 0; i < n; i++)
+    {
+        int index = thumbnailIndex[i];
+        //cout << thumbnailIndex[i] << endl;
+        //cout << "  " << i << endl;
+        selected = selectionSetP.Contains(i);
+
+        debuggingLine.Printf("[%03d] = %03d : %d\n", i, index, selected);
+        debuggingText.Append(debuggingLine);
+    }
+    SetDebuggingText(debuggingText);
+
     redrawType = REDRAW_ALL;
 }
 
@@ -939,13 +977,28 @@ void ThumbnailCanvas::HandleCursorScrolling()
     }
 }
 
+void ThumbnailCanvas::UpdateDebuggingText()
+{
+    wxString text;
+
+    for (int i = 0; i < thumbnailIndex.size(); i++)
+    {
+
+    }
+}
+
 void ThumbnailCanvas::OnKeyEvent(wxKeyEvent &event)
 {
     bool skipping = true;
     int  pageJump = GetNumRows();
 
+    //cout << "ThumbnailCanvas::OnKeyEvent(" << event.GetKeyCode() << ")" << endl;
+
     if (HandleAsNavigationKey(event))
+    {
+        event.Skip(skipping);
         return;
+    }
 
     //cout << "OnKeyEvent(" << event.GetKeyCode() << ")" << endl;
     int cursorToErase = -1;
@@ -955,14 +1008,18 @@ void ThumbnailCanvas::OnKeyEvent(wxKeyEvent &event)
         //cout << "ThumbnailCanvas(D)" << endl;
     }
 
+    //cout << "Key= " << fileNameList.NumFiles() << " files" << endl;
+
     switch (event.GetKeyCode())
     {
-        case WXK_UP:        cursorP.Move( 0,         -1); skipping = false;         break;
-        case WXK_DOWN:      cursorP.Move( 0,          1); skipping = false;         break;
-        case WXK_LEFT:      cursorP.Move(-1,          0); skipping = false;         break;
-        case WXK_RIGHT:     cursorP.Move( 1,          0); skipping = false;         break;
-        case WXK_PAGEUP:    cursorP.Move( 0,  -pageJump); skipping = false;         break;
-        case WXK_PAGEDOWN:  cursorP.Move( 0,   pageJump); skipping = false;         break;
+        case WXK_UP:                cursorP.Move( 0,         -1); skipping = false; break;
+        case WXK_DOWN:              cursorP.Move( 0,          1); skipping = false; break;
+        case WXK_LEFT:              cursorP.Move(-1,          0); skipping = false; break;
+        case WXK_RIGHT:             cursorP.Move( 1,          0); skipping = false; break;
+        case WXK_NUMPAD_PAGEUP:     cursorP.Move( 0,  -pageJump); skipping = false; break;
+        case WXK_NUMPAD_PAGEDOWN:   cursorP.Move( 0,   pageJump); skipping = false; break;
+        case WXK_NUMPAD_HOME:       cursorP.ToHome();             skipping = false; break;
+        case WXK_NUMPAD_END:        cursorP.ToEnd();              skipping = false; break;
 
         case WXK_RETURN:    ActivateThumbnail(cursorP.GetNumber());                 return;
         case WXK_DELETE:    DeleteSelection();                                      return;
@@ -972,6 +1029,10 @@ void ThumbnailCanvas::OnKeyEvent(wxKeyEvent &event)
             return;
     }
 
+    //int index = thumbnailIndex[cursorP.GetNumber()];
+    //wxString name = thumbnails[index].GetFileName().GetFullName();
+    //cout << "(" << cursorP.GetX() << ", " << cursorP.GetY() << ")  " << cursorP.GetNumber() << "  " << name  << endl;
+
 	cursorP.SetupRedraw(redrawSetP);
     redrawSetP.AddFrom(selectionSetP);
 
@@ -980,6 +1041,7 @@ void ThumbnailCanvas::OnKeyEvent(wxKeyEvent &event)
 	{
 		selectionSetP.SelectTo(cursorP.GetNumber());
         selectionChange = true;
+
 	}
 	else
 	{
@@ -1037,19 +1099,27 @@ void ThumbnailCanvas::OnFocusKillEvent(wxFocusEvent &event)
     }
 
     //cout << "done" << endl;
-} 
+}
 
 
 void ThumbnailCanvas::OnIdle(wxIdleEvent &event)
 {
+    wxWindow* foc = wxWindow::FindFocus();
+
+    if (!foc)
+        imageBrowser->GetParent()->SetFocus();
+
+
     if (HandleThumbnailLoading())
     {
         event.RequestMore();
+        Sleep(50);
         //cout << "event.RequestMore()\n";
         //STATUS_TEXT(3, "Loading Images ...");
     }
     else
     {
+        //Sleep(50);
         //cout << "event.RequestMore() stopped\n";
         //STATUS_TEXT(3, "");
     }
@@ -1164,10 +1234,37 @@ bool ThumbnailCanvas::CheckPasswordProtection(wxString directory)
     return false;
 }
 
+void ThumbnailCanvas::UpdateStatusBar_Directory(wxString directory)
+{
+    cout << "ThumbnailCanvas::UpdateStatusBar_Directory(" << directory << ")" << endl;
+
+    totalDirectorySizeBytes = 0;
+    int n = fileNameList.files.size();
+
+    for (int i = 0; i < n; i++)
+    {
+        wxString fullPath = directory;
+        fullPath += wxT("\\");
+        fullPath += fileNameList.files[i].fileName.GetFullPath();
+        cout << fullPath << endl;
+
+        wxFileName fn(fullPath);
+        wxDateTime dateTime = wxDateTime::Now();
+
+        if (fn.IsOk())
+        {
+            //dateTime = fn.GetModificationTime();
+            totalDirectorySizeBytes += fn.GetSize();
+        }
+
+    }
+    wxString hrs = HumanFileSize(totalDirectorySizeBytes.GetLo());
+    STATUS_TEXT(STATUS_BAR_DIRECTORY_SUMMARY, "%d files (%s)", n, hrs.c_str());
+}
 
 void ThumbnailCanvas::LoadThumbnails(wxString directory)
 {
-	cout << "LoadThumbnails(" << directory << ")" << endl;
+	//cout << "LoadThumbnails(" << directory << ")" << endl;
     //CheckPasswordProtection(directory);
 
     inFocus = false;
@@ -1188,6 +1285,7 @@ void ThumbnailCanvas::LoadThumbnails(wxString directory)
     if (n > 0)
         SetCursor(0);
 
+    //cout << "Reading file names" << endl;
     for (int i = 0; i<n; i++)
     {
         wxString fullPath = directory;
@@ -1207,6 +1305,7 @@ void ThumbnailCanvas::LoadThumbnails(wxString directory)
         thumbnails.back().SetDateTime(dateTime);
         //cout << "  " << thumbnails.back().GetFileName().GetName() << endl;
     }
+    //cout << "done" << endl;
 
     readHeadersCompleted = true;
 
@@ -1227,11 +1326,14 @@ void ThumbnailCanvas::LoadThumbnails(wxString directory)
 
     sortingType = ThumbnailSortingFunctor::SORT_NUMS_FORWARDS;
     SortThumbnails();
+
+    if (thumbnailIndex.size() > 0)
+        SetCursor(0);
 }
 
 void ThumbnailCanvas::StopLoadingThumbnails(wxString directory)
 {
-    //cout << "StopLoadingThumbnails()" << endl;
+    cout << "StopLoadingThumbnails()" << endl;
     if ((directory.StartsWith(fileNameList.directory.GetNameWithSep())) ||
         (fileNameList.directory.GetName().StartsWith(directory))
         )
@@ -1316,22 +1418,30 @@ bool ThumbnailCanvas::HandleThumbnailLoading()
     int i, n = loadingSet.size();
 
     //cout << "ThumbnailCanvas::HandleThumbnailLoading()" << endl;
-
+    //cout << "  " << n << " loading" << endl;
+    //cout << "  " << waitingSet.size() << " waiting" << endl;
 
     for (i = 0; i < n; i++)                         // Check if any thumbnails have finished loading
     {
         int th = loadingSet[i];
         //cout << "  loadingSet[" << i << "] = " << th << endl;
+
         //if (thumbnails[thumbnailIndex[th]].ImageIsLoaded())
         if (thumbnails[th].ImageIsLoaded())
-            {
+        {
+            //cout << "th = " << th << "  index = " << thumbnailIndex[th] << "  cursor = " << cursorP.GetNumber() << endl;
             loadingSet.RemoveSingle(th);
             redrawSetP.AddSingle(FindThumbnailIndex(th));
             i--;
             n--;
 
+            //cout << th << " " << thumbnailIndex[th] << " " << cursorP.GetNumber() << endl;
+
             if (th == cursorP.GetNumber())          // Did we just load the selected thumbnail?
+            {
+                //cout << "Updating status " << endl;
                 UpdateStatusBar_File();             // Then we have the information we need to fill in the status bar.
+            }
         }
     }
 
@@ -1351,6 +1461,7 @@ bool ThumbnailCanvas::HandleThumbnailLoading()
             thumbnails[th].StartLoadingImage();
             loadingSet.AddSingle(th);
             waitingSet.RemoveSingle(th);
+            //cout << waitingSet.size() << endl;
             i--;
             n--;
         }
@@ -1369,8 +1480,7 @@ bool ThumbnailCanvas::HandleThumbnailLoading()
         Refresh(DONT_ERASE_BACKGROUND);
     }
 
-    //cout << "loadingSet.size() = " << loadingSet.size() << endl;
-    //cout << "waitingSet.size() = " << waitingSet.size() << endl;
+    //cout << loadingSet.size() << " " << waitingSet.size() << endl;
 
     if (loadingSet.size() || waitingSet.size())
         return true;
@@ -1404,25 +1514,6 @@ int ThumbnailCanvas::GetThumbnailFromPosition(wxPoint &position)
 }
 
 
-/*
-void ThumbnailCanvas::SetCursorTo(int n)
-{
-    cout << "SetCursorTo(" << n << ")  erase: " << cursorNumber << endl;
-
-    if (n >= 0)
-    {
-        redrawSet.CopyFrom(selectionSet);
-        redrawSet.AddSingle(n);
-        redrawSet.AddSingle(cursorNumber);
-        cursorNumber = n;
-        RecalculateXyFromCursor();
-        redrawType = REDRAW_SELECTION;
-        cout << "Expecting to redraw " << n << " and " << cursorNumber << endl;
-        redrawSet.Print();
-        Refresh(DONT_ERASE_BACKGROUND);
-    }
-}
-*/
 
 void ThumbnailCanvas::IndexLookup(SortedVectorInts& vec)
 {
@@ -1464,6 +1555,7 @@ void ThumbnailCanvas::OnMouseEvent(wxMouseEvent &event)
             redrawType = REDRAW_ALL;
         }
         else        { /* failure! */ }
+        SetFocus();
     }
 
 
@@ -1585,61 +1677,40 @@ void ThumbnailCanvas::OnMouseEvent(wxMouseEvent &event)
 
             wxDropSource dragSource(this);
             dragSource.SetData(*dragingFilesDataObject);
-            wxDragResult result = dragSource.DoDragDrop(true);                  // Dragging starts now!
+            wxDragResult result = dragSource.DoDragDrop(wxDrag_DefaultMove);    // Dragging starts now!
                                                                                 // ====================
                                                                                 // Items have been dropped!            
+            cout << "wxDragResult = " << (int)result << endl;
+            if (result == wxDragError)  cout << "wxDragError " << endl;
+            if (result == wxDragNone)   cout << "wxDragNone " << endl;
+            if (result == wxDragCopy)   cout << "wxDragCopy " << endl;
+            if (result == wxDragMove)   cout << "wxDragMove" << endl;
+
+            //std::this_thread::sleep_until(std::chrono::system_clock::now() + std::chrono::seconds(1));
             RemoveThumbNailFromCanvasIfDeleted(fileNamesToMaybeRemove);
         }
     }
 
     wxString selectedFiles = "";
     wxString number;
-    /*
-    for (int i = 0; i < selectionSetP.size(); i++)
-    {
-        int selection = selectionSetP[i];
-        int index = thumbnailIndex[selection];
-        number.Printf("%d %d %d: ", i, selection, index);
-        selectedFiles.Append(number);
-        selectedFiles.Append(thumbnails[index].GetFileName().GetFullPath());
-        selectedFiles.Append("\n");
-    }
-
-    selectedFiles.Append("\nRedraw:\n");
-    for (int i = 0; i < redrawSetP.size(); i++)
-    {
-        int selection = redrawSetP[i];
-        int index = thumbnailIndex[selection];
-        number.Printf("%d %d %d: ", i, selection, index);
-        selectedFiles.Append(number);
-        selectedFiles.Append(thumbnails[index].GetFileName().GetFullPath());
-        selectedFiles.Append("\n");
-    }
-
-    SetDebuggingText(selectedFiles);
-    */
-
-    //lines += wxT("selectionSetP = ");                   lines += selectionSetP.SPrint();
-    //lines += wxT("draggingSet   = ");                   lines += draggingSet.SPrint();
-    //s.Printf(wxT("dragState     = %d\n"), dragState);   lines += s;
-
-    //SetDebuggingText(lines);
-    //cout << "Done" << endl;
-    //Update();
 }
 
 void ThumbnailCanvas::ActivateThumbnail(int n)
 {
-    //cout << "ThumbnailCanvas::ActivateThumbnail(" << n << ")" << endl;
-    //cout << "  " << fileNameList.directory.GetName() << endl << endl;
+    //cout << "ThumbnailCanvas::ActivateThumbnail(" << n << ")  MaxFielNumber = " << fileNameList.MaxFileNumber() << endl;
+
 
     if ( (n < 0) || (n > fileNameList.MaxFileNumber()) )
         return;
 
     int               index            = thumbnailIndex[n];
-    wxFileName        fileName         = fileNameList[index];
+    //cout << "index     = " << index << endl;
+    wxFileName        fileName         = thumbnails[index].GetFullPath();
+    //cout << "fileName  = " << fileName.GetFullName() << endl;
     wxString          extension        = fileName.GetExt();
+    //cout << "extension = " << extension << endl;
     ImageFileHandler* imageFileHandler = ImageFileHandlerRegistry::instance().GetImageFileHandlerFromExtension(extension);
+    //cout << "imageFileHandler = " << imageFileHandler << endl;
 
     //cout << "Activating " << fileName.GetFullPath() << endl;
 
@@ -1652,7 +1723,6 @@ void ThumbnailCanvas::ActivateThumbnail(int n)
         //cout << "Displaying " << fileName.GetFullPath() << endl;
         //imageViewer->DisplayImage(cursorP.GetNumber());
         imageViewer->DisplayImage(fileName);
-        
     }
 
     if (actions & DELETE_FILE)
@@ -1666,6 +1736,7 @@ void ThumbnailCanvas::ActivateThumbnail(int n)
         imageBrowser->RefreshDirTree(fileName.GetPathWithSep());
     }
 
+    //cout << "Deleting imageFileHandler" << imageFileHandler << endl;
     delete imageFileHandler;
 }
 
@@ -1691,9 +1762,6 @@ void ThumbnailCanvas::UpdateStatusBar_File()
             int index = thumbnailIndex[cursorP.GetNumber()];
             Thumbnail *tn = &thumbnails[index];
 
-            //cout << "  " << index << endl;
-            //cout << "Update Status: " << tn->GetFullPath().GetFullPath() << endl;
-
             wxFileName fn         = tn->GetFullPath();
 
             if (!fn.IsOk())
@@ -1710,12 +1778,16 @@ void ThumbnailCanvas::UpdateStatusBar_File()
                 return;
             }
 
-            wxString   dateString = date.Format("%d/%m/%Y  %H:%M");
+            wxString   dateString = date.Format("%H:%M %d/%m/%Y");
             wxSize     imageSize = tn->GetImageSize();
 
-            STATUS_TEXT(STATUS_BAR_FILE_SIZES, "%s,  %s - (%d x %d)", fn.GetHumanReadableSize().c_str(), dateString, imageSize.GetWidth(), imageSize.GetHeight());
+            //cout << "  " << index << endl;
+            //cout << "  Update Status: " << tn->GetFullPath().GetFullPath() << endl;
+            //cout << "  imageSize = " << imageSize.x << endl;
+
+            STATUS_TEXT(STATUS_BAR_FILE_SIZES, "%s,  %s - (%d x %d) %d %d", fn.GetHumanReadableSize().c_str(), dateString, imageSize.GetWidth(), imageSize.GetHeight(), index, thumbnailIndex[index]);
             STATUS_TEXT(STATUS_BAR_FILE_FORMAT, fn.GetFullName().c_str());
-            STATUS_TEXT(STATUS_BAR_INFORMATION, "cursor = %d, index = %d, sel = %d", cursorP.GetNumber(), index, selectionSetP[0]);
+            //STATUS_TEXT(STATUS_BAR_INFORMATION, "cursor = %d, index = %d, sel = %d", cursorP.GetNumber(), index, selectionSetP[0]);
         }
     //}
 }
@@ -1801,27 +1873,42 @@ int ThumbnailCanvas::FindThumbnailIndex(wxFileName fileName)
 
 void ThumbnailCanvas::RemoveThumbNailFromCanvasIfDeleted(vector<wxFileName>& fileNamesToMaybeRemove)
 {
-    //cout << "RemoveThumbNailFromCanvas(" << fileName.GetFullPath() << ")" << endl;
+    cout << "RemoveThumbNailFromCanvas()" << endl;
 
     //int tn = fileNameList.GetFileNumber(fileName);
 
     std::vector<int>::iterator iter = thumbnailIndex.begin();
 
-    //waitingSet.RemoveSingle(tn);
+    //
+// .RemoveSingle(tn);
     //loadingSet.RemoveSingle(tn);
     //redrawSetP.Clear();
 
     // Delete the thumbnails from the main array using iterators
     // Rebuild the thumbnailIndex array from scratch, then sort it.
 
-    for (int d = 0; d < fileNamesToMaybeRemove.size(); d++)                 // for each filename ot maybe remove
-    {
-        int index = FindThumbnailIndex(fileNamesToMaybeRemove[d]);          // Find it
+    FileNameList fnl(fileNamesToMaybeRemove[0].GetPath());
 
-        if (index >= 0)
+    fnl.Print();
+
+
+
+    for (int d = 0; d < fileNamesToMaybeRemove.size(); d++)                 // For each filename to maybe remove
+    {
+        // Note: wxFileName.Exists() doesn't seem to work! That's why I'm using FileNameList.Contains().
+
+        bool fileWasDeleted = !fnl.Contains(fileNamesToMaybeRemove[d]);
+        //cout << "  " << fileNamesToMaybeRemove[d].GetFullPath() << "  " << fileWasDeleted << endl;
+        if (fileWasDeleted)
         {
-            thumbnails[index] = thumbnails.back();                          // and delete it.
-            thumbnails.pop_back();
+            //cout << "removing: " << fileNamesToMaybeRemove[d].GetFullPath() << endl;
+            int index = FindThumbnailIndex(fileNamesToMaybeRemove[d]);          // Find it
+
+            if (index >= 0)
+            {
+                thumbnails[index] = thumbnails.back();                          // and delete it.
+                thumbnails.pop_back();
+            }
         }
     }
 
@@ -1833,14 +1920,15 @@ void ThumbnailCanvas::RemoveThumbNailFromCanvasIfDeleted(vector<wxFileName>& fil
         thumbnailIndex.push_back(i);
     }
     SortThumbnails();
-    //RecalculateRowsCols();
-    //redrawType = REDRAW_ALL;
-    //Refresh(ERASE_BACKGROUND);
 }
 
 // Delete the image on disk, and delete the thumbnail pointer, but keep the thumbnail.
 void ThumbnailCanvas::DeleteImage(wxFileName fileName)
 {
+    SetCursor(fileName.GetFullPath());
+    DeleteSelection();
+    return;
+
     //cout << "ThumbnailCanvas::DeleteImage(" << fileName.GetFullPath() << ")" << endl;
     int tn = FindThumbnailIndex(fileName);
 
@@ -1853,20 +1941,47 @@ void ThumbnailCanvas::DeleteImage(wxFileName fileName)
 
     //cout << "Deleting " << fileName.GetFullPath() << endl;
 
-    bool succesfullyDeleted = wxRemoveFile(fileName.GetFullPath());
+    //bool succesfullyDeleted = wxRemoveFile(fileName.GetFullPath());
+    bool succesfullyDeleted = fileNameList.DeleteFileName(fileName.GetFullPath());
+    //cout << endl;
+    //for (int i = 0; i < thumbnailIndex.size(); i++)
+    //    cout << "[" << i << "] = " << thumbnailIndex[i] << endl;
+    //cout << endl;
+
 
     if (succesfullyDeleted)
     {
-        thumbnails[tn] = thumbnails.back();                              // and delete it.
-        thumbnails.pop_back();
+        //cout << "succesfullyDeleted" << endl;
+
+        size_t indexToBeRemoved = GetSortedImageNumber(fileName.GetFullPath());
+        //cout << "indexToBeRemoved = " << indexToBeRemoved << endl;
+        selectionSetP.SelectOnly(indexToBeRemoved);
+        selectionSetP.Print();
+
+        DeleteSelection();
+        //thumbnails[tn] = thumbnails.back();                              // and delete it.
+        //thumbnails.pop_back();
     }
+    return;
 
     thumbnailIndex.clear();
     for (int i = 0; i < thumbnails.size(); i++)
     {
         thumbnailIndex.push_back(i);
     }
+
+    //cout << endl;
+    //for (int i = 0; i < thumbnailIndex.size(); i++)
+    //    cout << "[" << i << "] = " << thumbnailIndex[i] << endl;
+    //cout << endl;
+
     SortThumbnails();
+
+    //cout << endl;
+    //for (int i = 0; i < thumbnailIndex.size(); i++)
+    //    cout << "[" << i << "] = " << thumbnailIndex[i] << endl;
+    //cout << endl;
+    //cout << fileNameList.NumFiles() << " files left" << endl;
 }
 
 
@@ -1917,13 +2032,16 @@ void ThumbnailCanvas::DeleteSelection()
 {
     wxString debugString;
 
-    //cout << "ThumbnailCanvas::DeleteSelection()" << endl;
-    //cout << selectionSetP.size() << " files selected" << endl;
+    //wxString text = "testing";
+    //SetDebuggingText(text);
+
+    cout << "ThumbnailCanvas::DeleteSelection()" << endl;
+    cout << selectionSetP.size() << " files selected" << endl;
 
     if (selectionSetP.size() == 0)
     {
         selectionSetP.AddSingle(cursorP.GetNumber());
-        //cout << selectionSetP.size() << " files selected" << endl;
+        cout << selectionSetP.size() << " files selected" << endl;
     }
 
     int newCursor = 0;
@@ -1945,7 +2063,9 @@ void ThumbnailCanvas::DeleteSelection()
 
         wxString filenameToDelete = thumbnails[index].GetFullPath().GetFullPath();
         
-        bool succesfullyDeleted = wxRemoveFile(filenameToDelete);
+        cout << "Trying to delete " << filenameToDelete << endl;
+        //bool succesfullyDeleted = wxRemoveFile(filenameToDelete);
+        bool succesfullyDeleted = fileNameList.DeleteFileName(filenameToDelete);
 
         if (succesfullyDeleted)
         {
@@ -1957,14 +2077,18 @@ void ThumbnailCanvas::DeleteSelection()
     selectionSetP.Clear();
     SortThumbnails();
 
-    for (int i = 0; i < thumbnailIndex.size(); i++)
-    {
-        int index = thumbnailIndex[i];
-    }
+    //for (int i = 0; i < thumbnailIndex.size(); i++)
+    //{
+    //    int index = thumbnailIndex[i];
+    //}
 
     newCursor = clamp(newCursor, 0, (int)thumbnailIndex.size() - 1);
     cursorP.SetTo(newCursor);
     UpdateStatusBar_File();
+    UpdateStatusBar_Directory(fileNameList.directory.GetName());
+
+    cout << fileNameList.NumFiles() << " files left" << endl;
+
 }
 
 /*
@@ -2069,7 +2193,7 @@ void ThumbnailCanvas::RenameSequence(wxCommandEvent& evt)
 
 wxString ThumbnailCanvas::GetInfoString(wxFileName fileName)
 {
-    //cout << "ThumbnailCanvas::GetInfoString(" << fileName.GetFullPath() << ")" << endl;
+    cout << "ThumbnailCanvas::GetInfoString(" << fileName.GetFullPath() << ")" << endl;
 
     int        index = 0;
     wxString   infoString;
@@ -2082,8 +2206,12 @@ wxString ThumbnailCanvas::GetInfoString(wxFileName fileName)
     for (auto i: thumbnailIndex)
     {
         index = thumbnailIndex[i];
+
+        cout << i << " : " << index << "  " << thumbnails[index].GetFullPath().GetFullName() << " - " << fileName.GetFullName() << endl;
+
         if (thumbnails[index].GetFullPath() == fileName.GetFullPath())
         {
+            cout << " FOUND " << endl;
             thumbnail = &thumbnails[index];
             break;
         }
@@ -2101,7 +2229,7 @@ wxString ThumbnailCanvas::GetInfoString(wxFileName fileName)
 
     nameString = fileName.GetFullPath();
     dimensionsString.Printf("\n%dx%d\n", thumbnail->GetImageSize().x, thumbnail->GetImageSize().y);
-    numberString.Printf("%d of %d", (int)index, (int)thumbnailIndex.size());
+    numberString.Printf("%d of %d", (int)index+1, (int)thumbnailIndex.size());
 
     infoString = nameString + dimensionsString + numberString;
 
@@ -2226,35 +2354,55 @@ int ThumbnailCanvas::GetSortedImageNumber(wxFileName fileName) const
 
 wxFileName ThumbnailCanvas::Jump(wxFileName& currentImage, int delta, wxString viewableExtensions) const
 {
+    //cout << endl << "ThumbnailCanvas::Jump(" << delta << ")" << endl;
+
     int    maxFileNumber = thumbnailIndex.size() - 1;
     size_t originalImageNumber = 0;
     int    sortedIndex = GetSortedImageNumber(currentImage);
 
+    //cout << "sortedIndex = " << sortedIndex << endl;
     if (sortedIndex < 0)                                                    // Error code. Something went really wrong here
+    {
+        //cout << "ERROR sortedIndex < 0" << endl;
         return currentImage;
+    }
 
     originalImageNumber = sortedIndex;                                      // remember this in case we can't seem to find the next image to jump to
     sortedIndex        += delta;
+
+    //if (sortedIndex > maxFileNumber)
+    //    return wxFileName("");
+    //
+    //if (sortedIndex < 0)
+    //    return wxFileName("");
+
+    //cout << "sortedIndex + delta = " << sortedIndex << endl;
     sortedIndex         = clamp(sortedIndex, 0, maxFileNumber);
+    //cout << "sortedIndex clamped = " << sortedIndex << endl;
 
     while (true)
     {
         size_t index = thumbnailIndex[sortedIndex];
+        //cout << "index = " << index << endl;
 
         wxString extensionOfCurrentImage = GetExtensionOfImageNumber(index);
         bool     currentImageIsViewable = viewableExtensions.Contains(extensionOfCurrentImage);
 
+        cout << sortedIndex << ": " << thumbnails[index].GetFileName().GetFullName() << endl;
+
         if (currentImageIsViewable)
         {
+            //cout << "Found!" << endl;
             return thumbnails[index].GetFileName();
         }
 
         if (delta > 0)      sortedIndex++;
         else                sortedIndex--;
 
-        bool wentOffTheEnd = sortedIndex > maxFileNumber;
+        bool wentOffTheEnd = (sortedIndex > maxFileNumber) || (sortedIndex < 0);
         if (wentOffTheEnd)                                                  // Hit the end of the list? (start or end because it's unsigned)
         {
+            //cout << "Went off the end" << endl;
             sortedIndex = originalImageNumber;
             return currentImage;                                            // .. then just give up looking.
         }

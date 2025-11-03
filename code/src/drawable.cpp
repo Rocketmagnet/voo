@@ -1,4 +1,5 @@
-//#include <gl/glew.h>
+#include <gl/glew.h>
+
 #include <iostream>
 using namespace std;
 
@@ -25,6 +26,15 @@ void SetDebuggingText(wxString text);
 #define OVERLAP 10
 #define UNDERLAP 4
 
+void PrintOpenGLVersion()
+{
+    const char* version = (const char*)glGetString(GL_VERSION);
+    if (version)
+        std::cout << "OpenGL Version: " << version << std::endl;
+    else
+        std::cerr << "Failed to retrieve OpenGL version!" << std::endl;
+}
+
 std::ostream & operator << (std::ostream & os, const RectangleVector & rv)
 {
     return os << rv.TL << rv.BR;
@@ -33,7 +43,7 @@ std::ostream & operator << (std::ostream & os, const RectangleVector & rv)
 
 wxThread::ExitCode ImageLoader::Entry()
 {
-    SetPriority(wxPRIORITY_MAX);
+    SetPriority(wxPRIORITY_MIN);
 	glImage.Load(fileName);
     return 0;
 }
@@ -318,6 +328,7 @@ double Remap(double i, double sMin, double sMax, double dMin, double dMax)
 
 void TextureUpload::Render(Vector2D scrTL, Vector2D scrBR)
 {
+    //PrintOpenGLVersion();
     //cout << "TextureUpload::Render()" << endl;
     if (!valid)
     {
@@ -349,16 +360,7 @@ void TextureUpload::Render(Vector2D scrTL, Vector2D scrBR)
 
     glBindTexture(GL_TEXTURE_2D, ID);
 
-    //cout << ID << "        (" << x0 << ", " << y0 << ") - (" << x1 << ", " << y1 << ")" << endl;
-    //cout << "(" << renderableTexturePortion.TL.x << ", " << renderableTexturePortion.TL.y << ")";
-    //cout << "(" << renderableTexturePortion.BR.x << ", " << renderableTexturePortion.BR.y << ")" << endl;
-
     glBegin(GL_QUADS);
-        //glColor3f(1.0, 0.00, 0);    glVertex2f(x0, y0);
-        //glColor3f(1.0, 0.50, 0);    glVertex2f(x1, y0);
-        //glColor3f(1.0, 1.00, 0);    glVertex2f(x1, y1);
-        //glColor3f(1.0, 0.50, 0);    glVertex2f(x0, y1);
-
         glTexCoord2f(renderableTexturePortion.TL.x, renderableTexturePortion.TL.y);    glVertex2f(x0, y0);
         glTexCoord2f(renderableTexturePortion.BR.x, renderableTexturePortion.TL.y);    glVertex2f(x1, y0);
         glTexCoord2f(renderableTexturePortion.BR.x, renderableTexturePortion.BR.y);    glVertex2f(x1, y1);
@@ -478,47 +480,34 @@ TextureUpload::~TextureUpload()
 
 void TextureUpload::Init(wxImage *img, Vector2D TL, Vector2D BR, int overlap)
 {
-    //cout << endl;
-    //cout << "TextureUpload::Init(" << TL.x << ", " << TL.y << " - " << BR.x << ", " << BR.y << ")" << endl;
-
-      originalImagePortion = RectangleVector(TL, BR);
-      expandedImagePortion = RectangleVector(TL, BR);
+    originalImagePortion = RectangleVector(TL, BR);
+    expandedImagePortion = RectangleVector(TL, BR);
 
     if ((originalImagePortion.XSize() == 0) || (originalImagePortion.YSize() == 0))
     {
         valid = false;
-        //cout << "Valid = " << valid << endl;
         return;
     }
     else
     {
         valid = true;
-        //cout << "Valid = " << valid << endl;
     }
 
-    //clips = clip;
-    //cout << "Clips = " << clips << endl;
     if (overlap & OVERLAP_LEFT)
     {
           expandedImagePortion.TL.x -= OVERLAP;
-        //renderableImagePortion.TL.x -= OVERLAP / 2;
     }
 
     if (overlap & OVERLAP_RIGHT)
     {
           expandedImagePortion.BR.x += OVERLAP;
-        //renderableImagePortion.BR.x += OVERLAP / 2;
     }
-
-    //cout << "  originalImagePortion = " << originalImagePortion   << endl;
-    //cout << "  expandedImagePortion = " << expandedImagePortion   << endl;
-    //cout << "renderableImagePortion = " << renderableImagePortion << endl;
 
 
     int width  = expandedImagePortion.XSize();
     int height = expandedImagePortion.YSize();
 
-    copyWidth = width;
+    copyWidth  = width;
 
     float power_of_two_that_gives_correct_width = std::log((float)(width - 1)) / std::log(2.0);
     float power_of_two_that_gives_correct_height = std::log((float)(height - 1)) / std::log(2.0);
@@ -526,77 +515,194 @@ void TextureUpload::Init(wxImage *img, Vector2D TL, Vector2D BR, int overlap)
     int textureHeight = (int)std::pow(2.0, (int)(std::ceil(power_of_two_that_gives_correct_height)));
 
     textureSize = RectangleVector(textureWidth, textureHeight);
-    //textureSize = wxSize(textureWidth, textureHeight);
 
-    //cout << "textureSize = " << textureSize.TL << textureSize.BR << endl;
     wxImg = img;
 
     double top = 0;
     double left = 0;
 
-    //if (overlap & CLIP_LEFT) { left = OVERLAP / (double)textureWidth; }
-    //if (overlap & CLIP_TOP)  { top  = OVERLAP / (double)textureHeight; }
 
+    allocatedTexturePortion = RectangleVector( Vector2D(0,0), textureSize.GetFraction(expandedImagePortion.Size()) );
 
-     allocatedTexturePortion = RectangleVector( Vector2D(0,0),
-                                                textureSize.GetFraction(expandedImagePortion.Size()) );
+    renderableTexturePortion = originalImagePortion;
+    renderableTexturePortion.Subtract(expandedImagePortion.TL);
 
-     renderableTexturePortion = originalImagePortion;
-     renderableTexturePortion.Subtract(expandedImagePortion.TL);
-
-     renderableTexturePortion = RectangleVector(textureSize.GetFraction(renderableTexturePortion.TL),
-                                                textureSize.GetFraction(renderableTexturePortion.BR)  );
-
-
-     //renderableTexturePortion.TL.x *= allocatedTexturePortion.TL.x;
-     //renderableTexturePortion.TL.y *= allocatedTexturePortion.TL.y;
-     //renderableTexturePortion.BR.x *= allocatedTexturePortion.BR.x;
-     //renderableTexturePortion.BR.y *= allocatedTexturePortion.BR.y;
-     //cout << "renderableTexturePortion = " << renderableTexturePortion << endl;;
-
-    // allocatedTexturePortion = RectangleVector( Vector2D(0,0),
-    //                                            textureSize.GetFraction(expandedImagePortion.Size()) );
-    //
-    //renderableTexturePortion = RectangleVector( textureSize.GetFraction(originalImagePortion.TL), 
-    //                                            textureSize.GetFraction(originalImagePortion.BR)  );
-
-    //cout << "  allocatedTexturePortion = " << allocatedTexturePortion << endl;
-    //cout << "  renderableTexturePortion = " << renderableTexturePortion << endl;
-
-    //myTexturePortion = RectangleVector(Vector2D(left, top), Vector2D((double)width / (double)textureWidth, (double)height / (double)textureHeight));
-
-    //cout << "textureSize = (" << textureWidth << ", " << textureHeight << ")" << endl;
-    //cout << "copyWidth = " << copyWidth << endl;
-    //cout << "originalImagePortion = (" << originalImagePortion.TL.x << ", " << originalImagePortion.TL.y << ") - (" << originalImagePortion.BR.x << ", " << originalImagePortion.BR.y << ")" << endl;
-    //cout << "myTexturePortion = (" << myTexturePortion.TL.x << ", " << myTexturePortion.TL.y << ") - (" << myTexturePortion.BR.x << ", " << myTexturePortion.BR.y << ")" << endl;
-
-    //cout << "TL = " << topLeftFloat << "    BR = " << bottomRightFloat << endl;
+    renderableTexturePortion = RectangleVector(textureSize.GetFraction(renderableTexturePortion.TL),
+                                               textureSize.GetFraction(renderableTexturePortion.BR)  );
 
     uploadedTexture = false;
     
     currentY = 0;
-    //lastY    = originalImagePortion;
-    //cout << "blockSize = " << blockSize << "    lastBlock = " << lastBlock << endl;
 }
+
+/*
+void BlackTexture::CreateTexture()
+{
+    GLchar blackPixels[8 * 8 * 3] = { 0 };
+
+    glGenTextures(1, &ID);
+    glBindTexture(GL_TEXTURE_2D, ID);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 8, 8, 0, GL_RGB, GL_UNSIGNED_BYTE, blackPixels);    // Fill the texture with black pixels
+}
+*/
+
+void TextureUpload::CreateTexture(size_t width, size_t height)
+{
+    /*
+    BlackTexture blackTexture;
+
+    GLuint blackTextureID = blackTexture.GetId();
+
+    glGenTextures(1, &ID);
+    hasGeneratedTexture = true;
+
+    glBindTexture(GL_TEXTURE_2D, ID);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+    glBindTexture(GL_TEXTURE_2D, ID);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    GLfloat clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f }; // RGBA all zero
+
+    GLuint FramebufferName = 0;
+    glGenFramebuffers(1, &FramebufferName);
+    glBindFramebuffer(GL_FRAMEBUFFER, FramebufferName);                                 // Create a framebuffer so we can render to the texture
+
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, ID, 0);
+
+    GLenum DrawBuffers[1] = { GL_COLOR_ATTACHMENT0 };
+    glDrawBuffers(1, DrawBuffers);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, FramebufferName);
+    glViewport(0, 0, width, height);
+
+    glBegin(GL_QUADS);
+        glColor3f(0, 0, 0);
+        glVertex2f(    0,      0);
+        glVertex2f(width,      0);
+        glVertex2f(width, height);
+        glVertex2f(    0, height);
+    glEnd();
+    */
+}
+
+GLuint createBlackTextureQuad(int width, int height)
+{
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    //glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, width, height);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+
+    GLuint fbo;
+    glGenFramebuffers(1, &fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureID, 0);
+
+    // Set viewport to texture size
+    glViewport(0, 0, width, height);
+
+    
+    // Create a simple quad (two triangles)
+    float vertices[] = {
+        -1.0f, -1.0f, 0.0f,
+        1.0f, -1.0f, 0.0f,
+        1.0f, 1.0f, 0.0f,
+        -1.0f, 1.0f, 0.0f,
+    };
+
+    unsigned int indices[] = {
+        0, 1, 2,
+        2, 3, 0,
+    };
+
+    GLuint vao, vbo, ebo;
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
+    glGenBuffers(1, &ebo);
+
+    glBindVertexArray(vao);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    // Simple black shader program
+    const char* vertexShaderSource = "#version 330 core\n"
+        "layout (location = 0) in vec3 aPos;\n"
+        "void main() {\n"
+        "   gl_Position = vec4(aPos, 1.0);\n"
+        "}\0";
+
+    const char* fragmentShaderSource = "#version 330 core\n"
+        "out vec4 FragColor;\n"
+        "void main() {\n"
+        "   FragColor = vec4(0.0, 0.0, 0.2, 1.0);\n" // Black color
+        "}\0";
+
+    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+    glCompileShader(vertexShader);
+
+    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+    glCompileShader(fragmentShader);
+
+    GLuint shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
+
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+
+    // Render the quad
+    glUseProgram(shaderProgram);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+    // Cleanup
+    glDeleteVertexArrays(1, &vao);
+    glDeleteBuffers(1, &vbo);
+    glDeleteBuffers(1, &ebo);
+    glDeleteProgram(shaderProgram);
+
+    
+    glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind FBO
+    glViewport(0, 0, 1024, 768); // Reset viewport
+
+    //Texture parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glUseProgram(0);
+    return textureID;
+}
+
 
 bool TextureUpload::UploadNextBlock()
 {
-    //cout << "TextureUpload::UploadNextBlock()" << endl;
     if (!wxImg)
     {
-        //cout << "  !wxImg" << endl;
         return true;
     }
 
     if (uploadedTexture)
     {
-        //cout << "  uploadedTexture" << endl;
         return true;
     }
 
     if (!valid)
     {
-        //cout << "  !valid" << endl;
         return true;
     }
 
@@ -608,62 +714,51 @@ bool TextureUpload::UploadNextBlock()
         currentY = expandedImagePortion.TL.y;
         if (hasGeneratedTexture)
         {
-            //cout << "UPLOAD: Deleting texture " << ID << endl;
             hasGeneratedTexture = false;
             glDeleteTextures(1, &ID);
-            //NoteTime(wxT("Delete texture"));
         }
 
-        glGenTextures(1, &ID);
-        //NoteTime(wxT("Generate texture"));
-        //cout << "UPLOAD: Generating texture " << ID << endl;
+        ID = createBlackTextureQuad(textureSize.BR.x, textureSize.BR.y);
+
         hasGeneratedTexture = true;
-
-        //cout << "UPLOAD: Binding texture" << endl;
-        glBindTexture(GL_TEXTURE_2D, ID);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-        //cout << "Texture size = " << textureSize.TL << ", " << textureSize.BR << endl;
-
-        glBindTexture(GL_TEXTURE_2D, ID);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureSize.BR.x, textureSize.BR.y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
     }
     else
     {
         glBindTexture(GL_TEXTURE_2D, ID);
     }
 
-    //cout << "expandedImagePortion = " << expandedImagePortion.TL << " - " << expandedImagePortion.BR << endl;
     wxSize imageSize = wxImg->GetSize();
     size_t bytes = imageSize.GetWidth() * imageSize.GetHeight() * 3;
 
-    //cout << "image size = " << bytes  << endl;
+    // For some reason, some rare images crash glTexSubImage2D() when uploading the last row of the image.
+    // Here we add one extra row at the bottom of the image, and it seems to prevent this problem from happening.
+    wxSize sizeWithExtraRow = wxSize(imageSize.GetWidth(), imageSize.GetHeight() + 1);
+    wxImg->Resize(sizeWithExtraRow, wxPoint(0, 0));
 
-    for (int i = 0; i < 64; i++)
+    for (int i = 0; i < expandedImagePortion.BR.y; i++)
     {
         int texX = 0;
-        int texY = currentY;
+        //int texY = currentY;
 
-        //cout << "(" << currentY << " x " << wxImg->GetSize().x << " + " << originalImagePortion.TL.x << ") * 3" << endl;
         int srcAddress = (currentY * wxImg->GetSize().x + expandedImagePortion.TL.x) * 3;
         unsigned char* imageData = wxImg->GetData();
 
         int level = 0;
         int leftEdge = 0;
-        //cout << "Copying: (0, " << currentY << ")   size = (" << copyWidth << ", " << 1 << ")  from " << srcAddress  << ", " << bytes-srcAddress << endl;
+
         glTexSubImage2D(GL_TEXTURE_2D, level, leftEdge, currentY, copyWidth, 1, GL_RGB, GL_UNSIGNED_BYTE, &imageData[srcAddress]);
-        //cout << "done" << endl;
         currentY++;
+
         if (currentY == expandedImagePortion.BR.y)
         {
-            //cout << "uploadedTexture = true  1" << endl;
             uploadedTexture = true;
-            //glGenerateMipmap(GL_TEXTURE_2D);  
-            //glGenerateTextureMipmap(ID);
+            glGenerateMipmap(GL_TEXTURE_2D);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // Use mipmaps
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             break;
         }
-        //GL_INVALID_ENUM
         if (uploadedTexture)
             break;
     }
@@ -710,7 +805,7 @@ void GL_Image::Load(wxFileName fileName)
     // check the file exists
     if (!wxFileExists(fileName.GetFullPath()))
     {
-        cout << "  File doesn't exist: " << fileName.GetFullPath() << endl;
+        //cout << "  File doesn't exist: " << fileName.GetFullPath() << endl;
         exit(1);
     }
 
@@ -724,6 +819,7 @@ void GL_Image::Load(wxFileName fileName)
 
 		wxLongLong startTime = wxGetLocalTimeMillis();
 		//int exitCode = LoadJPEGTest("IMG_2287.jpg"); // fileName.char_str());
+
 		int success = ReadJpegHeader(&load_state, (const  char*)fileName.GetFullPath().c_str());
 		
 		int w = load_state.width, h = load_state.height;
@@ -962,6 +1058,7 @@ int GL_ImageServer::Cache(wxFileName fileName)
 
     //cout << "    caching " << fileName << endl;
 
+    //cout << "Creating handler" << endl;
     ImageLoader *imageLoader = new ImageLoader(imageSet[cacheLocation].glImage, fileName, basicGLPanel, glContext);      // Begin loading the image in the background.
     imageLoader->Run();
 
@@ -972,6 +1069,11 @@ int GL_ImageServer::Cache(wxFileName fileName)
     //cout << "  - Loading done" << endl;
 
     return cacheLocation;
+}
+
+ImageLoader::~ImageLoader()
+{
+    //cout << "Image handler deleting" << endl;
 }
 
 

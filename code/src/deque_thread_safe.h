@@ -1,3 +1,6 @@
+#ifndef DEQUE_THREAD_SAFE_H_INCLUDED
+#define DEQUE_THREAD_SAFE_H_INCLUDED
+
 #include <deque>
 #include <mutex>
 #include <condition_variable>
@@ -45,7 +48,19 @@ public:
         _collection.pop_front();
         return elem;
     }
- 
+
+    T front(void) noexcept
+    {
+        std::unique_lock<std::mutex> lock{ _mutex };
+        while (_collection.empty()) {
+            _condNewData.wait(lock);
+        }
+        auto elem = std::move(_collection.front());
+        //_collection.pop_front();
+        return elem;
+    }
+
+    bool IsEmpty() { return _collection.size() == 0; }
     int size() const { return _collection.size(); }
  
     T operator [](int i) const {return _collection[i];}
@@ -68,3 +83,5 @@ private:
     std::mutex   _mutex;                    ///< Mutex protecting the concrete storage
     std::condition_variable _condNewData;   ///< Condition used to notify that new data are available.
 };
+
+#endif

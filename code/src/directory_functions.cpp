@@ -9,6 +9,31 @@
 
 using namespace std;
 
+#define FRACTIONAL_SLASH_UNICODE_CHARACTER  0x2044
+
+
+// Returns true if the string contains forbidden characters.
+bool HasForbiddenPathChars(const wxString &dir)
+{
+    //cout << "HasForbiddenPathChars(" << dir << ") ";
+    static const wxString forbiddenChars = wxFileName::GetForbiddenChars();
+
+    for (wxUniChar ch : dir)
+    {
+        if (forbiddenChars.Contains(ch))
+        {
+            return true;
+        }
+
+        if (ch == FRACTIONAL_SLASH_UNICODE_CHARACTER)   // Windows interprets this as a path separator!
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 wxThread::ExitCode DirectorySearcher::Entry()
 {
     wxTreeItemIdValue cookie;
@@ -16,12 +41,12 @@ wxThread::ExitCode DirectorySearcher::Entry()
 
     wxTreeItemId id = treeCtrl.GetFirstChild(treeItemId, cookie);
 
-    cout << "DirectorySearcher::Entry() " << mainData->m_path << endl;
+    //cout << "DirectorySearcher::Entry() " << mainData->m_path << endl;
 
     while (id.IsOk())
     {
         wxDirItemData *data = (wxDirItemData*)(treeCtrl.GetItemData(id));
-        cout << "Scanning: " << data->m_path << endl;
+        //cout << "Scanning: " << data->m_path << endl;
         id = treeCtrl.GetNextChild(treeItemId, cookie);
     }
 
@@ -37,9 +62,11 @@ void GreyEmptyDirectories(wxTreeCtrl &treeCtrl, wxTreeItemId treeItemId, wxArray
 
     while (id.IsOk())
     {
+        
         wxDirItemData *data = (wxDirItemData*)(treeCtrl.GetItemData(id));
         wxDir          dir  = data->m_path;
         wxFileName fileName(data->m_path);
+        wxString      label = treeCtrl.GetItemText(id);
 
 
         if (fileName.IsDirReadable())
@@ -47,6 +74,10 @@ void GreyEmptyDirectories(wxTreeCtrl &treeCtrl, wxTreeItemId treeItemId, wxArray
             if ((!dir.HasFiles()) && (!dir.HasSubDirs()))
             {
                 treeCtrl.SetItemTextColour(id, wxColor(128, 128, 128));
+            }
+            else if (HasForbiddenPathChars(label))
+            {
+                treeCtrl.SetItemTextColour(id, wxColor(255, 64, 64));
             }
             else
             {
@@ -57,7 +88,6 @@ void GreyEmptyDirectories(wxTreeCtrl &treeCtrl, wxTreeItemId treeItemId, wxArray
                     dir.HasFiles("*.mpeg"))
                 {
                     treeCtrl.SetItemTextColour(id, wxColor(64, 64, 255));
-                    //treeCtrl.SetItemImage(id, )
                 }
 
                 knownDirList.push_back(data->m_path);

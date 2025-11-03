@@ -9,6 +9,9 @@
 // Licence:     
 /////////////////////////////////////////////////////////////////////////////
 
+#define wxUSE_MEMORY_TRACING 1
+
+
 // For compilers that support precompilation, includes "wx/wx.h".
 #include "wx/wxprec.h"
 
@@ -29,14 +32,48 @@
 #include "wx/dir.h"
 #include "wx/stdpaths.h"
 #include <iostream>
-#include <wx/dynlib.h>
+//#include <wx/dynlib.h>
+
 using namespace std;
 
 #define PRIVATE_DIRS_FILE_NAME     "prvdirs.txt"
 #define CONFIG_FILE_NAME           "config.txt"
 #define DIRFLAGS_CONTAINS_FILES    1
 
+
+
 extern void NoteTime(wxString s);
+
+#include <iostream>
+
+
+#include <cstdlib>
+
+/*
+void* operator new(std::size_t size) {
+    void* ptr = std::malloc(size);
+    if (!ptr) throw std::bad_alloc();
+    std::cout << "  Custom new: Allocating " << size << " bytes at " << ptr << "\n";
+    return ptr;
+}
+
+void operator delete(void* ptr) noexcept {
+    std::cout << "  Custom delete: Deallocating memory " << ptr << "\n";
+    std::free(ptr);
+}
+
+void* operator new[](std::size_t size) {
+    void* ptr = std::malloc(size);
+    if (!ptr) throw std::bad_alloc();
+    std::cout << "  Custom new[]: Allocating " << size << " bytes at " << ptr << "\n";
+    return ptr;
+}
+
+void operator delete[](void* ptr) noexcept {
+    std::cout << "  Custom delete[]: Deallocating memory " << ptr << "\n";
+    std::free(ptr);
+}
+*/
 
 ////@begin XPM images
 ////@end XPM images
@@ -99,10 +136,12 @@ void Image_BrowserApp::Init()
  */
 
 
-wxDynamicLibrary library_glew32_dll;
+//wxDynamicLibrary library_glew32_dll;
 
 bool Image_BrowserApp::OnInit()
 {   
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+
     NoteTime("Image_BrowserApp::OnInit()");
     CommandLineArguments commandLineArguments(argc, argv);                                          // Parse command line arguments
                                                                                                     // ----------------------------
@@ -121,7 +160,7 @@ bool Image_BrowserApp::OnInit()
     }
 
     //cout << "using: " << configDirectory << endl;
-    configParser.LoadConfigFile(configDirectory.ToStdString());
+    //configParser.LoadConfigFile(configDirectory.ToStdString());
 
 
     //cout << "currentDirectory = " << configParser.GetString("currentDirectory") << endl;
@@ -130,11 +169,11 @@ bool Image_BrowserApp::OnInit()
     bool success = commandLineArguments.GetPath(currentDirectory);
     //cout << "currentDirectory = " << currentDirectory  << " success=" << success << endl;
 
-    if (success)
-    {
-        //cout << "Path detected: " << currentDirectory.ToStdString() << endl;
-        configParser.SetString("currentDirectory", currentDirectory.ToStdString());
-    }
+    //if (success)
+    //{
+    //    //cout << "Path detected: " << currentDirectory.ToStdString() << endl;
+    //    configParser.SetString("currentDirectory", currentDirectory.ToStdString());
+    //}
 
 
 #if wxUSE_XPM
@@ -151,9 +190,11 @@ bool Image_BrowserApp::OnInit()
 #endif
 
     // Create the image browser, but don't show it yet.
-	imageBrowser = new ImageBrowser( this, -1, _T("Image Browser"), wxPoint(700,0), wxSize(1200, 640));
+    imageBrowserFrame = new ImageBrowserFrame( this, -1, _T("Image Browser"), wxPoint(700,0), wxSize(1200, 640));
+    imageBrowserFrame->Show(true);
     //imageBrowser->Create(this, -1);
 
+    /*
     if (commandLineArguments.HasFileName())
     {
         //cout << "Launching image viewer" << endl;
@@ -165,6 +206,7 @@ bool Image_BrowserApp::OnInit()
     {
         imageBrowser->Show(true);
     }
+    */
 
     return true;
 }
@@ -174,8 +216,10 @@ bool Image_BrowserApp::OnInit()
  * Cleanup for Image_BrowserApp
  */
 
+
 int Image_BrowserApp::OnExit()
-{    
+{   
+    //cout << "Image_BrowserApp::OnExit()" << endl;
 ////@begin Image_BrowserApp cleanup
 	return wxApp::OnExit();
 ////@end Image_BrowserApp cleanup

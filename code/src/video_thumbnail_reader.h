@@ -57,8 +57,8 @@ struct VideoFormatInfo
     }
 };
 
-class IMFSourceReader;
-class wxImage;
+struct IMFSourceReader;
+class  wxImage;
 
 class VideoThumbnailReader
 {

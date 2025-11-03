@@ -17,7 +17,6 @@ VectorRendererInterpreter::VectorRendererInterpreter(wxString program)
     while (tokenizer.HasMoreTokens())
     {
         wxString token = tokenizer.GetNextToken();
-        //cout << "Token: " << token << endl;
         arrayStr.Add(token);
     }
 
@@ -45,7 +44,7 @@ double   VectorRendererInterpreter::GetReal()
 
 wxString VectorRendererInterpreter::GetString()
 {
-	//cout << "i = " << i << endl;
+	//cout << i << ":" << arrayStr.size() << " [" << arrayStr[i] << "]" << endl;
 	return arrayStr[i++];
 }
 
@@ -69,7 +68,11 @@ void VectorRenderer::Render(wxString &program, wxBitmap &bitmap)
 
     while(!ending)
     {
-        command = interpreter.GetString()[0];
+        wxString commandString = interpreter.GetString();
+        if (commandString.size() == 0)
+            continue;
+
+        command = commandString[0];
 
         switch (command)
         {

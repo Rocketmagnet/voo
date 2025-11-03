@@ -120,7 +120,8 @@ class Frame2D
     Frame2D ( const Vector2D & C, const float & a ) :
         centre ( C ),
         x_axis ( Vector2D ( ( float ) cos ( a ), ( float ) sin ( a ) ) ),
-        angle ( a )
+        angle ( a ),
+        is_unit(true)
     {
     }
 

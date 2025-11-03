@@ -229,6 +229,13 @@ public:
 		SetRange(selectionStart, selectionEnd);
 	}
 
+    void SelectOnly(int selection)
+    {
+        v.clear();
+        v.push_back(selection);
+    }
+
+
     int DistanceTo(int i) const
     {
         if (i <= v.front())
@@ -278,18 +285,32 @@ public:
       fileNameList(fnl)
     {}
 
+    void ToHome()
+    {
+        number = 0;
+        RecalculateXyFromCursor();
+    }
+
+    void ToEnd()
+    {
+        number = fileNameList.MaxFileNumber();
+        RecalculateXyFromCursor();
+    }
 
     void Move(int dx, int dy)
     {
         previous = number;
+
         x += dx;
         y += dy;
 
-        if (y <           0)  y = 0;
-        if (x <           0)  x = 0;
-        if (x >= numColumns)  x = numColumns  - 1;
+        if (y < 0)  y = 0;
+        if (x < 0)  x = 0;
+        if (x >= numColumns)  x = numColumns - 1;
 
-        number = y*numColumns + x;
+        number = y * numColumns + x;
+
+        std::cout << "Move() number = " << number << "  Max file number = " << fileNameList.MaxFileNumber() << std::endl;
 
         if (number > fileNameList.MaxFileNumber())
         {
@@ -298,7 +319,6 @@ public:
         }
     }
 
-    
     void RecalculateCursorFromXY()
     {
         number = y*numColumns + x;
@@ -360,6 +380,7 @@ public:
       started(false),
       fileNameList(FNL)
     {
+        //std::cout << "ThumbnailLoader() " << this << std::endl;
     }
 
     bool                started;
@@ -381,6 +402,7 @@ public:
     : wxThread(wxTHREAD_DETACHED),
       thumbnailCanvas(tnc)
     {
+        std::cout << "ThumbnailHeaderReader() " << this << std::endl;
     }
 
 
@@ -399,7 +421,7 @@ public:
 	Thumbnail(const wxPoint &pos, wxFileName filename, bool fetchHeader, FileNameList & fileNameList, size_t uID);
 	~Thumbnail();
 
-    void StartLoadingImage() { if (thumbnailLoader) thumbnailLoader->Run(); }
+    void StartLoadingImage();
 
 	void Draw(wxPaintDC &dc, bool selected = false, bool cursor = false, bool inFocus = true);
 
@@ -479,7 +501,7 @@ protected:
 
 class ThumbnailCanvas : public wxScrolledWindow
 {
-    const size_t MAX_THUMBNAILS_LOADING = 4;    
+    const size_t MAX_THUMBNAILS_LOADING = 1;
 
     enum DRAG_STATE
     {
@@ -499,7 +521,7 @@ class ThumbnailCanvas : public wxScrolledWindow
     static const int SORT_DATE_FORWARDS = 2;
 
 public:
-	ThumbnailCanvas(ImageBrowser *imgBrs, FileNameList &fNameList, wxWindow *parent, wxWindowID, const wxPoint &pos, const wxSize &size);
+	ThumbnailCanvas(wxWindow *parent, FileNameList &fNameList, ImageBrowser* imgBrs, wxWindowID id, const wxPoint &pos, const wxSize &size);
 	~ThumbnailCanvas();
 
 	void OnPaint(wxPaintEvent &event);
@@ -512,6 +534,7 @@ public:
     void StopLoadingThumbnails(wxString directory);
     void ContinueLoadingThumbnails();
     void PauseLoadingThumbnails();
+    void FullRedraw();
 
     //void KillAllThreads();
     void DirectoryWasDeleted(wxString path);
@@ -540,14 +563,17 @@ public:
 
     void HideImageViewer();
 
+    void UpdateDebuggingText();
+
     void SetImageViewer(ImageViewer *iv);
     void SetAcceleratorTable(const wxAcceleratorTable &accel);
     void UpdateStatusBar_File();
+    void UpdateStatusBar_Directory(wxString directory);
     void ClearStatusBar();
     void SetCursor(wxFileName fileName);
     void SetCursor(int tn);
     int  GetSortedImageNumber(wxFileName fileName) const;
-    int FindThumbnailIndex(wxFileName fileName);
+    int  FindThumbnailIndex(wxFileName fileName);
 
     void RemoveThumbNailFromCanvasIfDeleted(std::vector<wxFileName>  &fileNamesToMaybeRemove);
     void DeleteImage(wxFileName fileName);
@@ -603,20 +629,23 @@ public:
 
 
 private:
-    void   ResetUiniqueID() {currentUniqueID = 0;}
-    size_t GetUiniqueID() { return currentUniqueID++; }
-    void HandleCursorScrolling();
-    void AddPopupMenuItem(const wxString& label, void(ThumbnailCanvas::*function)(wxCommandEvent &));
-    int  GetAvailableID() { return m_availableID++; }
-    int  FindThumbnailIndex(int th);
+    void     ResetUiniqueID() {currentUniqueID = 0;}
+    size_t   GetUiniqueID() { return currentUniqueID++; }
+    void     HandleCursorScrolling();
+    void     AddPopupMenuItem(const wxString& label, void(ThumbnailCanvas::*function)(wxCommandEvent &));
+    int      GetAvailableID() { return m_availableID++; }
+    int      FindThumbnailIndex(int th);
     wxString GetExtensionOfImageNumber(size_t index) const;
-    bool CheckPasswordProtection(wxString directory);
-    void IndexLookup(SortedVectorInts& vec);
+    bool     CheckPasswordProtection(wxString directory);
+    void     IndexLookup(SortedVectorInts& vec);
+
     //void ReportInt1(int pos, wxString str, int i);
     //void ReportInt2(int pos, wxString str, int i, int j);
     //void ReportInt3(int pos, wxString str, int i, int j, int k);
     //
     //void MoveCursor(int dx, int dy);
+
+    void StatusMessage(size_t place, wxString text);
 
     void FindNearestThumbnail();
 

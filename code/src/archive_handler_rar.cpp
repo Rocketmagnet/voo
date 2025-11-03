@@ -11,7 +11,7 @@ wxString archiveThumbRar = wxT("P(64,64,64) B(64,64,64) R(0,0,1,1) P(160,160,160
 
 ImageFileHandler* CreateRarHandler()
 {
-    cout << "Created RAR handler" << endl;
+    //cout << "Created RAR handler" << endl;
     return new RarHandler();
 }
 

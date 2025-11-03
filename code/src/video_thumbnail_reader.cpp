@@ -24,7 +24,7 @@ const LONGLONG MAX_FRAMES_TO_SKIP = 10;
 #include <fstream>
 
 bool VideoThumbnailReader::mfStarted = false;
-char *bitmap = 0;
+//char *bitmap = 0;
 
 bool Inside(int xx, int yy, int x1, int y1, int x2, int y2)
 {
@@ -256,12 +256,12 @@ int VideoThumbnailReader::OpenFile(const wchar_t* wszFileName)
     //   - Software deinterlace
 
     hr = MFCreateAttributes(&pAttributes, 1);
-    cout << "hr0 = " << hr << endl;
+    //cout << "hr0 = " << hr << endl;
 
     if (SUCCEEDED(hr))
     {
         hr = pAttributes->SetUINT32(MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING, TRUE);
-        cout << "hr1 = " << hr << endl;
+        //cout << "hr1 = " << hr << endl;
     }
 
     // Create the source reader from the URL.
@@ -269,14 +269,14 @@ int VideoThumbnailReader::OpenFile(const wchar_t* wszFileName)
     if (SUCCEEDED(hr))
     {
         hr = MFCreateSourceReaderFromURL(wszFileName, pAttributes, &m_pReader);
-        cout << "hr2 = " << hr << endl;
+        //cout << "hr2 = " << hr << endl;
     }
 
     if (SUCCEEDED(hr))
     {
         // Attempt to find a video stream.
         hr = SelectVideoStream();
-        cout << "hr3 = " << hr << endl;
+        //cout << "hr3 = " << hr << endl;
     }
 
     return hr;
@@ -304,7 +304,7 @@ bool  VideoThumbnailReader::CreateBitmap(char *imageData, int width, int height,
 
     if (!bCanSeek)
     {
-        cout << "Cannot seek" << endl;
+        //cout << "Cannot seek" << endl;
         return false;
     }
 
@@ -320,7 +320,7 @@ bool  VideoThumbnailReader::CreateBitmap(char *imageData, int width, int height,
 
         if (FAILED(hr))
         {
-            cout << "failed 1" << endl;
+            //cout << "failed 1" << endl;
             goto done;
         }
 
@@ -379,10 +379,10 @@ bool  VideoThumbnailReader::CreateBitmap(char *imageData, int width, int height,
         pSample = pSampleTmp;
         pSample->AddRef();
 
-        cout << "GetSampleTime" << endl;
+        //cout << "GetSampleTime" << endl;
         if (SUCCEEDED(pSample->GetSampleTime(&hnsTimeStamp)))
         {
-            cout << "A" << endl;
+            //cout << "A" << endl;
             // Keep going until we get a frame that is within tolerance of the
             // desired seek position, or until we skip MAX_FRAMES_TO_SKIP frames.
 
@@ -392,16 +392,16 @@ bool  VideoThumbnailReader::CreateBitmap(char *imageData, int width, int height,
             if ((cSkipped < MAX_FRAMES_TO_SKIP) &&
                 (hnsTimeStamp + SEEK_TOLERANCE < hnsPos))
             {
-                cout << "B" << endl;
+                //cout << "B" << endl;
                 SafeRelease(&pSampleTmp);
 
                 ++cSkipped;
-                cout << "C" << endl;
+                //cout << "C" << endl;
                 continue;
             }
-            cout << "D" << endl;
+            //cout << "D" << endl;
         }
-        cout << "E" << endl;
+        //cout << "E" << endl;
 
         SafeRelease(&pSampleTmp);
 
@@ -429,7 +429,7 @@ bool  VideoThumbnailReader::CreateBitmap(char *imageData, int width, int height,
         hr = pBuffer->Lock(&pBitmapData, NULL, &cbBitmapData);
 
         //cout << "Size of data = " << cbBitmapData << endl;
-        bitmap = new char[cbBitmapData];
+        //bitmap = new char[cbBitmapData];
 
         //write_32bit_file_binary("out.raw", (const char*)pBitmapData, cbBitmapData);
 
@@ -464,8 +464,8 @@ bool  VideoThumbnailReader::CreateBitmap(char *imageData, int width, int height,
             newWidth = dx2;
             newHeight = dy2;
 
-            cout << sx1 << ", " << sy1 << ", " << sx2 << ", " << sy2 << endl;
-            cout << dx1 << ", " << dy1 << ", " << dx2 << ", " << dy2 << endl;
+            //cout << sx1 << ", " << sy1 << ", " << sx2 << ", " << sy2 << endl;
+            //cout << dx1 << ", " << dy1 << ", " << dx2 << ", " << dy2 << endl;
         }
         else                                    // Destination is wider than source
         {                                       // Touching at top/bottom
@@ -486,8 +486,8 @@ bool  VideoThumbnailReader::CreateBitmap(char *imageData, int width, int height,
             newWidth = dx2;
             newHeight = dy2;
 
-            cout << sx1 << ", " << sy1 << ", " << sx2 << ", " << sy2 << endl;
-            cout << dx1 << ", " << dy1 << ", " << dx2 << ", " << dy2 << endl;
+            //cout << sx1 << ", " << sy1 << ", " << sx2 << ", " << sy2 << endl;
+            //cout << dx1 << ", " << dy1 << ", " << dx2 << ", " << dy2 << endl;
         }
 
         //int i = 3*width * (-y1 * height / (m_format->imageHeightPels*2));
@@ -516,7 +516,7 @@ bool  VideoThumbnailReader::CreateBitmap(char *imageData, int width, int height,
     }
     else
     {
-        cout << "  No pSample" << endl;
+        //cout << "  No pSample" << endl;
         hr = MF_E_END_OF_STREAM;
     }
 

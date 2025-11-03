@@ -8,8 +8,11 @@ using namespace std;
 
 ImageFileHandler* CreateVideoHandler()
 {
+    cout << "CreateVideoHandler()" << endl;
     return new VideoHandler();
 }
+
+wxFileName VideoHandler::playerPath;
 
 bool reg_VideoHandler1 = ImageFileHandlerRegistry::instance().RegisterImageFileHandler(CreateVideoHandler, _T("MPEG Layer 4"),        _T("mp4"),  _T("Video file."), CANNOT_VIEW_IMAGE);
 bool reg_VideoHandler2 = ImageFileHandlerRegistry::instance().RegisterImageFileHandler(CreateVideoHandler, _T("MPEG Layer 4"),        _T("mpg"),  _T("Video file."), CANNOT_VIEW_IMAGE);
@@ -23,24 +26,20 @@ bool reg_VideoHandler9 = ImageFileHandlerRegistry::instance().RegisterImageFileH
 
 int tnNum = 0;
 
-// Don Cape Tattis Bound Predicament Elbow Crush Hogtie Harness Ballgag and Intense Penis Gag Torment 868339465 456239045
-
 bool VideoHandler::LoadThumbnail(wxString fileName, Thumbnail &thumbnail)
 {
     wxLogNull logNo;													// logging is suspended while this object is in scope
-    wxSize tnSize = thumbnail.GetSize();
+    wxSize    tnSize = thumbnail.GetSize();
     
     wxSize largerSize = tnSize *= 4;
-    wxImage   image(largerSize, true);
+    wxImage image(largerSize, true);
 
-    LONGLONG pos = 300000000L;
+    LONGLONG pos      = 300000000L;
     wxString longPath = fileName;
-    //longPath.Prepend("\\\\?\\");
 
     const wchar_t *fn = longPath.wc_str();
-
     char *imageData = (char*)image.GetData();
-    //cout << "imageData = " << (int)imageData << endl;
+
     videoThumbnailReader.OpenFile(fn);
     bool success = videoThumbnailReader.CreateBitmap(imageData, largerSize.GetX(), largerSize.GetY(), pos);
 
@@ -49,33 +48,15 @@ bool VideoHandler::LoadThumbnail(wxString fileName, Thumbnail &thumbnail)
         wxSize newSize = videoThumbnailReader.GetSize();
         wxSize finalSize = newSize / 4;
 
-        //cout << "tnSize =     " <<     tnSize.x << ", " <<     tnSize.y << endl;
-        //cout << "largerSize = " << largerSize.x << ", " << largerSize.y << endl;
-        //cout << "newSize =    " <<    newSize.x << ", " <<    newSize.y << endl;
-        //cout << "finalSize =  " <<  finalSize.x << ", " <<  finalSize.y << endl;
-
         if (newSize.GetX() * newSize.GetY() > 0)
         {
-            //wxString fileName;
-            //fileName.Printf("thumbnail_1_%d.png", tnNum);
-            //image.SaveFile(fileName);
             image.Resize(newSize, wxPoint(0, 0));
-
-            //image.SaveFile("thumbnail_2.png");
-
-            //newSize /= 4;
-
             image.Rescale(finalSize.GetX(), finalSize.GetY(), wxIMAGE_QUALITY_NORMAL);
-            //fileName.Printf("thumbnail_3_%d.png", tnNum++);
-            //image.SaveFile(fileName);
             thumbnail.SetImage(image);
         }
     }
 
-    //ThumbnailCache::Instance().CacheImage(&image, fileName);
-
     image.Destroy();
-
     thumbnail.FinishedLoading();
 
     return true;
@@ -85,12 +66,12 @@ int VideoHandler::LoadImage(wxString fileName)
 {
     //cout << "VideoHandler::LoadImage(" << fileName << ")" << endl;
 
-    wxString command = "C:\\Program Files\\MPC-HC\\mpc-hc64.exe ";
+    wxString command = "C:\\Program Files\\MPC-HC\\mpc-hc64.exe";
     command += wxT(" \"") + fileName + wxT("\"");;
 
-    cout << command << endl;
+    //cout << command << endl;
     wxExecute(command.c_str(), wxEXEC_ASYNC, NULL);
-    
+
     return DO_NOTHING;
 }
 

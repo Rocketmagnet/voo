@@ -11,6 +11,7 @@ wxString archiveThumb = wxT("P(64,64,64) B(64,64,64) R(0,0,1,1) P(160,160,160,2)
 
 ImageFileHandler* CreateZipHandler()
 {
+    //cout << "Created ZIP handler" << endl;
     return new ZipHandler();
 }
 
@@ -79,7 +80,7 @@ int ZipHandler::LoadImage(wxString fileName)
     wxArchiveEntry *entry;
     while ((entry = zip->GetNextEntry()) != NULL)
     {
-        cout << "----" << entry->GetName() << endl;
+        //cout << "----" << entry->GetName() << endl;
         if (entry->IsDir())
         {
             wxLogNull nolog;      // suppress error message if directory already exists  

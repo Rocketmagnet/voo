@@ -63,6 +63,7 @@ bool ImageFileHandlerRegistry::RegisterImageFileHandler(ImageFileHandlerFunction
 
 ImageFileHandler* ImageFileHandlerRegistry::GetImageFileHandlerFromExtension(const wxString & ext)
 {
+    //cout << "GetImageFileHandlerFromExtension" << endl;
     int i, n = imageFileHandlerInfoVector.size();
 
     for (i = 0; i < n; i++)

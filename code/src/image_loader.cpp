@@ -35,12 +35,13 @@ GLuint* LoadImage(wxString path, int* imageWidth, int* imageHeight, int* texture
     // check the file exists
     if (!wxFileExists(path))
     {
-        cout << "File doesn't exist: " << path << endl;
+        //cout << "File doesn't exist: " << path << endl;
         //wxMessageBox(_("Failed to load resource image"));
         exit(1);
     }
 
     wxImage* img = new wxImage();
+    //cout << "Created wxImage* img" << img << endl;
 
     img->SetOption(wxIMAGE_OPTION_GIF_TRANSPARENCY, wxIMAGE_OPTION_GIF_TRANSPARENCY_UNCHANGED);
     img->LoadFile(path);
@@ -74,6 +75,7 @@ GLuint* LoadImage(wxString path, int* imageWidth, int* imageHeight, int* texture
 
         int imageSize = (*imageWidth) * (*imageHeight) * bytesPerPixel;
         GLubyte *imageData = new GLubyte[imageSize];
+        //cout << "Created image data " << imageData << endl;
 
         int rev_val = (*imageHeight) - 1;
 
@@ -132,6 +134,7 @@ GLuint* LoadImage(wxString path, int* imageWidth, int* imageHeight, int* texture
 
         int imageSize = newWidth * newHeight * bytesPerPixel;
         GLubyte	*imageData = new GLubyte[imageSize];
+        //cout << "Created image data " << imageData << endl;
 
         int rev_val = (*imageHeight) - 1;
 
@@ -184,8 +187,11 @@ GLuint* LoadImage(wxString path, int* imageWidth, int* imageHeight, int* texture
         (*textureHeight) = newHeight;
 
         delete[] imageData;
+        //cout << "Deeted image data " << imageData << endl;
     }
 
+    delete img;
+    //cout << "Deleted wxImage* img" << img << endl;
 
     return ID;
 

@@ -20,6 +20,7 @@ class BasicGLPanel : public wxGLCanvas
 
 public:
     BasicGLPanel(wxFrame* parent, int* args);
+    ~BasicGLPanel();
 
     void SetFileNameList(FileNameList *fileNameList) { imageServer.SetFileNameList(fileNameList); }
     void Resized(wxSizeEvent& evt);

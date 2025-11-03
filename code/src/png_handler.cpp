@@ -1,13 +1,16 @@
 
 #include "png_handler.h"
 #include "thumbnail_canvas.h"
+#include <iostream>
 
+using namespace std;
 
 
 ImageFileHandler* CreatePngHandler()
 {
     //GerberRenderer * renderer = new GerberRenderer(_T(""));
     //return renderer;
+    //cout << "Created PNG handler" << endl;
     return new PngHandler();
 }
 

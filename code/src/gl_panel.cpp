@@ -58,8 +58,13 @@ BasicGLPanel::BasicGLPanel(wxFrame* parent, int* args)
     imageServer.SetPointers(this, m_context);
 
     //subImage.Create(256, 256, true);
-
 }
+
+BasicGLPanel::~BasicGLPanel()
+{
+    delete m_context;
+}
+
 
 void BasicGLPanel::InitFont(FreetypeFont & font, int fontResolution)
 {

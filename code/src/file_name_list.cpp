@@ -10,11 +10,40 @@ using namespace std;
 
 FileNameList::FileNameList()
 {
+    //cout << "FileNameList::FileNameList()" << endl;
+}
+
+FileNameList::~FileNameList()
+{
+    //cout << "FileNameList::~FileNameList()" << endl;
 }
 
 FileNameList::FileNameList(wxString dir)
 {
     LoadFileList(dir);
+}
+
+void FileNameList::Print()
+{
+    ///cout << "FileNameList::Print()" << endl;
+    for (auto &fileName : files)
+    {
+        //cout << " : " << fileName.fileName.GetFullPath() << endl;
+    }
+    //cout << "Done" << endl;
+}
+
+bool FileNameList::Contains(wxFileName fileName)
+{
+    for (auto& fileNameInList : files)
+    {
+        if (fileNameInList.fileName == fileName)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool FileSortNatural(const DirSortingItem &fn1, const DirSortingItem &fn2)
@@ -53,16 +82,9 @@ void FileNameList::LoadFileList(wxString dir)
         }
     }
 
-    sort(files.begin(), files.end(), FileSortNatural);
-    //sort(files.begin(), files.end(), FileSortBasic);
+    directory.Close();
 
-    //cout << " ---- " << endl;
-    //n = files.size();
-    //for (i = 0; i < n; i++)
-    //{
-    //    cout << "  " << files[i].fileName.GetFullName() << endl;
-    //}
-    //cout << endl;
+    sort(files.begin(), files.end(), FileSortNatural);
 }
 
 void FileNameList::FillArrayWithFileNamesFrom(wxString dir, wxArrayString &arrayString)
@@ -140,6 +162,17 @@ void FileNameList::Resort()
 bool FileNameList::DeleteFileName(wxFileName fileName)
 {
     bool success = wxRemoveFile(fileName.GetFullPath());
+    //cout << "FileNameList::DeleteFileName(" << fileName.GetFullName() << ") " << success << endl;
+    for (int i = 0; i < files.size(); i++)
+    {
+        //cout << i << endl;
+        if (files[i].fileName == fileName)
+        {
+            //cout << "Deleting " << i << endl;
+            files.erase(files.begin() + i);
+            break;
+        }
+    }
     return success;
 }
 

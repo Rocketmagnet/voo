@@ -4,6 +4,7 @@
 #include <iostream>
 
 using namespace std;
+extern void NoteTime(wxString s);
 
 ImageFileHandler* CreateJpegHandler()
 {
@@ -42,7 +43,10 @@ bool JpegHandler::LoadThumbnail(wxString fileName, Thumbnail &thumbnail)
     //cout << "JpegHandler::LoadThumbnail(" << fileName << ")" << endl;
 
     //jpeg_load_state *load_state = ReadJpegHeader((const  char*)fileName.c_str());
-    int success = ReadJpegHeader(&jpegLoadState, (const char*)fileName.c_str());
+    //int success = ReadJpegHeader(&jpegLoadState, (const char*)fileName.c_str());
+    int maxSize = thumbnail.GetSize().GetWidth();
+    int success = FetchThumbnailReadHeader(&jpegLoadState, (const char*)fileName.c_str(), maxSize);
+
     jpeg_load_state *load_state = &jpegLoadState;
 
     int w = load_state->width, h = load_state->height;
@@ -51,7 +55,10 @@ bool JpegHandler::LoadThumbnail(wxString fileName, Thumbnail &thumbnail)
     {
         image.Create(w, h);
         image.SetRGB(wxRect(0, 0, w, h), 128, 64, 0);
+
+        NoteTime("ReadStart");
         JpegRead(image.GetData(), load_state);
+        NoteTime("ReadEnd");
         returnValue = true;
 
         thumbnail.SetImage(image);
